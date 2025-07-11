@@ -1161,6 +1161,7 @@ export const webviewMessageHandler = async (
 					...currentState,
 					customModePrompts: updatedPrompts,
 					hasOpenedModeSelector: currentState.hasOpenedModeSelector ?? false,
+					filesChangedEnabled: currentState.filesChangedEnabled ?? true,
 				}
 				provider.postMessageToWebview({ type: "state", state: stateWithPrompts })
 
@@ -1230,6 +1231,11 @@ export const webviewMessageHandler = async (
 			break
 		case "showRooIgnoredFiles":
 			await updateGlobalState("showRooIgnoredFiles", message.bool ?? true)
+			await provider.postStateToWebview()
+			break
+		case "filesChangedEnabled":
+			const filesChangedEnabled = message.bool ?? true
+			await updateGlobalState("filesChangedEnabled", filesChangedEnabled)
 			await provider.postStateToWebview()
 			break
 		case "hasOpenedModeSelector":
@@ -1434,7 +1440,12 @@ export const webviewMessageHandler = async (
 			break
 		case "upsertApiConfiguration":
 			if (message.text && message.apiConfiguration) {
-				await provider.upsertProviderProfile(message.text, message.apiConfiguration)
+				try {
+					await provider.upsertProviderProfile(message.text, message.apiConfiguration)
+				} catch (error) {
+					// Error is already logged in upsertProviderProfile, just show user message
+					vscode.window.showErrorMessage(t("errors.create_api_config"))
+				}
 			}
 			break
 		case "renameApiConfiguration":
