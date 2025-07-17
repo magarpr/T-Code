@@ -101,6 +101,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				lmStudioBaseUrl: "http://localhost:1234",
 			},
 		})
 	})
@@ -137,6 +138,10 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			apiKey: "litellm-key",
 			baseUrl: "http://localhost:4000",
 		})
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "lmstudio",
+			baseUrl: "http://localhost:1234",
+		})
 
 		// Verify response was sent
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
@@ -148,7 +153,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: mockModels,
 				litellm: mockModels,
 				ollama: {},
-				lmstudio: {},
+				lmstudio: mockModels,
 			},
 		})
 	})
@@ -235,7 +240,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				unbound: mockModels,
 				litellm: {},
 				ollama: {},
-				lmstudio: {},
+				lmstudio: mockModels,
 			},
 		})
 	})
@@ -257,6 +262,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
+			.mockRejectedValueOnce(new Error("LMStudio API error")) // lmstudio"))
 
 		await webviewMessageHandler(mockClineProvider, {
 			type: "requestRouterModels",
@@ -307,6 +313,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
+			.mockRejectedValueOnce(new Error("LMStudio API error")) // lmstudio
 
 		await webviewMessageHandler(mockClineProvider, {
 			type: "requestRouterModels",
@@ -346,6 +353,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			success: false,
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "LMStudio API error",
+			values: { provider: "lmstudio" },
 		})
 	})
 

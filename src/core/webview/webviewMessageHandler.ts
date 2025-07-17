@@ -605,9 +605,8 @@ export const webviewMessageHandler = async (
 
 			const fetchedRouterModels: Partial<Record<RouterName, ModelRecord>> = {
 				...routerModels,
-				// Initialize ollama and lmstudio with empty objects since they use separate handlers
+				// Initialize ollama with empty objects since it uses separate handlers
 				ollama: {},
-				lmstudio: {},
 			}
 
 			results.forEach((result, index) => {
@@ -616,18 +615,14 @@ export const webviewMessageHandler = async (
 				if (result.status === "fulfilled") {
 					fetchedRouterModels[routerName] = result.value.models
 
-					// Ollama and LM Studio settings pages still need these events
+					// Ollama settings pages still need these events
 					if (routerName === "ollama" && Object.keys(result.value.models).length > 0) {
 						provider.postMessageToWebview({
 							type: "ollamaModels",
 							ollamaModels: Object.keys(result.value.models),
 						})
-					} else if (routerName === "lmstudio" && Object.keys(result.value.models).length > 0) {
-						provider.postMessageToWebview({
-							type: "lmStudioModels",
-							lmStudioModels: Object.keys(result.value.models),
-						})
 					}
+					// LM Studio models have moved to main router models message
 				} else {
 					// Handle rejection: Post a specific error message for this provider
 					const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason)
