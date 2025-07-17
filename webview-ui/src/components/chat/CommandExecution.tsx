@@ -50,7 +50,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 	const [isExpanded, setIsExpanded] = useState(terminalShellIntegrationDisabled)
 	const [streamingOutput, setStreamingOutput] = useState("")
 	const [status, setStatus] = useState<CommandExecutionStatus | null>(null)
-	const [showSuggestions] = useState(true)
+	const showSuggestions = true
 
 	// The command's output can either come from the text associated with the
 	// task message (this is the case for completed commands) or from the
