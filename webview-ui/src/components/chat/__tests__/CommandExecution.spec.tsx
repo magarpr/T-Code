@@ -274,4 +274,143 @@ describe("CommandExecution", () => {
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "rm"] })
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: [] })
 	})
+
+	describe("integration with CommandPatternSelector", () => {
+		it("should extract patterns from complex commands with multiple operators", () => {
+			render(
+				<ExtensionStateWrapper>
+					<CommandExecution executionId="test-6" text="npm install && npm test || echo 'failed'" />
+				</ExtensionStateWrapper>,
+			)
+
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			expect(screen.getByText("npm")).toBeInTheDocument()
+			expect(screen.getByText("npm install")).toBeInTheDocument()
+			expect(screen.getByText("npm test")).toBeInTheDocument()
+			expect(screen.getByText("echo")).toBeInTheDocument()
+		})
+
+		it("should handle commands with malformed suggestions gracefully", () => {
+			const commandWithMalformedSuggestions = `npm install
+Output:
+Suggested patterns: npm, , npm install,
+Other output here`
+
+			render(
+				<ExtensionStateWrapper>
+					<CommandExecution
+						executionId="test-6"
+						text={commandWithMalformedSuggestions}
+						icon={<span>icon</span>}
+						title={<span>Run Command</span>}
+					/>
+				</ExtensionStateWrapper>,
+			)
+
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			// Should still show valid patterns
+			expect(screen.getAllByText("npm")[0]).toBeInTheDocument()
+			expect(screen.getAllByText("npm install")[0]).toBeInTheDocument()
+		})
+
+		it("should handle commands with subshells by not including them in patterns", () => {
+			render(
+				<ExtensionStateWrapper>
+					<CommandExecution executionId="test-7" text="echo $(whoami) && git status" />
+				</ExtensionStateWrapper>,
+			)
+
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			expect(screen.getByText("echo")).toBeInTheDocument()
+			expect(screen.getByText("git")).toBeInTheDocument()
+			expect(screen.getByText("git status")).toBeInTheDocument()
+			// Should not include subshell content
+			expect(screen.queryByText("whoami")).not.toBeInTheDocument()
+		})
+
+		it("should handle commands with backtick subshells", () => {
+			render(
+				<ExtensionStateWrapper>
+					<CommandExecution executionId="test-8" text="git commit -m `date`" />
+				</ExtensionStateWrapper>,
+			)
+
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			expect(screen.getByText("git")).toBeInTheDocument()
+			expect(screen.getByText("git commit")).toBeInTheDocument()
+			// Should not include subshell content
+			expect(screen.queryByText("date")).not.toBeInTheDocument()
+		})
+
+		it("should handle pattern changes for commands with special characters", () => {
+			render(
+				<ExtensionStateWrapper>
+					<CommandExecution executionId="test-9" text="cd ~/projects && npm start" />
+				</ExtensionStateWrapper>,
+			)
+
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			expect(screen.getByText("cd")).toBeInTheDocument()
+			expect(screen.getByText("npm")).toBeInTheDocument()
+			expect(screen.getByText("npm start")).toBeInTheDocument()
+		})
+
+		it("should handle commands with mixed content including output and suggestions", () => {
+			const commandWithMixedContent = `npm test
+Output:
+Running tests...
+✓ Test 1 passed
+✓ Test 2 passed
+
+Suggested patterns: npm, npm test, npm run
+- npm
+- npm test
+- npm run test`
+
+			render(
+				<ExtensionStateWrapper>
+					<CommandExecution
+						executionId="test-10"
+						text={commandWithMixedContent}
+						icon={<span>icon</span>}
+						title={<span>Run Command</span>}
+					/>
+				</ExtensionStateWrapper>,
+			)
+
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			// Should show patterns from suggestions
+			expect(screen.getAllByText("npm")[0]).toBeInTheDocument()
+			expect(screen.getAllByText("npm test")[0]).toBeInTheDocument()
+			expect(screen.getAllByText("npm run")[0]).toBeInTheDocument()
+		})
+
+		it("should update both allowed and denied lists when patterns conflict", () => {
+			const conflictState = {
+				...mockExtensionState,
+				allowedCommands: ["git"],
+				deniedCommands: ["git push"],
+			}
+
+			render(
+				<ExtensionStateContext.Provider value={conflictState as any}>
+					<CommandExecution executionId="test-11" text="git push origin main" />
+				</ExtensionStateContext.Provider>,
+			)
+
+			// Click to allow "git push"
+			const allowButton = screen.getByText("Allow git push")
+			fireEvent.click(allowButton)
+
+			// Should add to allowed and remove from denied
+			expect(conflictState.setAllowedCommands).toHaveBeenCalledWith(["git", "git push"])
+			expect(conflictState.setDeniedCommands).toHaveBeenCalledWith([])
+		})
+	})
 })

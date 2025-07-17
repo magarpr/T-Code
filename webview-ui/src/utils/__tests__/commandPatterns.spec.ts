@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest"
-import { extractCommandPatterns, getPatternDescription, parseCommandAndOutput } from "../commandPatterns"
+import {
+	extractCommandPatterns,
+	getPatternDescription,
+	parseCommandAndOutput,
+	detectSecurityIssues,
+} from "../commandPatterns"
 
 describe("extractCommandPatterns", () => {
 	it("should extract simple command", () => {
@@ -99,16 +104,16 @@ describe("extractCommandPatterns", () => {
 })
 
 describe("getPatternDescription", () => {
-	it("should return descriptions for common commands", () => {
-		expect(getPatternDescription("cd")).toBe("directory navigation")
+	it("should return pattern followed by commands", () => {
+		expect(getPatternDescription("cd")).toBe("cd commands")
 		expect(getPatternDescription("npm")).toBe("npm commands")
 		expect(getPatternDescription("npm install")).toBe("npm install commands")
 		expect(getPatternDescription("git")).toBe("git commands")
 		expect(getPatternDescription("git push")).toBe("git push commands")
-		expect(getPatternDescription("python")).toBe("python scripts")
+		expect(getPatternDescription("python")).toBe("python commands")
 	})
 
-	it("should return default description for unknown commands", () => {
+	it("should handle any command pattern", () => {
 		expect(getPatternDescription("unknowncommand")).toBe("unknowncommand commands")
 		expect(getPatternDescription("custom-tool")).toBe("custom-tool commands")
 	})
@@ -116,13 +121,13 @@ describe("getPatternDescription", () => {
 	it("should handle package managers", () => {
 		expect(getPatternDescription("yarn")).toBe("yarn commands")
 		expect(getPatternDescription("pnpm")).toBe("pnpm commands")
-		expect(getPatternDescription("bun")).toBe("bun scripts")
+		expect(getPatternDescription("bun")).toBe("bun commands")
 	})
 
 	it("should handle build tools", () => {
-		expect(getPatternDescription("make")).toBe("build automation")
-		expect(getPatternDescription("cmake")).toBe("CMake build system")
-		expect(getPatternDescription("cargo")).toBe("Rust cargo commands")
+		expect(getPatternDescription("make")).toBe("make commands")
+		expect(getPatternDescription("cmake")).toBe("cmake commands")
+		expect(getPatternDescription("cargo")).toBe("cargo commands")
 		expect(getPatternDescription("go build")).toBe("go build commands")
 	})
 })
@@ -271,5 +276,79 @@ Installing...`
 		const result = parseCommandAndOutput(text)
 		expect(result.command).toBe('echo "test"')
 		expect(result.output).toBe("First output\nOutput: Second output")
+	})
+})
+
+describe("detectSecurityIssues", () => {
+	it("should detect subshell execution with $()", () => {
+		const warnings = detectSecurityIssues("echo $(malicious)")
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0].type).toBe("subshell")
+		expect(warnings[0].message).toContain("subshell execution")
+	})
+
+	it("should detect subshell execution with backticks", () => {
+		const warnings = detectSecurityIssues("echo `malicious`")
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0].type).toBe("subshell")
+		expect(warnings[0].message).toContain("subshell execution")
+	})
+
+	it("should detect nested subshells", () => {
+		const warnings = detectSecurityIssues("echo $(echo $(date))")
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0].type).toBe("subshell")
+	})
+
+	it("should detect subshells in complex commands", () => {
+		const warnings = detectSecurityIssues("npm install && echo $(whoami) || git push")
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0].type).toBe("subshell")
+	})
+
+	it("should not detect issues in safe commands", () => {
+		const warnings = detectSecurityIssues("npm install express")
+		expect(warnings).toHaveLength(0)
+	})
+
+	it("should handle empty commands", () => {
+		const warnings = detectSecurityIssues("")
+		expect(warnings).toHaveLength(0)
+	})
+
+	it("should detect multiple subshell patterns", () => {
+		const warnings = detectSecurityIssues("echo $(date) && echo `whoami`")
+		expect(warnings).toHaveLength(1) // Should still be 1 warning for subshell presence
+		expect(warnings[0].type).toBe("subshell")
+	})
+
+	it("should detect subshells in quoted strings", () => {
+		const warnings = detectSecurityIssues('echo "Current user: $(whoami)"')
+		expect(warnings).toHaveLength(1)
+		expect(warnings[0].type).toBe("subshell")
+	})
+})
+
+describe("security integration with extractCommandPatterns", () => {
+	it("should not include subshell content in patterns", () => {
+		const patterns = extractCommandPatterns("echo $(malicious)")
+		expect(patterns).toContain("echo")
+		expect(patterns).not.toContain("$(malicious)")
+		expect(patterns).not.toContain("malicious")
+	})
+
+	it("should handle commands with subshells properly", () => {
+		const patterns = extractCommandPatterns("npm install && echo $(whoami)")
+		expect(patterns).toContain("npm")
+		expect(patterns).toContain("npm install")
+		expect(patterns).toContain("echo")
+		expect(patterns).not.toContain("whoami")
+	})
+
+	it("should extract patterns from commands with backtick subshells", () => {
+		const patterns = extractCommandPatterns("git commit -m `date`")
+		expect(patterns).toContain("git")
+		expect(patterns).toContain("git commit")
+		expect(patterns).not.toContain("date")
 	})
 })

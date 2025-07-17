@@ -5,13 +5,23 @@ export interface CommandPattern {
 	description?: string
 }
 
+export interface SecurityWarning {
+	type: "subshell" | "injection"
+	message: string
+}
+
 export function extractCommandPatterns(command: string): string[] {
 	if (!command?.trim()) return []
 
 	const patterns = new Set<string>()
 
 	try {
-		const parsed = parse(command)
+		// First, remove subshell expressions to avoid extracting their contents
+		const cleanedCommand = command
+			.replace(/\$\([^)]*\)/g, "") // Remove $() subshells
+			.replace(/`[^`]*`/g, "") // Remove backtick subshells
+
+		const parsed = parse(cleanedCommand)
 
 		const commandSeparators = new Set(["|", "&&", "||", ";"])
 		let current: any[] = []
@@ -54,73 +64,26 @@ function processCommand(cmd: any[], patterns: Set<string>) {
 	}
 }
 
-export function getPatternDescription(pattern: string): string {
-	// Generate human-readable descriptions for common patterns
-	const descriptions: Record<string, string> = {
-		cd: "directory navigation",
-		ls: "list directory contents",
-		pwd: "print working directory",
-		mkdir: "create directories",
-		rm: "remove files/directories",
-		cp: "copy files/directories",
-		mv: "move/rename files",
-		cat: "display file contents",
-		echo: "display text",
-		npm: "npm commands",
-		"npm install": "npm install commands",
-		"npm run": "all npm run scripts",
-		"npm test": "npm test commands",
-		"npm start": "npm start commands",
-		"npm build": "npm build commands",
-		yarn: "yarn commands",
-		"yarn install": "yarn install commands",
-		"yarn run": "all yarn run scripts",
-		pnpm: "pnpm commands",
-		"pnpm install": "pnpm install commands",
-		"pnpm run": "all pnpm run scripts",
-		git: "git commands",
-		"git add": "git add commands",
-		"git commit": "git commit commands",
-		"git push": "git push commands",
-		"git pull": "git pull commands",
-		"git clone": "git clone commands",
-		"git checkout": "git checkout commands",
-		"git branch": "git branch commands",
-		"git merge": "git merge commands",
-		"git status": "git status commands",
-		"git log": "git log commands",
-		python: "python scripts",
-		python3: "python3 scripts",
-		node: "node.js scripts",
-		deno: "deno scripts",
-		bun: "bun scripts",
-		docker: "docker commands",
-		"docker run": "docker run commands",
-		"docker build": "docker build commands",
-		"docker compose": "docker compose commands",
-		curl: "HTTP requests",
-		wget: "download files",
-		grep: "search text patterns",
-		find: "find files/directories",
-		sed: "stream editor",
-		awk: "text processing",
-		make: "build automation",
-		cmake: "CMake build system",
-		go: "go commands",
-		"go run": "go run commands",
-		"go build": "go build commands",
-		"go test": "go test commands",
-		cargo: "Rust cargo commands",
-		"cargo run": "cargo run commands",
-		"cargo build": "cargo build commands",
-		"cargo test": "cargo test commands",
-		dotnet: ".NET commands",
-		"dotnet run": "dotnet run commands",
-		"dotnet build": "dotnet build commands",
-		"dotnet test": "dotnet test commands",
+export function detectSecurityIssues(command: string): SecurityWarning[] {
+	const warnings: SecurityWarning[] = []
+
+	// Check for subshell execution attempts
+	if (command.includes("$(") || command.includes("`")) {
+		warnings.push({
+			type: "subshell",
+			message: "Command contains subshell execution which could bypass restrictions",
+		})
 	}
 
-	return descriptions[pattern] || `${pattern} commands`
+	return warnings
+}
+
+/**
+ * Get a human-readable description for a command pattern.
+ * Simply returns the pattern followed by "commands".
+ */
+export function getPatternDescription(pattern: string): string {
+	return `${pattern} commands`
 }
 
 export function parseCommandAndOutput(text: string): {

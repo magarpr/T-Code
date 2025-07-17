@@ -6,7 +6,6 @@ import { CommandExecutionStatus, commandExecutionStatusSchema } from "@roo-code/
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { safeJsonParse } from "@roo/safeJsonParse"
-import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
 
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -42,15 +41,8 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		output: parsedOutput,
 		suggestions,
 	} = useMemo(() => {
-		// First try our enhanced parser
-		const enhanced = parseCommandAndOutputUtil(text || "")
-		// If it found a command, use it, otherwise fall back to the original parser
-		if (enhanced.command && enhanced.command !== text) {
-			return enhanced
-		}
-		// Fall back to original parser
-		const original = parseCommandAndOutput(text)
-		return { ...original, suggestions: [] }
+		// Use the enhanced parser from commandPatterns
+		return parseCommandAndOutputUtil(text || "")
 	}, [text])
 
 	// If we aren't opening the VSCode terminal for this command then we default
@@ -230,20 +222,3 @@ const OutputContainerInternal = ({ isExpanded, output }: { isExpanded: boolean; 
 )
 
 const OutputContainer = memo(OutputContainerInternal)
-
-const parseCommandAndOutput = (text: string | undefined) => {
-	if (!text) {
-		return { command: "", output: "" }
-	}
-
-	const index = text.indexOf(COMMAND_OUTPUT_STRING)
-
-	if (index === -1) {
-		return { command: text, output: "" }
-	}
-
-	return {
-		command: text.slice(0, index),
-		output: text.slice(index + COMMAND_OUTPUT_STRING.length),
-	}
-}
