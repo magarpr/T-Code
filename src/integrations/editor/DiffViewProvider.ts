@@ -119,7 +119,7 @@ export class DiffViewProvider {
 		const diffEditor = this.activeDiffEditor
 		const document = diffEditor?.document
 
-		if (!diffEditor || !document || !this.isEditorValid(diffEditor)) {
+		if (!diffEditor || !document) {
 			throw new Error("User closed text editor, unable to edit file...")
 		}
 
