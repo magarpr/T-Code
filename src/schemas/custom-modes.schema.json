@@ -1,0 +1,105 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Custom Modes Configuration",
+	"description": "Schema for Roo Code custom modes configuration files (.roomodes and custom_modes.yaml)",
+	"type": "object",
+	"properties": {
+		"customModes": {
+			"type": "array",
+			"description": "Array of custom mode configurations",
+			"items": {
+				"$ref": "#/definitions/modeConfig"
+			},
+			"uniqueItems": true
+		}
+	},
+	"required": ["customModes"],
+	"additionalProperties": false,
+	"definitions": {
+		"modeConfig": {
+			"type": "object",
+			"description": "Configuration for a single custom mode",
+			"properties": {
+				"slug": {
+					"type": "string",
+					"pattern": "^[a-zA-Z0-9-]+$",
+					"description": "Unique identifier for the mode (letters, numbers, and dashes only)"
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Display name for the mode"
+				},
+				"roleDefinition": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Detailed description of the mode's role and capabilities"
+				},
+				"whenToUse": {
+					"type": "string",
+					"description": "Description of when this mode should be used"
+				},
+				"description": {
+					"type": "string",
+					"description": "Brief description of what the mode does"
+				},
+				"customInstructions": {
+					"type": "string",
+					"description": "Additional custom instructions for the mode"
+				},
+				"groups": {
+					"type": "array",
+					"description": "Tool groups and permissions for this mode",
+					"items": {
+						"oneOf": [
+							{
+								"$ref": "#/definitions/toolGroup"
+							},
+							{
+								"type": "array",
+								"items": [
+									{
+										"$ref": "#/definitions/toolGroup"
+									},
+									{
+										"$ref": "#/definitions/groupOptions"
+									}
+								],
+								"minItems": 2,
+								"maxItems": 2
+							}
+						]
+					},
+					"uniqueItems": true
+				},
+				"source": {
+					"type": "string",
+					"enum": ["global", "project"],
+					"description": "Source of the mode configuration"
+				}
+			},
+			"required": ["slug", "name", "roleDefinition", "groups"],
+			"additionalProperties": false
+		},
+		"toolGroup": {
+			"type": "string",
+			"enum": ["read", "edit", "browser", "command", "mcp", "modes"],
+			"description": "Available tool groups"
+		},
+		"groupOptions": {
+			"type": "object",
+			"description": "Options for a tool group",
+			"properties": {
+				"fileRegex": {
+					"type": "string",
+					"description": "Regular expression pattern to match files this group can access"
+				},
+				"description": {
+					"type": "string",
+					"description": "Description of what files this pattern matches"
+				}
+			},
+			"additionalProperties": false
+		}
+	}
+}

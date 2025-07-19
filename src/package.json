@@ -388,7 +388,16 @@
 					"description": "%settings.autoImportSettingsPath.description%"
 				}
 			}
-		}
+		},
+		"yamlValidation": [
+			{
+				"fileMatch": [
+					".roomodes",
+					"custom_modes.yaml"
+				],
+				"url": "./schemas/custom-modes.schema.json"
+			}
+		]
 	},
 	"scripts": {
 		"lint": "eslint . --ext=ts --max-warnings=0",
