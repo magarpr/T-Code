@@ -51,7 +51,7 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 		"gemini-embedding-001": { dimension: 3072, scoreThreshold: 0.4 },
 	},
 	mistral: {
-		"codestral-embed": { dimension: 1024, scoreThreshold: 0.4 },
+		"codestral-embed": { dimension: 1536, scoreThreshold: 0.4 },
 	},
 }
 

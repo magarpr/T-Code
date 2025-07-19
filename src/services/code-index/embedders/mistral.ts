@@ -10,7 +10,7 @@ import { TelemetryService } from "@roo-code/telemetry"
  * with configuration for Mistral's embedding API.
  *
  * Supported models:
- * - codestral-embed (dimension: 1024)
+ * - codestral-embed (dimension: 1536)
  */
 export class MistralEmbedder implements IEmbedder {
 	private readonly openAICompatibleEmbedder: OpenAICompatibleEmbedder
