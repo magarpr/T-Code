@@ -1244,5 +1244,51 @@ describe("Sliding Window", () => {
 			expect(result2).not.toEqual(messagesWithSmallContent)
 			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
 		})
+
+		it("should handle models where maxTokens equals contextWindow without negative allowedTokens", async () => {
+			const contextWindow = 100000
+			const modelInfo = createModelInfo(contextWindow, contextWindow) // maxTokens = contextWindow
+
+			// Create messages with very small content in the last one to avoid token overflow
+			const messagesWithSmallContent = [
+				...messages.slice(0, -1),
+				{ ...messages[messages.length - 1], content: "" },
+			]
+
+			// With the fix, reservedTokens should be 20% of context window (20000)
+			// allowedTokens = 100000 * 0.9 - 20000 = 70000
+			// So tokens below 70000 should not trigger truncation
+			const result1 = await truncateConversationIfNeeded({
+				messages: messagesWithSmallContent,
+				totalTokens: 69999, // Just below the fixed threshold
+				contextWindow: modelInfo.contextWindow,
+				maxTokens: modelInfo.maxTokens,
+				apiHandler: mockApiHandler,
+				autoCondenseContext: false,
+				autoCondenseContextPercent: 100,
+				systemPrompt: "System prompt",
+				taskId,
+				profileThresholds: {},
+				currentProfileId: "default",
+			})
+			expect(result1.messages).toEqual(messagesWithSmallContent) // No truncation
+
+			// Above the threshold should trigger truncation
+			const result2 = await truncateConversationIfNeeded({
+				messages: messagesWithSmallContent,
+				totalTokens: 70001, // Above the fixed threshold
+				contextWindow: modelInfo.contextWindow,
+				maxTokens: modelInfo.maxTokens,
+				apiHandler: mockApiHandler,
+				autoCondenseContext: false,
+				autoCondenseContextPercent: 100,
+				systemPrompt: "System prompt",
+				taskId,
+				profileThresholds: {},
+				currentProfileId: "default",
+			})
+			expect(result2.messages).not.toEqual(messagesWithSmallContent) // Should truncate
+			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
+		})
 	})
 })

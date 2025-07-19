@@ -105,7 +105,8 @@ export async function truncateConversationIfNeeded({
 	let error: string | undefined
 	let cost = 0
 	// Calculate the maximum tokens reserved for response
-	const reservedTokens = maxTokens || contextWindow * 0.2
+	// If maxTokens equals contextWindow, fall back to 20% to avoid negative allowedTokens
+	const reservedTokens = maxTokens && maxTokens !== contextWindow ? maxTokens : contextWindow * 0.2
 
 	// Estimate tokens for the last message (which is always a user message)
 	const lastMessage = messages[messages.length - 1]
