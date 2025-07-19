@@ -412,8 +412,8 @@ Original error: ${errorMessage}`
 
 				// Apply HTML entity unescaping based on user setting
 				let processedDiffItems = diffItems
-				const state = (await cline.providerRef.deref()?.getState()) ?? {}
-				const unescapeHtmlEntitiesInDiffs = (state as any).unescapeHtmlEntitiesInDiffs ?? false
+				const providerState = (await cline.providerRef.deref()?.getState()) ?? {}
+				const unescapeHtmlEntitiesInDiffs = (providerState as any).unescapeHtmlEntitiesInDiffs ?? false
 
 				if (unescapeHtmlEntitiesInDiffs && !cline.api.getModel().id.includes("claude")) {
 					processedDiffItems = diffItems.map((item) => ({
