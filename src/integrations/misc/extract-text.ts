@@ -5,7 +5,7 @@ import mammoth from "mammoth"
 import fs from "fs/promises"
 import { isBinaryFile } from "isbinaryfile"
 import { extractTextFromXLSX } from "./extract-text-from-xlsx"
-import { stripBOM } from "../../utils/bomUtils"
+import stripBom from "strip-bom"
 
 async function extractTextFromPDF(filePath: string): Promise<string> {
 	const dataBuffer = await fs.readFile(filePath)
@@ -70,7 +70,7 @@ export async function extractTextFromFile(filePath: string): Promise<string> {
 	if (!isBinary) {
 		const content = await fs.readFile(filePath, "utf8")
 		// Strip BOM if present before adding line numbers
-		return addLineNumbers(stripBOM(content))
+		return addLineNumbers(stripBom(content))
 	} else {
 		throw new Error(`Cannot read text for file type: ${fileExtension}`)
 	}

@@ -7,7 +7,7 @@
  * Now you can read a range of lines from a file
  */
 import { createReadStream } from "fs"
-import { stripBOM } from "../../utils/bomUtils"
+import stripBom from "strip-bom"
 
 const outOfRangeError = (filepath: string, n: number) => {
 	return new RangeError(`Line with index ${n} does not exist in '${filepath}'. Note that line indexing is zero-based`)
@@ -70,7 +70,7 @@ export function readLines(filepath: string, endLine?: number, startLine?: number
 
 			// Strip BOM from the first chunk if present
 			if (isFirstChunk) {
-				chunkStr = stripBOM(chunkStr)
+				chunkStr = stripBom(chunkStr)
 				isFirstChunk = false
 			}
 
