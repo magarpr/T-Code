@@ -13,7 +13,7 @@ import {
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { XmlMatcher } from "../../utils/xml-matcher"
-import { extractApiVersionFromUrl, isAzureOpenAiUrl, removeApiVersionFromUrl } from "../../utils/azure-url-parser"
+import { extractApiVersionFromUrl } from "../../utils/azure-url-parser"
 
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
@@ -46,12 +46,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		let effectiveApiVersion = this.options.azureApiVersion
 		let baseURL = originalBaseURL
 
-		if (isAzureOpenAi && !effectiveApiVersion) {
+		// Extract version for both Azure OpenAI and Azure AI Inference
+		if ((isAzureOpenAi || isAzureAiInference) && !effectiveApiVersion) {
 			const extractedVersion = extractApiVersionFromUrl(originalBaseURL)
 			if (extractedVersion) {
 				effectiveApiVersion = extractedVersion
-				// For AzureOpenAI client, remove api-version from baseURL since it's passed separately
-				baseURL = removeApiVersionFromUrl(originalBaseURL)
 			}
 		}
 
@@ -72,7 +71,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// Azure API shape slightly differs from the core API shape:
 			// https://github.com/openai/openai-node?tab=readme-ov-file#microsoft-azure-openai
 			this.client = new AzureOpenAI({
-				baseURL,
+				baseURL: originalBaseURL, // Use original URL to maintain exact same behavior
 				apiKey,
 				apiVersion: effectiveApiVersion || azureOpenAiDefaultApiVersion,
 				defaultHeaders: headers,
