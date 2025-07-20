@@ -22,6 +22,7 @@ import { Package } from "./shared/package"
 import { formatLanguage } from "./shared/language"
 import { ContextProxy } from "./core/config/ContextProxy"
 import { ClineProvider } from "./core/webview/ClineProvider"
+import { WebPreviewProvider } from "./core/webview/WebPreviewProvider"
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
@@ -121,6 +122,15 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
+	// Register the Web Preview Provider
+	const webPreviewProvider = new WebPreviewProvider(context)
+	webPreviewProvider.setClineProvider(provider)
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(WebPreviewProvider.viewId, webPreviewProvider, {
+			webviewOptions: { retainContextWhenHidden: true },
+		}),
+	)
+
 	// Auto-import configuration if specified in settings
 	try {
 		await autoImportSettings(outputChannel, {
@@ -135,6 +145,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	registerCommands({ context, outputChannel, provider })
+
+	// Set the web preview provider in registerCommands
+	const { setWebPreviewProvider } = await import("./activate/registerCommands")
+	setWebPreviewProvider(webPreviewProvider)
 
 	/**
 	 * We use the text document content provider API to show the left side for diff

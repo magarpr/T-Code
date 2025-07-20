@@ -107,6 +107,7 @@ export interface ExtensionMessage {
 		| "codeIndexSecretStatus"
 		| "showDeleteMessageDialog"
 		| "showEditMessageDialog"
+		| "webPreviewElementSelected"
 	text?: string
 	payload?: any // Add a generic payload for now, can refine later
 	action?:
@@ -161,6 +162,7 @@ export interface ExtensionMessage {
 	settings?: any
 	messageTs?: number
 	context?: string
+	elementContext?: string
 }
 
 export type ExtensionState = Pick<
@@ -302,6 +304,7 @@ export interface ClineSayTool {
 		| "finishTask"
 		| "searchAndReplace"
 		| "insertContent"
+		| "web_preview"
 	path?: string
 	diff?: string
 	content?: string
@@ -338,6 +341,8 @@ export interface ClineSayTool {
 		}>
 	}>
 	question?: string
+	action?: string
+	url?: string
 }
 
 // Must keep in sync with system prompt.

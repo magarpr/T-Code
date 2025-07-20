@@ -24,6 +24,7 @@ import { askFollowupQuestionTool } from "../tools/askFollowupQuestionTool"
 import { switchModeTool } from "../tools/switchModeTool"
 import { attemptCompletionTool } from "../tools/attemptCompletionTool"
 import { newTaskTool } from "../tools/newTaskTool"
+import { webPreviewTool } from "../tools/webPreviewTool"
 
 import { checkpointSave } from "../checkpoints"
 import { updateTodoListTool } from "../tools/updateTodoListTool"
@@ -214,6 +215,8 @@ export async function presentAssistantMessage(cline: Task) {
 						const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
+					case "web_preview":
+						return `[${block.name} for '${block.params.action}'${block.params.url ? ` - ${block.params.url}` : ""}]`
 				}
 			}
 
@@ -521,6 +524,9 @@ export async function presentAssistantMessage(cline: Task) {
 						toolDescription,
 						askFinishSubTaskApproval,
 					)
+					break
+				case "web_preview":
+					await webPreviewTool(cline, block, askApproval, handleError, pushToolResult)
 					break
 			}
 

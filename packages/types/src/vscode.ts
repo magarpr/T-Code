@@ -53,6 +53,8 @@ export const commandIds = [
 	"focusInput",
 	"acceptInput",
 	"focusPanel",
+	"openWebPreview",
+	"getSelectedElement",
 ] as const
 
 export type CommandId = (typeof commandIds)[number]

@@ -66,6 +66,12 @@
 					"type": "webview",
 					"id": "roo-cline.SidebarProvider",
 					"name": "%views.sidebar.name%"
+				},
+				{
+					"type": "webview",
+					"id": "roo-code.webPreview",
+					"name": "Web Preview",
+					"visibility": "collapsed"
 				}
 			]
 		},
@@ -173,6 +179,16 @@
 			{
 				"command": "roo-cline.acceptInput",
 				"title": "%command.acceptInput.title%",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "roo-cline.openWebPreview",
+				"title": "Open Web Preview",
+				"category": "%configuration.title%"
+			},
+			{
+				"command": "roo-cline.getSelectedElement",
+				"title": "Get Selected Element",
 				"category": "%configuration.title%"
 			}
 		],

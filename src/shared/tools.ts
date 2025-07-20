@@ -190,6 +190,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	search_and_replace: "search and replace",
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
+	web_preview: "web preview",
 } as const
 
 // Define available tool groups.

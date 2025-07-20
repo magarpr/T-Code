@@ -198,6 +198,11 @@ export interface WebviewMessage {
 		| "checkRulesDirectoryResult"
 		| "saveCodeIndexSettingsAtomic"
 		| "requestCodeIndexSecretStatus"
+		| "elementSelected"
+		| "navigateToUrl"
+		| "setViewportSize"
+		| "setDeviceMode"
+		| "refreshPreview"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
@@ -260,6 +265,11 @@ export interface WebviewMessage {
 		codebaseIndexGeminiApiKey?: string
 		codebaseIndexMistralApiKey?: string
 	}
+	// Web preview specific fields
+	elementContext?: any
+	width?: number
+	height?: number
+	deviceMode?: string
 }
 
 export const checkoutDiffPayloadSchema = z.object({

@@ -7,6 +7,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { Package } from "../shared/package"
 import { getCommand } from "../utils/commands"
 import { ClineProvider } from "../core/webview/ClineProvider"
+import { WebPreviewProvider } from "../core/webview/WebPreviewProvider"
 import { ContextProxy } from "../core/config/ContextProxy"
 import { focusPanel } from "../utils/focusPanel"
 
@@ -32,6 +33,7 @@ export function getVisibleProviderOrLog(outputChannel: vscode.OutputChannel): Cl
 // Store panel references in both modes
 let sidebarPanel: vscode.WebviewView | undefined = undefined
 let tabPanel: vscode.WebviewPanel | undefined = undefined
+let webPreviewProvider: WebPreviewProvider | undefined = undefined
 
 /**
  * Get the currently active panel
@@ -55,6 +57,10 @@ export function setPanel(
 		tabPanel = newPanel as vscode.WebviewPanel
 		sidebarPanel = undefined
 	}
+}
+
+export function setWebPreviewProvider(provider: WebPreviewProvider) {
+	webPreviewProvider = provider
 }
 
 export type RegisterCommandOptions = {
@@ -217,6 +223,27 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 		}
 
 		visibleProvider.postMessageToWebview({ type: "acceptInput" })
+	},
+	openWebPreview: async (url?: string) => {
+		if (!webPreviewProvider) {
+			outputChannel.appendLine("Web Preview Provider not initialized")
+			return
+		}
+
+		if (url) {
+			await webPreviewProvider.openUrl(url)
+		} else {
+			// Show the web preview panel without navigating
+			await vscode.commands.executeCommand("roo-code.webPreview.focus")
+		}
+	},
+	getSelectedElement: async () => {
+		if (!webPreviewProvider) {
+			outputChannel.appendLine("Web Preview Provider not initialized")
+			return null
+		}
+
+		return webPreviewProvider.getSelectedElementContext()
 	},
 })
 
