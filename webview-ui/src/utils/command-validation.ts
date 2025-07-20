@@ -83,8 +83,22 @@ export function parseCommand(command: string): string[] {
 		return `__REDIR_${redirections.length - 1}__`
 	})
 
-	// Handle array indexing expressions: ${array[...]} pattern and partial expressions
-	processedCommand = processedCommand.replace(/\$\{[^}]*\[[^\]]*(\]([^}]*\})?)?/g, (match) => {
+	// Handle BASH_REMATCH specifically first to avoid shell-quote parsing issues
+	// Match ${BASH_REMATCH[n]} pattern
+	processedCommand = processedCommand.replace(/\$\{BASH_REMATCH\[[^\]]*\]\}/g, (match) => {
+		arrayIndexing.push(match)
+		return `__ARRAY_${arrayIndexing.length - 1}__`
+	})
+
+	// Also handle BASH_REMATCH without braces: $BASH_REMATCH[n]
+	processedCommand = processedCommand.replace(/\$BASH_REMATCH\[[^\]]*\]/g, (match) => {
+		arrayIndexing.push(match)
+		return `__ARRAY_${arrayIndexing.length - 1}__`
+	})
+
+	// Handle other array indexing expressions: ${array[...]} pattern and partial expressions
+	// This handles general array syntax but excludes BASH_REMATCH which was already handled
+	processedCommand = processedCommand.replace(/\$\{(?!BASH_REMATCH)[^}]*\[[^\]]*(\]([^}]*\})?)?/g, (match) => {
 		arrayIndexing.push(match)
 		return `__ARRAY_${arrayIndexing.length - 1}__`
 	})

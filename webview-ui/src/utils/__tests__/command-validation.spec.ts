@@ -276,6 +276,41 @@ done`
 				parseCommand(problematicPart)
 			}).not.toThrow("Bad substitution")
 		})
+
+		it("should not throw an error when parsing commands with BASH_REMATCH array syntax", () => {
+			// This test reproduces the bug reported in issue #5978
+			const commandWithBashRematch = 'repo="${BASH_REMATCH[1]}"'
+
+			expect(() => {
+				parseCommand(commandWithBashRematch)
+			}).not.toThrow("Bad substitution")
+		})
+
+		it("should not throw an error when parsing the full gh alias command from issue #5978", () => {
+			// This is the exact command from the issue that causes the crash
+			// Using a regular string to avoid template literal evaluation issues
+			const ghAliasCommand =
+				"gh alias set pr-reviews --clobber '!f() { \n" +
+				'  url="$1"\n' +
+				'  if [[ "$url" =~ github\\.com/([^/]+/[^/]+)/pull/([0-9]+) ]]; then\n' +
+				'    repo="${BASH_REMATCH[1]}"\n' +
+				'    pr="${BASH_REMATCH[2]}"\n' +
+				'    echo "=== Review Comments for $repo PR #$pr ==="\n' +
+				'    gh api "repos/$repo/pulls/$pr/reviews" --jq ".[] | {user: .user.login, state: .state, body: .body, submitted_at: .submitted_at}"\n' +
+				"    echo\n" +
+				'    echo "=== Line Comments ==="\n' +
+				'    gh api "repos/$repo/pulls/$pr/comments" --jq ".[] | {user: .user.login, body: .body, path: .path, line: .line, created_at: .created_at}"\n' +
+				"  else\n" +
+				'    echo "Error: Please provide a valid GitHub PR URL"\n' +
+				'    echo "Example: gh pr-reviews https://github.com/owner/repo/pull/123"\n' +
+				'    echo "Received: $url"\n' +
+				"  fi\n" +
+				"}; f'"
+
+			expect(() => {
+				parseCommand(ghAliasCommand)
+			}).not.toThrow()
+		})
 	})
 
 	describe("isAutoApprovedCommand (legacy behavior)", () => {
