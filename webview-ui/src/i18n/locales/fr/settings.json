@@ -31,7 +31,8 @@
 		"prompts": "Invites",
 		"experimental": "Expérimental",
 		"language": "Langue",
-		"about": "À propos de Roo Code"
+		"about": "À propos de Roo Code",
+		"tools": "Outils"
 	},
 	"prompts": {
 		"description": "Configurez les invites de support utilisées pour les actions rapides comme l'amélioration des invites, l'explication du code et la résolution des problèmes. Ces invites aident Roo à fournir une meilleure assistance pour les tâches de développement courantes."
@@ -718,5 +719,9 @@
 		"useCustomArn": "Utiliser un ARN personnalisé..."
 	},
 	"includeMaxOutputTokens": "Inclure les tokens de sortie maximum",
-	"includeMaxOutputTokensDescription": "Envoyer le paramètre de tokens de sortie maximum dans les requêtes API. Certains fournisseurs peuvent ne pas supporter cela."
+	"includeMaxOutputTokensDescription": "Envoyer le paramètre de tokens de sortie maximum dans les requêtes API. Certains fournisseurs peuvent ne pas supporter cela.",
+	"tools": {
+		"description": "Désactivez des outils spécifiques pour réduire l'utilisation de tokens. Les outils désactivés ne seront pas inclus dans le prompt système.",
+		"note": "Remarque : Certains outils sont toujours disponibles et ne peuvent pas être désactivés (poser des questions, terminer des tâches, changer de mode, créer une nouvelle tâche, mettre à jour la liste de tâches)."
+	}
 }
