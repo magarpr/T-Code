@@ -22,7 +22,7 @@ customModes:
     groups:
       - read
       - - edit
-        - fileRegex: (\.roomodes$|\.roo/.*\.xml$|\.yaml$)
+        - fileRegex: (\.roomodes$|.*\.xml$|.*\.yaml$)
           description: Mode configuration files and XML instructions
       - command
       - mcp

@@ -6,6 +6,31 @@
 
   <detailed_steps>
     <step number="1">
+      <title>Choose Mode Scope</title>
+      <description>
+        Determine whether the mode should be global (available in all projects) or local (specific to current project)
+      </description>
+      <actions>
+        <action>Ask user to choose between global and local scope</action>
+        <action>Store the choice to determine file paths throughout the workflow</action>
+      </actions>
+      <example>
+        <ask_followup_question>
+          <question>Should this be a global mode (available in all projects) or a local mode (only for this project)?</question>
+          <follow_up>
+            <suggest>Global mode - available in all projects</suggest>
+            <suggest>Local mode - only for this project</suggest>
+          </follow_up>
+        </ask_followup_question>
+      </example>
+      <important_note>
+        The user's choice here determines where all files will be written:
+        - Global: Uses the system's global settings directory
+        - Local: Uses the current project's .roomodes and .roo/ directories
+      </important_note>
+    </step>
+
+    <step number="2">
       <title>Gather Requirements</title>
       <description>
         Understand what the user wants the mode to accomplish
@@ -29,7 +54,7 @@
       </example>
     </step>
 
-    <step number="2">
+    <step number="3">
       <title>Design Mode Configuration</title>
       <description>
         Create the mode definition with all required fields
@@ -46,7 +71,7 @@
         <field name="roleDefinition">
           <description>Detailed description of the mode's role and expertise</description>
           <best_practice>
-            Start with "You are Roo Code, a [specialist type]..."
+            Start with "You are Roo, a [specialist type]..."
             List specific areas of expertise
             Mention key technologies or methodologies
           </best_practice>
@@ -69,13 +94,36 @@
         </field>
       </recommended_fields>
       <important_note>
-        Do not include customInstructions in the .roomodes configuration.
+        Do not include customInstructions in the mode configuration.
         All detailed instructions should be placed in XML files within
-        the .roo/rules-[mode-slug]/ directory instead.
+        the appropriate rules directory instead.
       </important_note>
     </step>
 
-    <step number="3">
+    <step number="4">
+      <title>Write Mode Configuration</title>
+      <description>
+        Save the mode configuration to the appropriate location based on scope
+      </description>
+      <scope_based_paths>
+        <global_mode>
+          <description>For global modes, write to the system's custom_modes.yaml file</description>
+          <path_logic>
+            Use the SYSTEM INFORMATION context to get the Home Directory,
+            then construct the path to the global settings directory.
+            The exact path varies by OS but follows patterns like:
+            - Windows: C:\Users\[username]\AppData\Roaming\Code\User\globalStorage\rooveterinaryinc.roo-cline\settings\custom_modes.yaml
+            - macOS/Linux: ~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/custom_modes.yaml
+          </path_logic>
+        </global_mode>
+        <local_mode>
+          <description>For local modes, write to the project's .roomodes file</description>
+          <path>.roomodes</path>
+        </local_mode>
+      </scope_based_paths>
+    </step>
+
+    <step number="5">
       <title>Implement File Restrictions</title>
       <description>
         Configure appropriate file access permissions
@@ -98,11 +146,21 @@ groups:
       </guidelines>
     </step>
 
-    <step number="4">
+    <step number="6">
       <title>Create XML Instruction Files</title>
       <description>
-        Design structured instruction files in .roo/rules-[mode-slug]/
+        Design structured instruction files in the appropriate rules directory
       </description>
+      <scope_based_directories>
+        <global_mode>
+          <description>For global modes, create rules in the global .roo directory</description>
+          <path_pattern>[global-settings-dir]/.roo/rules-[mode-slug]/</path_pattern>
+        </global_mode>
+        <local_mode>
+          <description>For local modes, create rules in the project's .roo directory</description>
+          <path_pattern>.roo/rules-[mode-slug]/</path_pattern>
+        </local_mode>
+      </scope_based_directories>
       <file_structure>
         <file name="1_workflow.xml">Main workflow and step-by-step processes</file>
         <file name="2_best_practices.xml">Guidelines and conventions</file>
@@ -118,7 +176,7 @@ groups:
       </xml_best_practices>
     </step>
 
-    <step number="5">
+    <step number="7">
       <title>Test and Refine</title>
       <description>
         Verify the mode works as intended
@@ -129,14 +187,18 @@ groups:
         <item>Instructions are clear and actionable</item>
         <item>Mode integrates well with Orchestrator</item>
         <item>All examples are accurate and helpful</item>
+        <item>For global modes: Verify the mode is available in other projects</item>
       </checklist>
     </step>
   </detailed_steps>
 
   <quick_reference>
-    <command>Create mode in .roomodes for project-specific modes</command>
-    <command>Create mode in global custom_modes.yaml for system-wide modes</command>
-    <command>Use list_files to verify .roo folder structure</command>
+    <command>Always ask for scope (global/local) before creating a mode</command>
+    <command>Global modes: Write to system's custom_modes.yaml file</command>
+    <command>Local modes: Write to project's .roomodes file</command>
+    <command>Global rules: Create in [global-settings-dir]/.roo/rules-[slug]/</command>
+    <command>Local rules: Create in project's .roo/rules-[slug]/</command>
+    <command>Use list_files to verify folder structure</command>
     <command>Test file regex patterns with search_files</command>
   </quick_reference>
 </mode_creation_workflow>

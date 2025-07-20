@@ -1,0 +1,97 @@
+<global_mode_path_guidance>
+  <overview>
+    This file provides specific guidance for creating global modes that are available across all projects.
+    Global modes require special handling of file paths that vary by operating system.
+  </overview>
+
+  <path_construction>
+    <description>
+      When creating a global mode, you need to construct the correct path to the global settings directory.
+      This path varies by operating system and must be determined from the SYSTEM INFORMATION context.
+    </description>
+    
+    <steps>
+      <step number="1">
+        <title>Get System Information</title>
+        <description>
+          Check the SYSTEM INFORMATION section for:
+          - Operating System (Windows, macOS, Linux)
+          - Home Directory path
+        </description>
+      </step>
+      
+      <step number="2">
+        <title>Construct Global Settings Path</title>
+        <os_specific_patterns>
+          <windows>
+            <pattern>C:\Users\[username]\AppData\Roaming\Code\User\globalStorage\rooveterinaryinc.roo-cline\settings\</pattern>
+            <example>C:\Users\VooDoo\AppData\Roaming\Code\User\globalStorage\rooveterinaryinc.roo-cline\settings\</example>
+            <custom_modes_file>custom_modes.yaml</custom_modes_file>
+          </windows>
+          <macos>
+            <pattern>~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/</pattern>
+            <example>/Users/username/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/</example>
+            <custom_modes_file>custom_modes.yaml</custom_modes_file>
+          </macos>
+          <linux>
+            <pattern>~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/</pattern>
+            <example>/home/username/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/</example>
+            <custom_modes_file>custom_modes.yaml</custom_modes_file>
+          </linux>
+        </os_specific_patterns>
+      </step>
+      
+      <step number="3">
+        <title>Create Global Rules Directory</title>
+        <description>
+          For global modes, the rules directory follows the same pattern but in a .roo subdirectory
+        </description>
+        <pattern>[global-settings-dir]/.roo/rules-[mode-slug]/</pattern>
+        <example>
+          Windows: C:\Users\VooDoo\AppData\Roaming\Code\User\globalStorage\rooveterinaryinc.roo-cline\settings\.roo\rules-api-dev\
+          macOS/Linux: ~/.config/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/.roo/rules-api-dev/
+        </example>
+      </step>
+    </steps>
+  </path_construction>
+
+  <implementation_example>
+    <scenario>Creating a global mode called "api-dev"</scenario>
+    <workflow>
+      <action>Read SYSTEM INFORMATION to determine OS and home directory</action>
+      <action>Construct the global custom_modes.yaml path based on OS</action>
+      <action>Read existing custom_modes.yaml content (if it exists)</action>
+      <action>Add the new mode configuration to the customModes array</action>
+      <action>Write the updated content back to custom_modes.yaml</action>
+      <action>Create the global rules directory at [global-settings-dir]/.roo/rules-api-dev/</action>
+      <action>Write XML instruction files to the global rules directory</action>
+    </workflow>
+  </implementation_example>
+
+  <important_notes>
+    <note priority="high">
+      Always use absolute paths when working with global mode files.
+      The write_to_file tool will automatically create parent directories if they don't exist.
+    </note>
+    <note priority="high">
+      The Mode Writer mode now has permission to write to any .yaml or .xml file,
+      which enables it to write to the global custom_modes.yaml file.
+    </note>
+    <note priority="medium">
+      When reading the global custom_modes.yaml file, handle the case where it might not exist yet.
+      The file should be created with an empty customModes array if it doesn't exist.
+    </note>
+  </important_notes>
+
+  <testing_global_modes>
+    <description>
+      After creating a global mode, verify it works correctly
+    </description>
+    <checklist>
+      <item>The mode appears in the mode list in the current project</item>
+      <item>Switch to a different project and verify the mode appears there too</item>
+      <item>The global rules are loaded correctly from the global .roo directory</item>
+      <item>The mode's file restrictions work as expected</item>
+    </checklist>
+  </testing_global_modes>
+</global_mode_path_guidance>
