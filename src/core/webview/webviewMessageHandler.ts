@@ -2239,5 +2239,19 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "webPreviewElementSelected":
+			// Handle web preview element context
+			if (message.text) {
+				const cline = provider.getCurrentCline()
+				if (cline) {
+					// Add the element context to the current conversation
+					await provider.postMessageToWebview({
+						type: "invoke",
+						invoke: "setChatBoxMessage",
+						text: `Selected element context:\n\n${message.text}`,
+					})
+				}
+			}
+			break
 	}
 }

@@ -218,6 +218,47 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 
 		visibleProvider.postMessageToWebview({ type: "acceptInput" })
 	},
+	openWebPreview: async () => {
+		const { WebPreviewProvider } = await import("../core/webview/WebPreviewProvider")
+
+		const contextProxy = await ContextProxy.getInstance(context)
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		const webPreviewProvider = new WebPreviewProvider(context, outputChannel, contextProxy, visibleProvider)
+
+		const panel = vscode.window.createWebviewPanel(
+			WebPreviewProvider.viewId,
+			"Web Preview",
+			vscode.ViewColumn.Two,
+			{
+				enableScripts: true,
+				retainContextWhenHidden: true,
+				localResourceRoots: [context.extensionUri],
+			},
+		)
+
+		panel.iconPath = {
+			light: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "browser_light.svg"),
+			dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "browser_dark.svg"),
+		}
+
+		await webPreviewProvider.resolveWebviewView(panel)
+
+		// Handle panel disposal
+		panel.onDidDispose(
+			() => {
+				webPreviewProvider.dispose()
+			},
+			null,
+			context.subscriptions,
+		)
+
+		TelemetryService.instance.captureTitleButtonClicked("webPreview")
+	},
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {

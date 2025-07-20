@@ -1,0 +1,140 @@
+.web-preview-container {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	background-color: var(--vscode-editor-background);
+	color: var(--vscode-editor-foreground);
+}
+
+.web-preview-header {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 10px;
+	background-color: var(--vscode-editorWidget-background);
+	border-bottom: 1px solid var(--vscode-widget-border);
+}
+
+.url-bar {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.url-input {
+	flex: 1;
+}
+
+.controls {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.web-preview-content {
+	flex: 1;
+	overflow: auto;
+	padding: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--vscode-editor-background);
+}
+
+.device-frame {
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+	background-color: white;
+	border-radius: 8px;
+	overflow: hidden;
+	transition: transform 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.web-preview-header {
+		flex-direction: column;
+	}
+
+	.controls {
+		flex-wrap: wrap;
+	}
+}
+
+/* Loading state */
+.loading-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.loading-spinner {
+	width: 40px;
+	height: 40px;
+	border: 4px solid var(--vscode-progressBar-background);
+	border-top-color: var(--vscode-focusBorder);
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Element selection mode */
+.selecting-mode .device-frame {
+	cursor: crosshair;
+}
+
+.element-overlay {
+	position: absolute;
+	border: 2px solid var(--vscode-focusBorder);
+	background: rgba(0, 122, 204, 0.1);
+	pointer-events: none;
+	z-index: 9999;
+}
+
+.element-info {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	background-color: var(--vscode-editorWidget-background);
+	border: 1px solid var(--vscode-widget-border);
+	border-radius: 4px;
+	padding: 10px;
+	max-width: 300px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	z-index: 1001;
+	font-size: 12px;
+}
+
+.url-input input {
+	width: 100%;
+}
+
+.device-frame iframe {
+	width: 100%;
+	height: 100%;
+	border: none;
+}
+
+.element-info h4 {
+	margin: 0 0 5px 0;
+	color: var(--vscode-foreground);
+}
+
+.element-info pre {
+	margin: 0;
+	padding: 5px;
+	background-color: var(--vscode-editor-background);
+	border-radius: 2px;
+	overflow-x: auto;
+}

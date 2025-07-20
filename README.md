@@ -93,8 +93,26 @@ Roo Code comes with powerful [tools](https://docs.roocode.com/basic-usage/how-to
 - Execute commands in your VS Code terminal
 - Control a web browser
 - Use external tools via [MCP (Model Context Protocol)](https://docs.roocode.com/advanced-usage/mcp)
+- **Preview web applications** with integrated element selection for AI context
 
 MCP extends Roo Code's capabilities by allowing you to add unlimited custom tools. Integrate with external APIs, connect to databases, or create specialized development tools - MCP provides the framework to expand Roo Code's functionality to meet your specific needs.
+
+### Web Preview
+
+The integrated web preview feature allows you to:
+
+- **Preview web applications** directly within VS Code
+- **Select UI elements** to automatically capture their context (HTML, CSS, XPath, position)
+- **Send element context to AI** for better communication about specific UI components
+- **Test responsive designs** with device simulation (Desktop, Laptop, iPad, iPhone, etc.)
+- **Navigate seamlessly** between different pages of your application
+
+To use the web preview:
+
+1. Right-click on any HTML file and select "Open Web Preview"
+2. Or use the command palette: `Roo Code: Open Web Preview`
+3. Click "Select Element" to enable element selection mode
+4. Click on any element in the preview to send its context to the AI assistant
 
 ### Customization
 

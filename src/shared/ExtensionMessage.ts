@@ -107,6 +107,10 @@ export interface ExtensionMessage {
 		| "codeIndexSecretStatus"
 		| "showDeleteMessageDialog"
 		| "showEditMessageDialog"
+		| "webPreviewConfig"
+		| "webPreviewElementContext"
+		| "webPreviewNavigate"
+		| "webPreviewSetDevice"
 	text?: string
 	payload?: any // Add a generic payload for now, can refine later
 	action?:
@@ -161,6 +165,9 @@ export interface ExtensionMessage {
 	settings?: any
 	messageTs?: number
 	context?: string
+	config?: any
+	url?: string
+	device?: string
 }
 
 export type ExtensionState = Pick<

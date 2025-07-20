@@ -96,6 +96,10 @@ export default defineConfig(({ mode }) => {
 			reportCompressedSize: false,
 			sourcemap: true,
 			rollupOptions: {
+				input: {
+					index: resolve(__dirname, "index.html"),
+					webPreview: resolve(__dirname, "webPreview.html"),
+				},
 				output: {
 					entryFileNames: `assets/[name].js`,
 					chunkFileNames: (chunkInfo) => {
