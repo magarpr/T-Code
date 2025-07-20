@@ -61,7 +61,6 @@ export function getToolDescriptionsForMode(
 	experiments?: Record<string, boolean>,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
-	disabledTools?: string[],
 ): string {
 	const config = getModeConfig(mode, customModes)
 	const args: ToolArgs = {
@@ -110,30 +109,31 @@ export function getToolDescriptionsForMode(
 		tools.delete("codebase_search")
 	}
 
-	// Filter out disabled tools (except always-available tools)
-	if (disabledTools && disabledTools.length > 0) {
-		disabledTools.forEach((tool) => {
-			// Don't filter out always-available tools
-			if (!ALWAYS_AVAILABLE_TOOLS.includes(tool as any)) {
-				tools.delete(tool)
+	// Map tool descriptions for allowed tools
+	const toolsArray = Array.from(tools)
+	const descriptions = toolsArray
+		.map((toolName) => {
+			const descriptionFn = toolDescriptionMap[toolName]
+			if (!descriptionFn) {
+				return undefined
+			}
+
+			return {
+				name: toolName,
+				description: descriptionFn({
+					...args,
+					toolOptions: undefined, // No tool options in group-based approach
+				}),
 			}
 		})
-	}
+		.filter((item) => item && item.description)
 
-	// Map tool descriptions for allowed tools
-	const descriptions = Array.from(tools).map((toolName) => {
-		const descriptionFn = toolDescriptionMap[toolName]
-		if (!descriptionFn) {
-			return undefined
-		}
+	// Filter out disabled tools at the very end using the simplest possible implementation
+	const enabledDescriptions = descriptions
+		.filter((item) => !settings?.disabledTools?.includes(item!.name))
+		.map((item) => item!.description)
 
-		return descriptionFn({
-			...args,
-			toolOptions: undefined, // No tool options in group-based approach
-		})
-	})
-
-	return `# Tools\n\n${descriptions.filter(Boolean).join("\n\n")}`
+	return `# Tools\n\n${enabledDescriptions.join("\n\n")}`
 }
 
 // Export individual description functions for backward compatibility

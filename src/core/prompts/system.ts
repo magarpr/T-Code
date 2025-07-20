@@ -98,7 +98,6 @@ ${getToolDescriptionsForMode(
 	experiments,
 	partialReadsEnabled,
 	settings,
-	settings?.disabledTools,
 )}
 
 ${getToolUseGuidelinesSection(codeIndexManager)}

@@ -723,6 +723,27 @@
 	"tools": {
 		"description": "Disable specific tools to reduce token usage. Disabled tools won't be included in the system prompt.",
 		"note": "Note: Some tools are always available and cannot be disabled (ask questions, complete tasks, switch modes, create new task, update todo list).",
-		"alwaysAvailable": "Always available tools"
+		"alwaysAvailable": "Always available tools",
+		"names": {
+			"execute_command": "Run commands",
+			"read_file": "Read files",
+			"fetch_instructions": "Fetch instructions",
+			"write_to_file": "Write files",
+			"apply_diff": "Apply changes",
+			"search_files": "Search files",
+			"list_files": "List files",
+			"list_code_definition_names": "List definitions",
+			"browser_action": "Use a browser",
+			"use_mcp_tool": "Use MCP tools",
+			"access_mcp_resource": "Access MCP resources",
+			"ask_followup_question": "Ask questions",
+			"attempt_completion": "Complete tasks",
+			"switch_mode": "Switch modes",
+			"new_task": "Create new task",
+			"insert_content": "Insert content",
+			"search_and_replace": "Search and replace",
+			"codebase_search": "Codebase search",
+			"update_todo_list": "Update todo list"
+		}
 	}
 }
