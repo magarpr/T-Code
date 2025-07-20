@@ -13,6 +13,7 @@ type ToolSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	setCachedStateField: SetCachedStateField<"disabledTools">
 }
 
+// Import the constants from shared/tools.ts
 // Tool display names mapping
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
 	execute_command: "Run commands",
@@ -45,20 +46,30 @@ const ALWAYS_AVAILABLE_TOOLS = [
 	"update_todo_list",
 ]
 
-// Tool groups for better organization
-const TOOL_GROUPS = {
-	"File Operations": [
-		"read_file",
-		"write_to_file",
-		"search_files",
-		"list_files",
-		"list_code_definition_names",
-		"codebase_search",
-	],
-	"Code Editing": ["apply_diff", "insert_content", "search_and_replace"],
-	System: ["execute_command", "browser_action"],
-	MCP: ["use_mcp_tool", "access_mcp_resource"],
-	Other: ["fetch_instructions"],
+// Tool groups configuration
+const TOOL_GROUPS: Record<string, { tools: readonly string[] }> = {
+	read: {
+		tools: [
+			"read_file",
+			"fetch_instructions",
+			"search_files",
+			"list_files",
+			"list_code_definition_names",
+			"codebase_search",
+		],
+	},
+	edit: {
+		tools: ["apply_diff", "write_to_file", "insert_content", "search_and_replace"],
+	},
+	browser: {
+		tools: ["browser_action"],
+	},
+	command: {
+		tools: ["execute_command"],
+	},
+	mcp: {
+		tools: ["use_mcp_tool", "access_mcp_resource"],
+	},
 }
 
 export const ToolSettings = ({ disabledTools = [], setCachedStateField, ...props }: ToolSettingsProps) => {
@@ -79,12 +90,34 @@ export const ToolSettings = ({ disabledTools = [], setCachedStateField, ...props
 
 	const isToolEnabled = (toolName: string) => !disabledTools.includes(toolName)
 
-	const toolGroups = useMemo(() => {
-		return Object.entries(TOOL_GROUPS).map(([groupName, tools]) => ({
-			name: groupName,
-			tools: tools.filter((tool) => !ALWAYS_AVAILABLE_TOOLS.includes(tool)),
-		}))
+	// Get all available tools dynamically from the global tools configuration
+	const allTools = useMemo(() => {
+		const tools = new Set<string>()
+
+		// Add all tools from tool groups
+		Object.values(TOOL_GROUPS).forEach((group) => {
+			group.tools.forEach((tool) => tools.add(tool))
+		})
+
+		// Add always available tools
+		ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
+
+		// Convert to array and sort alphabetically
+		return Array.from(tools).sort((a, b) => {
+			const nameA = TOOL_DISPLAY_NAMES[a as keyof typeof TOOL_DISPLAY_NAMES] || a
+			const nameB = TOOL_DISPLAY_NAMES[b as keyof typeof TOOL_DISPLAY_NAMES] || b
+			return nameA.localeCompare(nameB)
+		})
 	}, [])
+
+	// Separate tools into disableable and always-available
+	const disableableTools = useMemo(() => {
+		return allTools.filter((tool) => !ALWAYS_AVAILABLE_TOOLS.includes(tool as any))
+	}, [allTools])
+
+	const alwaysAvailableTools = useMemo(() => {
+		return allTools.filter((tool) => ALWAYS_AVAILABLE_TOOLS.includes(tool as any))
+	}, [allTools])
 
 	return (
 		<div {...props}>
@@ -98,21 +131,35 @@ export const ToolSettings = ({ disabledTools = [], setCachedStateField, ...props
 			<Section>
 				<div className="text-vscode-descriptionForeground text-sm mb-3">{t("settings:tools.description")}</div>
 
-				<div className="space-y-4">
-					{toolGroups.map(({ name, tools }) => (
-						<div key={name}>
-							<h4 className="font-medium mb-2">{name}</h4>
-							<div className="space-y-1 pl-3">
-								{tools.map((tool) => (
-									<VSCodeCheckbox
-										key={tool}
-										checked={isToolEnabled(tool)}
-										onChange={(e: any) => handleToolToggle(tool, e.target.checked)}>
-										<span className="text-sm">{TOOL_DISPLAY_NAMES[tool] || tool}</span>
-									</VSCodeCheckbox>
-								))}
+				<div className="space-y-2">
+					{/* Disableable tools */}
+					{disableableTools.map((tool) => (
+						<VSCodeCheckbox
+							key={tool}
+							checked={isToolEnabled(tool)}
+							onChange={(e: any) => handleToolToggle(tool, e.target.checked)}>
+							<span className="text-sm">
+								{TOOL_DISPLAY_NAMES[tool as keyof typeof TOOL_DISPLAY_NAMES] || tool}
+							</span>
+						</VSCodeCheckbox>
+					))}
+
+					{/* Separator */}
+					{alwaysAvailableTools.length > 0 && (
+						<div className="border-t border-vscode-panel-border my-3 pt-3">
+							<div className="text-vscode-descriptionForeground text-xs mb-2">
+								{t("settings:tools.alwaysAvailable")}
 							</div>
 						</div>
+					)}
+
+					{/* Always available tools (disabled checkboxes) */}
+					{alwaysAvailableTools.map((tool) => (
+						<VSCodeCheckbox key={tool} checked={true} disabled={true}>
+							<span className="text-sm opacity-75">
+								{TOOL_DISPLAY_NAMES[tool as keyof typeof TOOL_DISPLAY_NAMES] || tool}
+							</span>
+						</VSCodeCheckbox>
 					))}
 				</div>
 
