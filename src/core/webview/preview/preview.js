@@ -113,19 +113,35 @@
 	}
 
 	function loadUrl(url) {
-		// Ensure URL has protocol
-		if (!url.startsWith("http://") && !url.startsWith("https://")) {
-			url = "http://" + url
-		}
-
+		// Validate and sanitize URL
 		try {
-			iframe.src = url
-			document.getElementById("urlInput").value = url
+			// Ensure URL has protocol
+			if (!url.startsWith("http://") && !url.startsWith("https://")) {
+				url = "http://" + url
+			}
+
+			// Parse and validate URL
+			const parsedUrl = new URL(url)
+
+			// Only allow http and https protocols
+			if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+				throw new Error("Only HTTP and HTTPS protocols are allowed")
+			}
+
+			// Create a safe URL string
+			const safeUrl = parsedUrl.toString()
+
+			// Set iframe source using setAttribute for better security
+			iframe.setAttribute("src", safeUrl)
+
+			// Update input field with the safe URL
+			const urlInput = document.getElementById("urlInput")
+			urlInput.value = safeUrl
 
 			// Notify extension
 			vscode.postMessage({
 				type: "urlChanged",
-				url: url,
+				url: safeUrl,
 			})
 
 			// Setup iframe load handler
@@ -137,7 +153,7 @@
 		} catch (error) {
 			vscode.postMessage({
 				type: "error",
-				error: error.message,
+				error: "Invalid URL: " + error.message,
 			})
 		}
 	}
