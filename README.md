@@ -92,6 +92,7 @@ Roo Code comes with powerful [tools](https://docs.roocode.com/basic-usage/how-to
 - Read and write files in your project
 - Execute commands in your VS Code terminal
 - Control a web browser
+- **Preview web applications** and select UI elements for AI context
 - Use external tools via [MCP (Model Context Protocol)](https://docs.roocode.com/advanced-usage/mcp)
 
 MCP extends Roo Code's capabilities by allowing you to add unlimited custom tools. Integrate with external APIs, connect to databases, or create specialized development tools - MCP provides the framework to expand Roo Code's functionality to meet your specific needs.

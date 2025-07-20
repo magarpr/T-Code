@@ -758,6 +758,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						setIsCondensing(false)
 					}
 					break
+				case "webPreviewElementSelected":
+					// Handle web preview element selection
+					if (message.text) {
+						// Add the element context to the chat input
+						handleSetChatBoxMessage(message.text, [])
+					}
+					break
 			}
 			// textAreaRef.current is not explicitly required here since React
 			// guarantees that ref will be stable across re-renders, and we're

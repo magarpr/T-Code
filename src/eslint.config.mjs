@@ -30,6 +30,12 @@ export default [
 		},
 	},
 	{
+		files: ["core/webview/preview/preview.js"],
+		rules: {
+			"no-undef": "off",
+		},
+	},
+	{
 		ignores: ["webview-ui", "out"],
 	},
 ]

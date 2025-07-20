@@ -66,6 +66,12 @@
 					"type": "webview",
 					"id": "roo-cline.SidebarProvider",
 					"name": "%views.sidebar.name%"
+				},
+				{
+					"type": "webview",
+					"id": "roo-cline.WebPreviewProvider",
+					"name": "Web Preview",
+					"visibility": "collapsed"
 				}
 			]
 		},
@@ -174,6 +180,12 @@
 				"command": "roo-cline.acceptInput",
 				"title": "%command.acceptInput.title%",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "roo-cline.openWebPreview",
+				"title": "Open Web Preview",
+				"category": "%configuration.title%",
+				"icon": "$(globe)"
 			}
 		],
 		"menus": {

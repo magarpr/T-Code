@@ -22,6 +22,7 @@ import { Package } from "./shared/package"
 import { formatLanguage } from "./shared/language"
 import { ContextProxy } from "./core/config/ContextProxy"
 import { ClineProvider } from "./core/webview/ClineProvider"
+import { WebPreviewProvider } from "./core/webview/WebPreviewProvider"
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
@@ -117,6 +118,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ClineProvider.sideBarId, provider, {
+			webviewOptions: { retainContextWhenHidden: true },
+		}),
+	)
+
+	// Register the web preview provider
+	const webPreviewProvider = new WebPreviewProvider(context, outputChannel)
+	webPreviewProvider.setClineProvider(provider)
+
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(WebPreviewProvider.viewId, webPreviewProvider, {
 			webviewOptions: { retainContextWhenHidden: true },
 		}),
 	)

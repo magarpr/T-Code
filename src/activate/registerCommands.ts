@@ -218,6 +218,10 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 
 		visibleProvider.postMessageToWebview({ type: "acceptInput" })
 	},
+	openWebPreview: () => {
+		// Focus on the web preview panel
+		vscode.commands.executeCommand("roo-cline.WebPreviewProvider.focus")
+	},
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
