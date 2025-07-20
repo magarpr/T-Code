@@ -61,6 +61,7 @@ export function getToolDescriptionsForMode(
 	experiments?: Record<string, boolean>,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
+	disabledTools?: string[],
 ): string {
 	const config = getModeConfig(mode, customModes)
 	const args: ToolArgs = {
@@ -107,6 +108,16 @@ export function getToolDescriptionsForMode(
 		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
 	) {
 		tools.delete("codebase_search")
+	}
+
+	// Filter out disabled tools (except always-available tools)
+	if (disabledTools && disabledTools.length > 0) {
+		disabledTools.forEach((tool) => {
+			// Don't filter out always-available tools
+			if (!ALWAYS_AVAILABLE_TOOLS.includes(tool as any)) {
+				tools.delete(tool)
+			}
+		})
 	}
 
 	// Map tool descriptions for allowed tools

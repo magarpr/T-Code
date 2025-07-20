@@ -1440,6 +1440,7 @@ export class ClineProvider
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			diagnosticsEnabled,
+			disabledTools,
 		} = await this.getState()
 
 		const telemetryKey = process.env.POSTHOG_API_KEY
@@ -1561,6 +1562,7 @@ export class ClineProvider
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: diagnosticsEnabled ?? true,
+			disabledTools: disabledTools ?? [],
 		}
 	}
 
@@ -1726,6 +1728,7 @@ export class ClineProvider
 				codebaseIndexSearchMinScore: stateValues.codebaseIndexConfig?.codebaseIndexSearchMinScore,
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
+			disabledTools: stateValues.disabledTools ?? [],
 		}
 	}
 

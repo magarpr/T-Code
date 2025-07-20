@@ -72,6 +72,8 @@ export const globalSettingsSchema = z.object({
 	autoCondenseContextPercent: z.number().optional(),
 	maxConcurrentFileReads: z.number().optional(),
 
+	disabledTools: z.array(z.string()).optional(),
+
 	browserToolEnabled: z.boolean().optional(),
 	browserViewportSize: z.string().optional(),
 	screenshotQuality: z.number().optional(),

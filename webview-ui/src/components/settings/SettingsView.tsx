@@ -23,6 +23,7 @@ import {
 	Info,
 	MessageSquare,
 	LucideIcon,
+	Wrench,
 } from "lucide-react"
 
 import type { ProviderSettings, ExperimentId } from "@roo-code/types"
@@ -65,6 +66,7 @@ import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
+import { ToolSettings } from "./ToolSettings"
 import { cn } from "@/lib/utils"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
@@ -87,6 +89,7 @@ const sectionNames = [
 	"contextManagement",
 	"terminal",
 	"prompts",
+	"tools",
 	"experimental",
 	"language",
 	"about",
@@ -177,6 +180,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
+		disabledTools,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -333,6 +337,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
+			vscode.postMessage({ type: "disabledTools", values: disabledTools })
 			setChangeDetected(false)
 		}
 	}
@@ -410,6 +415,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
 			{ id: "prompts", icon: MessageSquare },
+			{ id: "tools", icon: Wrench },
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
 			{ id: "about", icon: Info },
@@ -696,6 +702,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							customSupportPrompts={customSupportPrompts || {}}
 							setCustomSupportPrompts={setCustomSupportPromptsField}
 						/>
+					)}
+
+					{/* Tools Section */}
+					{activeTab === "tools" && (
+						<ToolSettings disabledTools={disabledTools} setCachedStateField={setCachedStateField} />
 					)}
 
 					{/* Experimental Section */}

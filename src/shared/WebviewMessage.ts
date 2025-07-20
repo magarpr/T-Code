@@ -153,6 +153,7 @@ export interface WebviewMessage {
 		| "humanRelayResponse"
 		| "humanRelayCancel"
 		| "browserToolEnabled"
+		| "disabledTools"
 		| "codebaseIndexEnabled"
 		| "telemetrySetting"
 		| "showRooIgnoredFiles"
@@ -241,6 +242,7 @@ export interface WebviewMessage {
 	visibility?: ShareVisibility // For share visibility
 	hasContent?: boolean // For checkRulesDirectoryResult
 	checkOnly?: boolean // For deleteCustomMode check
+	disabledTools?: string[] // For disabling specific tools
 	codeIndexSettings?: {
 		// Global state settings
 		codebaseIndexEnabled: boolean
