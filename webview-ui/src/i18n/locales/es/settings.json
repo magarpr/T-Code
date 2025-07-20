@@ -31,7 +31,8 @@
 		"prompts": "Indicaciones",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Acerca de Roo Code"
+		"about": "Acerca de Roo Code",
+		"tools": "Tools"
 	},
 	"prompts": {
 		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Roo a brindar mejor asistencia para tareas comunes de desarrollo."
@@ -718,5 +719,10 @@
 		"useCustomArn": "Usar ARN personalizado..."
 	},
 	"includeMaxOutputTokens": "Incluir tokens máximos de salida",
-	"includeMaxOutputTokensDescription": "Enviar parámetro de tokens máximos de salida en solicitudes API. Algunos proveedores pueden no soportar esto."
+	"includeMaxOutputTokensDescription": "Enviar parámetro de tokens máximos de salida en solicitudes API. Algunos proveedores pueden no soportar esto.",
+	"tools": {
+		"description": "Disable specific tools to reduce token usage. Disabled tools won't be included in the system prompt.",
+		"note": "Note: Some tools are always available and cannot be disabled (ask questions, complete tasks, switch modes, create new task, update todo list).",
+		"alwaysAvailable": "Always available tools"
+	}
 }

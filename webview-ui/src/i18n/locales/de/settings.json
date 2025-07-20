@@ -31,7 +31,8 @@
 		"prompts": "Eingabeaufforderungen",
 		"experimental": "Experimentell",
 		"language": "Sprache",
-		"about": "Über Roo Code"
+		"about": "Über Roo Code",
+		"tools": "Tools"
 	},
 	"prompts": {
 		"description": "Konfiguriere Support-Prompts, die für schnelle Aktionen wie das Verbessern von Prompts, das Erklären von Code und das Beheben von Problemen verwendet werden. Diese Prompts helfen Roo dabei, bessere Unterstützung für häufige Entwicklungsaufgaben zu bieten."
@@ -718,5 +719,10 @@
 		"useCustomArn": "Benutzerdefinierte ARN verwenden..."
 	},
 	"includeMaxOutputTokens": "Maximale Ausgabe-Tokens einbeziehen",
-	"includeMaxOutputTokensDescription": "Senden Sie den Parameter für maximale Ausgabe-Tokens in API-Anfragen. Einige Anbieter unterstützen dies möglicherweise nicht."
+	"includeMaxOutputTokensDescription": "Senden Sie den Parameter für maximale Ausgabe-Tokens in API-Anfragen. Einige Anbieter unterstützen dies möglicherweise nicht.",
+	"tools": {
+		"description": "Disable specific tools to reduce token usage. Disabled tools won't be included in the system prompt.",
+		"note": "Note: Some tools are always available and cannot be disabled (ask questions, complete tasks, switch modes, create new task, update todo list).",
+		"alwaysAvailable": "Always available tools"
+	}
 }

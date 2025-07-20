@@ -31,7 +31,8 @@
 		"prompts": "Podpowiedzi",
 		"experimental": "Eksperymentalne",
 		"language": "Język",
-		"about": "O Roo Code"
+		"about": "O Roo Code",
+		"tools": "Tools"
 	},
 	"prompts": {
 		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Roo zapewnić lepsze wsparcie dla typowych zadań programistycznych."
@@ -718,5 +719,10 @@
 		"useCustomArn": "Użyj niestandardowego ARN..."
 	},
 	"includeMaxOutputTokens": "Uwzględnij maksymalne tokeny wyjściowe",
-	"includeMaxOutputTokensDescription": "Wyślij parametr maksymalnych tokenów wyjściowych w żądaniach API. Niektórzy dostawcy mogą tego nie obsługiwać."
+	"includeMaxOutputTokensDescription": "Wyślij parametr maksymalnych tokenów wyjściowych w żądaniach API. Niektórzy dostawcy mogą tego nie obsługiwać.",
+	"tools": {
+		"description": "Disable specific tools to reduce token usage. Disabled tools won't be included in the system prompt.",
+		"note": "Note: Some tools are always available and cannot be disabled (ask questions, complete tasks, switch modes, create new task, update todo list).",
+		"alwaysAvailable": "Always available tools"
+	}
 }
