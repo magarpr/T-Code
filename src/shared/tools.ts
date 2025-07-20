@@ -164,6 +164,11 @@ export interface SearchAndReplaceToolUse extends ToolUse {
 		Partial<Pick<Record<ToolParamName, string>, "use_regex" | "ignore_case" | "start_line" | "end_line">>
 }
 
+export interface AiDeepResearchToolUse extends ToolUse {
+	name: "ai_deep_research"
+	params: Partial<Pick<Record<ToolParamName, string>, "query">>
+}
+
 // Define tool group configuration
 export type ToolGroupConfig = {
 	tools: readonly string[]
@@ -190,6 +195,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	search_and_replace: "search and replace",
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
+	ai_deep_research: "ai deep research",
 } as const
 
 // Define available tool groups.
@@ -202,6 +208,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 			"list_files",
 			"list_code_definition_names",
 			"codebase_search",
+			"ai_deep_research",
 		],
 	},
 	edit: {

@@ -32,6 +32,7 @@ import { formatResponse } from "../prompts/responses"
 import { validateToolUse } from "../tools/validateToolUse"
 import { Task } from "../task/Task"
 import { codebaseSearchTool } from "../tools/codebaseSearchTool"
+import { aiDeepResearchTool } from "../tools/aiDeepResearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
 
@@ -204,7 +205,9 @@ export async function presentAssistantMessage(cline: Task) {
 						return `[${block.name}]`
 					case "switch_mode":
 						return `[${block.name} to '${block.params.mode_slug}'${block.params.reason ? ` because: ${block.params.reason}` : ""}]`
-					case "codebase_search": // Add case for the new tool
+					case "codebase_search":
+						return `[${block.name} for '${block.params.query}']`
+					case "ai_deep_research":
 						return `[${block.name} for '${block.params.query}']`
 					case "update_todo_list":
 						return `[${block.name}]`
@@ -461,6 +464,9 @@ export async function presentAssistantMessage(cline: Task) {
 					break
 				case "codebase_search":
 					await codebaseSearchTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "ai_deep_research":
+					await aiDeepResearchTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "list_code_definition_names":
 					await listCodeDefinitionNamesTool(

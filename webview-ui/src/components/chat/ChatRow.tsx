@@ -46,6 +46,7 @@ import { CommandExecutionError } from "./CommandExecutionError"
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
+import AIDeepResearchBlock from "./AIDeepResearchBlock"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -493,6 +494,15 @@ export const ChatRowContent = ({
 					</div>
 				)
 			}
+			case "aiDeepResearch":
+				return (
+					<AIDeepResearchBlock
+						query={tool.query || ""}
+						status={tool.status}
+						content={tool.content}
+						result={tool.content}
+					/>
+				)
 			case "updateTodoList" as any: {
 				const todos = (tool as any).todos || []
 				return (
@@ -1201,6 +1211,35 @@ export const ChatRowContent = ({
 					const { results = [] } = parsed?.content || {}
 
 					return <CodebaseSearchResultsDisplay results={results} />
+				case "ai_deep_research_result":
+					let aiParsed: {
+						tool: string
+						query: string
+						status?: "thinking" | "searching" | "reading" | "analyzing" | "completed"
+						content?: string
+					} | null = null
+
+					try {
+						if (message.text) {
+							aiParsed = JSON.parse(message.text)
+						}
+					} catch (error) {
+						console.error("Failed to parse ai_deep_research_result content:", error)
+					}
+
+					if (!aiParsed || aiParsed.tool !== "aiDeepResearch") {
+						console.error("Invalid ai_deep_research_result content structure:", aiParsed)
+						return <div>Error displaying AI Deep Research results.</div>
+					}
+
+					return (
+						<AIDeepResearchBlock
+							query={aiParsed.query}
+							status={aiParsed.status}
+							content={aiParsed.content}
+							result={aiParsed.status === "completed" ? aiParsed.content : undefined}
+						/>
+					)
 				case "user_edit_todos":
 					return <UpdateTodoListToolBlock userEdited onChange={() => {}} />
 				default:

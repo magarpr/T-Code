@@ -302,6 +302,7 @@ export interface ClineSayTool {
 		| "finishTask"
 		| "searchAndReplace"
 		| "insertContent"
+		| "aiDeepResearch"
 	path?: string
 	diff?: string
 	content?: string
@@ -338,6 +339,7 @@ export interface ClineSayTool {
 		}>
 	}>
 	question?: string
+	status?: "thinking" | "searching" | "reading" | "analyzing" | "completed"
 }
 
 // Must keep in sync with system prompt.
