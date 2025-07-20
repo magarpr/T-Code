@@ -29,7 +29,7 @@ export interface WebPreviewMessage {
 }
 
 export class WebPreviewProvider implements vscode.WebviewViewProvider {
-	public static readonly viewId = "roo-code.webPreview"
+	public static readonly viewId = "roo-cline.WebPreviewProvider"
 	private static instance?: WebPreviewProvider
 
 	private view?: vscode.WebviewView
