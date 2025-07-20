@@ -1651,6 +1651,107 @@ describe("ClineProvider", () => {
 			// Verify state was posted to webview
 			expect(mockPostMessage).toHaveBeenCalledWith(expect.objectContaining({ type: "state" }))
 		})
+
+		test("tracks mode usage frequency when switching modes", async () => {
+			// Mock the contextProxy's getValue to return modeUsageFrequency
+			let modeUsageFrequency: Record<string, number> | undefined = undefined
+
+			vi.spyOn(provider.contextProxy, "getValue").mockImplementation((key: string) => {
+				if (key === "modeUsageFrequency") return modeUsageFrequency
+				return undefined
+			})
+
+			vi.spyOn(provider.contextProxy, "setValue").mockImplementation(async (key: string, value: any) => {
+				if (key === "modeUsageFrequency") {
+					modeUsageFrequency = value
+				}
+			})
+			;(provider as any).providerSettingsManager = {
+				getModeConfigId: vi.fn().mockResolvedValue(undefined),
+				listConfig: vi.fn().mockResolvedValue([]),
+				setModeConfig: vi.fn(),
+			} as any
+
+			// Switch to architect mode
+			await provider.handleModeSwitch("architect")
+
+			// Verify mode usage frequency was tracked
+			expect(modeUsageFrequency).toEqual({
+				architect: 1,
+			})
+
+			// Set existing usage frequency
+			modeUsageFrequency = { architect: 1, code: 3 }
+
+			// Switch to architect mode again
+			await provider.handleModeSwitch("architect")
+
+			// Verify usage count was incremented
+			expect(modeUsageFrequency).toEqual({
+				architect: 2,
+				code: 3,
+			})
+
+			// Switch to a new mode
+			await provider.handleModeSwitch("debug")
+
+			// Verify new mode was added to usage frequency
+			expect(modeUsageFrequency).toEqual({
+				architect: 2,
+				code: 3,
+				debug: 1,
+			})
+		})
+
+		test("includes modeUsageFrequency in state when posting to webview", async () => {
+			// Mock the contextProxy to return modeUsageFrequency
+			let modeUsageFrequency = { code: 5, architect: 3, debug: 1 }
+
+			vi.spyOn(provider.contextProxy, "getValue").mockImplementation((key: string) => {
+				if (key === "modeUsageFrequency") return modeUsageFrequency
+				return undefined
+			})
+
+			vi.spyOn(provider.contextProxy, "setValue").mockImplementation(async (key: string, value: any) => {
+				if (key === "modeUsageFrequency") {
+					modeUsageFrequency = value
+				}
+			})
+
+			// Mock getValues to return all necessary state including modeUsageFrequency
+			vi.spyOn(provider.contextProxy, "getValues").mockReturnValue({
+				modeUsageFrequency,
+				mode: "code",
+				currentApiConfigName: "default",
+				listApiConfigMeta: [],
+			} as any)
+			;(provider as any).providerSettingsManager = {
+				getModeConfigId: vi.fn().mockResolvedValue(undefined),
+				listConfig: vi.fn().mockResolvedValue([]),
+				setModeConfig: vi.fn(),
+			} as any
+
+			// Clear previous mock calls
+			mockPostMessage.mockClear()
+
+			// Switch mode to trigger state post
+			await provider.handleModeSwitch("code")
+
+			// Find the call that contains the state update
+			const stateCalls = mockPostMessage.mock.calls.filter(
+				(call: any[]) => call[0]?.type === "state" && call[0]?.state?.modeUsageFrequency,
+			)
+
+			expect(stateCalls.length).toBeGreaterThan(0)
+			const lastStateCall = stateCalls[stateCalls.length - 1]
+
+			// Verify the modeUsageFrequency was incremented correctly
+			expect(lastStateCall[0].state.modeUsageFrequency).toEqual({
+				code: 6,
+				architect: 3,
+				debug: 1,
+			})
+		})
 	})
 
 	describe("updateCustomMode", () => {

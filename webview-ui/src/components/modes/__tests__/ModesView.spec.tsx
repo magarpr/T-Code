@@ -26,6 +26,7 @@ const mockExtensionState = {
 	currentApiConfigName: "",
 	customInstructions: "Initial instructions",
 	setCustomInstructions: vitest.fn(),
+	modeUsageFrequency: {},
 }
 
 const renderPromptsView = (props = {}) => {
@@ -229,6 +230,154 @@ describe("PromptsView", () => {
 		expect(vscode.postMessage).toHaveBeenCalledWith({
 			type: "customInstructions",
 			text: undefined,
+		})
+	})
+
+	describe("Mode sorting by usage frequency", () => {
+		it("sorts modes by usage frequency in descending order", async () => {
+			const modeUsageFrequency = {
+				ask: 10,
+				code: 5,
+				architect: 15,
+				debug: 3,
+			}
+
+			renderPromptsView({ modeUsageFrequency })
+
+			// Open the mode selector
+			const selectTrigger = screen.getByTestId("mode-select-trigger")
+			fireEvent.click(selectTrigger)
+
+			// Wait for the dropdown to open
+			await waitFor(() => {
+				expect(selectTrigger).toHaveAttribute("aria-expanded", "true")
+			})
+
+			// Get all mode options
+			const modeOptions = screen.getAllByTestId(/^mode-option-/)
+			const modeIds = modeOptions.map((option) => option.getAttribute("data-testid")?.replace("mode-option-", ""))
+
+			// Verify the order - architect (15) should be first, ask (10) second, code (5) third, debug (3) fourth
+			expect(modeIds[0]).toBe("architect")
+			expect(modeIds[1]).toBe("ask")
+			expect(modeIds[2]).toBe("code")
+			expect(modeIds[3]).toBe("debug")
+		})
+
+		it("maintains original order for modes with equal usage frequency", async () => {
+			const modeUsageFrequency = {
+				code: 5,
+				architect: 5,
+				ask: 5,
+			}
+
+			renderPromptsView({ modeUsageFrequency })
+
+			// Open the mode selector
+			const selectTrigger = screen.getByTestId("mode-select-trigger")
+			fireEvent.click(selectTrigger)
+
+			// Wait for the dropdown to open
+			await waitFor(() => {
+				expect(selectTrigger).toHaveAttribute("aria-expanded", "true")
+			})
+
+			// Get all mode options
+			const modeOptions = screen.getAllByTestId(/^mode-option-/)
+			const modeIds = modeOptions.map((option) => option.getAttribute("data-testid")?.replace("mode-option-", ""))
+
+			// When frequencies are equal, modes should maintain their original order
+			// The original order is: architect, code, ask, debug, orchestrator (from modes array)
+			expect(modeIds[0]).toBe("architect")
+			expect(modeIds[1]).toBe("code")
+			expect(modeIds[2]).toBe("ask")
+		})
+
+		it("places modes with no usage data at the end", async () => {
+			const modeUsageFrequency = {
+				code: 10,
+				architect: 5,
+				// ask and debug have no usage data
+			}
+
+			renderPromptsView({ modeUsageFrequency })
+
+			// Open the mode selector
+			const selectTrigger = screen.getByTestId("mode-select-trigger")
+			fireEvent.click(selectTrigger)
+
+			// Wait for the dropdown to open
+			await waitFor(() => {
+				expect(selectTrigger).toHaveAttribute("aria-expanded", "true")
+			})
+
+			// Get all mode options
+			const modeOptions = screen.getAllByTestId(/^mode-option-/)
+			const modeIds = modeOptions.map((option) => option.getAttribute("data-testid")?.replace("mode-option-", ""))
+
+			// code (10) should be first, architect (5) second, then modes with no usage
+			expect(modeIds[0]).toBe("code")
+			expect(modeIds[1]).toBe("architect")
+			// ask and debug should be after the modes with usage data
+			expect(modeIds.indexOf("ask")).toBeGreaterThan(1)
+			expect(modeIds.indexOf("debug")).toBeGreaterThan(1)
+		})
+
+		it("handles empty usage frequency object correctly", async () => {
+			renderPromptsView({ modeUsageFrequency: {} })
+
+			// Open the mode selector
+			const selectTrigger = screen.getByTestId("mode-select-trigger")
+			fireEvent.click(selectTrigger)
+
+			// Wait for the dropdown to open
+			await waitFor(() => {
+				expect(selectTrigger).toHaveAttribute("aria-expanded", "true")
+			})
+
+			// Get all mode options
+			const modeOptions = screen.getAllByTestId(/^mode-option-/)
+
+			// Should show all modes in their original order
+			expect(modeOptions.length).toBeGreaterThan(0)
+		})
+
+		it("includes custom modes in sorting", async () => {
+			const customMode = {
+				slug: "custom-mode",
+				name: "Custom Mode",
+				roleDefinition: "Custom role",
+				groups: [],
+			}
+
+			const modeUsageFrequency = {
+				"custom-mode": 20,
+				code: 10,
+				architect: 5,
+			}
+
+			renderPromptsView({
+				modeUsageFrequency,
+				customModes: [customMode],
+			})
+
+			// Open the mode selector
+			const selectTrigger = screen.getByTestId("mode-select-trigger")
+			fireEvent.click(selectTrigger)
+
+			// Wait for the dropdown to open
+			await waitFor(() => {
+				expect(selectTrigger).toHaveAttribute("aria-expanded", "true")
+			})
+
+			// Get all mode options
+			const modeOptions = screen.getAllByTestId(/^mode-option-/)
+			const modeIds = modeOptions.map((option) => option.getAttribute("data-testid")?.replace("mode-option-", ""))
+
+			// custom-mode (20) should be first, code (10) second, architect (5) third
+			expect(modeIds[0]).toBe("custom-mode")
+			expect(modeIds[1]).toBe("code")
+			expect(modeIds[2]).toBe("architect")
 		})
 	})
 })

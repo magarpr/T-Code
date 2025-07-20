@@ -234,6 +234,7 @@ export type ExtensionState = Pick<
 	| "codebaseIndexConfig"
 	| "codebaseIndexModels"
 	| "profileThresholds"
+	| "modeUsageFrequency"
 > & {
 	version: string
 	clineMessages: ClineMessage[]
@@ -283,6 +284,7 @@ export type ExtensionState = Pick<
 	marketplaceInstalledMetadata?: { project: Record<string, any>; global: Record<string, any> }
 	profileThresholds: Record<string, number>
 	hasOpenedModeSelector: boolean
+	modeUsageFrequency?: Record<string, number>
 }
 
 export interface ClineSayTool {

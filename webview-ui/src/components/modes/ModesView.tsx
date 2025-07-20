@@ -74,6 +74,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		customInstructions,
 		setCustomInstructions,
 		customModes,
+		modeUsageFrequency,
 	} = useExtensionState()
 
 	// Use a local state to track the visually active mode
@@ -83,8 +84,24 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	// 3. Still sending the mode change to the backend for persistence
 	const [visualMode, setVisualMode] = useState(mode)
 
-	// Memoize modes to preserve array order
-	const modes = useMemo(() => getAllModes(customModes), [customModes])
+	// Memoize modes and sort by usage frequency
+	const modes = useMemo(() => {
+		const allModes = getAllModes(customModes)
+
+		// Sort modes by usage frequency (descending)
+		return [...allModes].sort((a, b) => {
+			const freqA = modeUsageFrequency?.[a.slug] || 0
+			const freqB = modeUsageFrequency?.[b.slug] || 0
+
+			// Sort by frequency first (higher frequency first)
+			if (freqB !== freqA) {
+				return freqB - freqA
+			}
+
+			// If frequencies are equal, maintain original order
+			return allModes.indexOf(a) - allModes.indexOf(b)
+		})
+	}, [customModes, modeUsageFrequency])
 
 	const [isDialogOpen, setIsDialogOpen] = useState(false)
 	const [selectedPromptContent, setSelectedPromptContent] = useState("")

@@ -811,6 +811,11 @@ export class ClineProvider
 
 		await this.updateGlobalState("mode", newMode)
 
+		// Track mode usage frequency
+		const modeUsageFrequency = this.getGlobalState("modeUsageFrequency") || {}
+		modeUsageFrequency[newMode] = (modeUsageFrequency[newMode] || 0) + 1
+		await this.updateGlobalState("modeUsageFrequency", modeUsageFrequency)
+
 		// Load the saved API config for the new mode if it exists
 		const savedConfigId = await this.providerSettingsManager.getModeConfigId(newMode)
 		const listApiConfig = await this.providerSettingsManager.listConfig()
@@ -1440,6 +1445,7 @@ export class ClineProvider
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			diagnosticsEnabled,
+			modeUsageFrequency,
 		} = await this.getState()
 
 		const telemetryKey = process.env.POSTHOG_API_KEY
@@ -1561,6 +1567,7 @@ export class ClineProvider
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: diagnosticsEnabled ?? true,
+			modeUsageFrequency: modeUsageFrequency ?? {},
 		}
 	}
 
@@ -1726,6 +1733,7 @@ export class ClineProvider
 				codebaseIndexSearchMinScore: stateValues.codebaseIndexConfig?.codebaseIndexSearchMinScore,
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
+			modeUsageFrequency: stateValues.modeUsageFrequency ?? {},
 		}
 	}
 
