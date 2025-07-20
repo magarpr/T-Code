@@ -49,6 +49,25 @@ class MockApiHandler extends BaseProvider {
 const mockApiHandler = new MockApiHandler()
 const taskId = "test-task-id"
 
+// Helper function to create truncate options with default values
+const createTruncateOptions = (overrides: any = {}) => {
+	const modelInfo = mockApiHandler.getModel().info
+	const defaults = {
+		messages: [],
+		totalTokens: 0,
+		contextWindow: modelInfo.contextWindow,
+		maxTokens: modelInfo.maxTokens,
+		apiHandler: mockApiHandler,
+		autoCondenseContext: false,
+		autoCondenseContextPercent: 100,
+		systemPrompt: "System prompt",
+		taskId,
+		profileThresholds: {},
+		currentProfileId: "default",
+	}
+	return { ...defaults, ...overrides }
+}
+
 describe("Sliding Window", () => {
 	beforeEach(() => {
 		if (!TelemetryService.hasInstance()) {
@@ -262,19 +281,14 @@ describe("Sliding Window", () => {
 				{ ...messages[messages.length - 1], content: "" },
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+				}),
+			)
 
 			// Check the new return type
 			expect(result).toEqual({
@@ -303,19 +317,14 @@ describe("Sliding Window", () => {
 				messagesWithSmallContent[4],
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+				}),
+			)
 
 			expect(result).toEqual({
 				messages: expectedMessages,
@@ -338,33 +347,23 @@ describe("Sliding Window", () => {
 
 			// Test below threshold
 			const belowThreshold = 69999
-			const result1 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: belowThreshold,
-				contextWindow: modelInfo1.contextWindow,
-				maxTokens: modelInfo1.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result1 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: belowThreshold,
+					contextWindow: modelInfo1.contextWindow,
+					maxTokens: modelInfo1.maxTokens,
+				}),
+			)
 
-			const result2 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: belowThreshold,
-				contextWindow: modelInfo2.contextWindow,
-				maxTokens: modelInfo2.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result2 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: belowThreshold,
+					contextWindow: modelInfo2.contextWindow,
+					maxTokens: modelInfo2.maxTokens,
+				}),
+			)
 
 			expect(result1.messages).toEqual(result2.messages)
 			expect(result1.summary).toEqual(result2.summary)
@@ -373,33 +372,23 @@ describe("Sliding Window", () => {
 
 			// Test above threshold
 			const aboveThreshold = 70001
-			const result3 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: aboveThreshold,
-				contextWindow: modelInfo1.contextWindow,
-				maxTokens: modelInfo1.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result3 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: aboveThreshold,
+					contextWindow: modelInfo1.contextWindow,
+					maxTokens: modelInfo1.maxTokens,
+				}),
+			)
 
-			const result4 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: aboveThreshold,
-				contextWindow: modelInfo2.contextWindow,
-				maxTokens: modelInfo2.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result4 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: aboveThreshold,
+					contextWindow: modelInfo2.contextWindow,
+					maxTokens: modelInfo2.maxTokens,
+				}),
+			)
 
 			expect(result3.messages).toEqual(result4.messages)
 			expect(result3.summary).toEqual(result4.summary)
@@ -423,19 +412,14 @@ describe("Sliding Window", () => {
 			// Set base tokens so total is well below threshold + buffer even with small content added
 			const dynamicBuffer = modelInfo.contextWindow * TOKEN_BUFFER_PERCENTAGE
 			const baseTokensForSmall = availableTokens - smallContentTokens - dynamicBuffer - 10
-			const resultWithSmall = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: baseTokensForSmall,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const resultWithSmall = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: baseTokensForSmall,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens,
+				}),
+			)
 			expect(resultWithSmall).toEqual({
 				messages: messagesWithSmallContent,
 				summary: "",
@@ -458,19 +442,14 @@ describe("Sliding Window", () => {
 
 			// Set base tokens so we're just below threshold without content, but over with content
 			const baseTokensForLarge = availableTokens - Math.floor(largeContentTokens / 2)
-			const resultWithLarge = await truncateConversationIfNeeded({
-				messages: messagesWithLargeContent,
-				totalTokens: baseTokensForLarge,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const resultWithLarge = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithLargeContent,
+					totalTokens: baseTokensForLarge,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens,
+				}),
+			)
 			expect(resultWithLarge.messages).not.toEqual(messagesWithLargeContent) // Should truncate
 			expect(resultWithLarge.summary).toBe("")
 			expect(resultWithLarge.cost).toBe(0)
@@ -486,19 +465,14 @@ describe("Sliding Window", () => {
 
 			// Set base tokens so we're just below threshold without content
 			const baseTokensForVeryLarge = availableTokens - Math.floor(veryLargeContentTokens / 2)
-			const resultWithVeryLarge = await truncateConversationIfNeeded({
-				messages: messagesWithVeryLargeContent,
-				totalTokens: baseTokensForVeryLarge,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const resultWithVeryLarge = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithVeryLargeContent,
+					totalTokens: baseTokensForVeryLarge,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens,
+				}),
+			)
 			expect(resultWithVeryLarge.messages).not.toEqual(messagesWithVeryLargeContent) // Should truncate
 			expect(resultWithVeryLarge.summary).toBe("")
 			expect(resultWithVeryLarge.cost).toBe(0)
@@ -524,19 +498,14 @@ describe("Sliding Window", () => {
 				messagesWithSmallContent[4],
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+				}),
+			)
 			expect(result).toEqual({
 				messages: expectedResult,
 				summary: "",
@@ -571,19 +540,16 @@ describe("Sliding Window", () => {
 				{ ...messages[messages.length - 1], content: "" },
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: true,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+					autoCondenseContext: true,
+				}),
+			)
 
 			// Verify summarizeConversation was called with the right parameters
 			expect(summarizeSpy).toHaveBeenCalledWith(
@@ -638,19 +604,15 @@ describe("Sliding Window", () => {
 				messagesWithSmallContent[4],
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: true,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					autoCondenseContext: true,
+				}),
+			)
 
 			// Verify summarizeConversation was called
 			expect(summarizeSpy).toHaveBeenCalled()
@@ -685,19 +647,16 @@ describe("Sliding Window", () => {
 				messagesWithSmallContent[4],
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 50, // This shouldn't matter since autoCondenseContext is false
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					autoCondenseContext: false,
+					autoCondenseContextPercent: 50, // This shouldn't matter since autoCondenseContext is false
+				}),
+			)
 
 			// Verify summarizeConversation was not called
 			expect(summarizeSpy).not.toHaveBeenCalled()
@@ -742,19 +701,16 @@ describe("Sliding Window", () => {
 				{ ...messages[messages.length - 1], content: "" },
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: true,
-				autoCondenseContextPercent: 50, // Set threshold to 50% - our tokens are at 60%
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					autoCondenseContext: true,
+					autoCondenseContextPercent: 50, // Set threshold to 50% - our tokens are at 60%
+				}),
+			)
 
 			// Verify summarizeConversation was called with the right parameters
 			expect(summarizeSpy).toHaveBeenCalledWith(
@@ -794,19 +750,16 @@ describe("Sliding Window", () => {
 				{ ...messages[messages.length - 1], content: "" },
 			]
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: true,
-				autoCondenseContextPercent: 50, // Set threshold to 50% - our tokens are at 40%
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					autoCondenseContext: true,
+					autoCondenseContextPercent: 50, // Set threshold to 50% - our tokens are at 40%
+				}),
+			)
 
 			// Verify summarizeConversation was not called
 			expect(summarizeSpy).not.toHaveBeenCalled()
@@ -881,19 +834,19 @@ describe("Sliding Window", () => {
 				.spyOn(condenseModule, "summarizeConversation")
 				.mockResolvedValue(mockSummarizeResponse)
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: true,
-				autoCondenseContextPercent: 100, // Global threshold of 100%
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds,
-				currentProfileId,
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+					autoCondenseContext: true,
+					autoCondenseContextPercent: 100, // Global threshold of 100%
+					profileThresholds,
+					currentProfileId,
+				}),
+			)
 
 			// Should use summarization because 65% > 60% (profile threshold)
 			expect(summarizeSpy).toHaveBeenCalled()
@@ -947,19 +900,19 @@ describe("Sliding Window", () => {
 				.spyOn(condenseModule, "summarizeConversation")
 				.mockResolvedValue(mockSummarizeResponse)
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: true,
-				autoCondenseContextPercent: 75, // Global threshold of 75%
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds,
-				currentProfileId,
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+					autoCondenseContext: true,
+					autoCondenseContextPercent: 75, // Global threshold of 75%
+					profileThresholds,
+					currentProfileId,
+				}),
+			)
 
 			// Should use summarization because 80% > 75% (global threshold, since profile is -1)
 			expect(summarizeSpy).toHaveBeenCalled()
@@ -1001,19 +954,19 @@ describe("Sliding Window", () => {
 			vi.clearAllMocks()
 			const summarizeSpy = vi.spyOn(condenseModule, "summarizeConversation")
 
-			const result = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens,
-				contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: true,
-				autoCondenseContextPercent: 80, // Global threshold of 80%
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds,
-				currentProfileId,
-			})
+			const result = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens,
+					contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+					autoCondenseContext: true,
+					autoCondenseContextPercent: 80, // Global threshold of 80%
+					profileThresholds,
+					currentProfileId,
+				}),
+			)
 
 			// Should NOT use summarization because 50% < 80% (global threshold, since profile has no specific threshold)
 			// and totalTokens (50000) < allowedTokens (60000)
@@ -1062,19 +1015,15 @@ describe("Sliding Window", () => {
 
 			// Account for the dynamic buffer which is 10% of context window (10,000 tokens)
 			// Below max tokens and buffer - no truncation
-			const result1 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 39999, // Well below threshold + dynamic buffer
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result1 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 39999, // Well below threshold + dynamic buffer
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result1).toEqual({
 				messages: messagesWithSmallContent,
 				summary: "",
@@ -1083,19 +1032,15 @@ describe("Sliding Window", () => {
 			})
 
 			// Above max tokens - truncate
-			const result2 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 50001, // Above threshold
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result2 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 50001, // Above threshold
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result2.messages).not.toEqual(messagesWithSmallContent)
 			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
 			expect(result2.summary).toBe("")
@@ -1115,19 +1060,15 @@ describe("Sliding Window", () => {
 
 			// Account for the dynamic buffer which is 10% of context window (10,000 tokens)
 			// Below max tokens and buffer - no truncation
-			const result1 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 69999, // Well below threshold + dynamic buffer
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result1 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 69999, // Well below threshold + dynamic buffer
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result1).toEqual({
 				messages: messagesWithSmallContent,
 				summary: "",
@@ -1136,19 +1077,15 @@ describe("Sliding Window", () => {
 			})
 
 			// Above max tokens - truncate
-			const result2 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 80001, // Above threshold
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result2 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 80001, // Above threshold
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result2.messages).not.toEqual(messagesWithSmallContent)
 			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
 			expect(result2.summary).toBe("")
@@ -1167,35 +1104,27 @@ describe("Sliding Window", () => {
 			]
 
 			// Below max tokens and buffer - no truncation
-			const result1 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 34999, // Well below threshold + buffer
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result1 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 34999, // Well below threshold + buffer
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result1.messages).toEqual(messagesWithSmallContent)
 
 			// Above max tokens - truncate
-			const result2 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 40001, // Above threshold
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result2 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 40001, // Above threshold
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result2).not.toEqual(messagesWithSmallContent)
 			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
 		})
@@ -1212,35 +1141,27 @@ describe("Sliding Window", () => {
 
 			// Account for the dynamic buffer which is 10% of context window (20,000 tokens for this test)
 			// Below max tokens and buffer - no truncation
-			const result1 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 149999, // Well below threshold + dynamic buffer
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result1 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 149999, // Well below threshold + dynamic buffer
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result1.messages).toEqual(messagesWithSmallContent)
 
 			// Above max tokens - truncate
-			const result2 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 170001, // Above threshold
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result2 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 170001, // Above threshold
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result2).not.toEqual(messagesWithSmallContent)
 			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
 		})
@@ -1258,35 +1179,27 @@ describe("Sliding Window", () => {
 			// With the fix, reservedTokens should be 20% of context window (20000)
 			// allowedTokens = 100000 * 0.9 - 20000 = 70000
 			// So tokens below 70000 should not trigger truncation
-			const result1 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 69999, // Just below the fixed threshold
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result1 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 69999, // Just below the fixed threshold
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result1.messages).toEqual(messagesWithSmallContent) // No truncation
 
 			// Above the threshold should trigger truncation
-			const result2 = await truncateConversationIfNeeded({
-				messages: messagesWithSmallContent,
-				totalTokens: 70001, // Above the fixed threshold
-				contextWindow: modelInfo.contextWindow,
-				maxTokens: modelInfo.maxTokens,
-				apiHandler: mockApiHandler,
-				autoCondenseContext: false,
-				autoCondenseContextPercent: 100,
-				systemPrompt: "System prompt",
-				taskId,
-				profileThresholds: {},
-				currentProfileId: "default",
-			})
+			const result2 = await truncateConversationIfNeeded(
+				createTruncateOptions({
+					messages: messagesWithSmallContent,
+					totalTokens: 70001, // Above the fixed threshold
+					contextWindow: modelInfo.contextWindow,
+					maxTokens: modelInfo.maxTokens,
+					modelInfo,
+				}),
+			)
 			expect(result2.messages).not.toEqual(messagesWithSmallContent) // Should truncate
 			expect(result2.messages.length).toBe(3) // Truncated with 0.5 fraction
 		})
