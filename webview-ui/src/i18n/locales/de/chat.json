@@ -325,5 +325,20 @@
 	},
 	"editMessage": {
 		"placeholder": "Bearbeite deine Nachricht..."
+	},
+	"aiDeepResearch": {
+		"title": "AI Deep Research",
+		"thinking": "Thinking...",
+		"searching": "Searching the web...",
+		"reading": "Reading sources...",
+		"analyzing": "Analyzing information...",
+		"completed": "Research completed",
+		"initializing": "Initializing research...",
+		"query": "Query",
+		"thoughtProcess": "Thought Process",
+		"searchingFor": "Searching for",
+		"readingUrl": "Reading",
+		"analyzingContent": "Analyzing content...",
+		"results": "Research Results"
 	}
 }
