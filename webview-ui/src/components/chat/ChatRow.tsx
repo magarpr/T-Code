@@ -72,8 +72,13 @@ const ChatRow = memo(
 		// This allows us to detect changes without causing re-renders
 		const prevHeightRef = useRef(0)
 
+		// Prevent browser context menu from appearing
+		const handleContextMenu = useCallback((e: React.MouseEvent) => {
+			e.preventDefault()
+		}, [])
+
 		const [chatrow, { height }] = useSize(
-			<div className="px-[15px] py-[10px] pr-[6px]">
+			<div className="px-[15px] py-[10px] pr-[6px]" onContextMenu={handleContextMenu}>
 				<ChatRowContent {...props} />
 			</div>,
 		)

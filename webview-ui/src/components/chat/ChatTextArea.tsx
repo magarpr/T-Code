@@ -1174,6 +1174,11 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			</div>
 		)
 
+		// Prevent browser context menu from appearing
+		const handleContextMenu = useCallback((e: React.MouseEvent) => {
+			e.preventDefault()
+		}, [])
+
 		return (
 			<div
 				className={cn(
@@ -1191,7 +1196,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					"ml-auto",
 					"mr-auto",
 					"box-border",
-				)}>
+				)}
+				onContextMenu={handleContextMenu}>
 				<div className="relative">
 					<div
 						className={cn("chat-text-area", "relative", "flex", "flex-col", "outline-none")}

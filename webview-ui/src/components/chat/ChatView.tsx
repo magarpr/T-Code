@@ -1629,8 +1629,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const areButtonsVisible = showScrollToBottom || primaryButtonText || secondaryButtonText || isStreaming
 
+	// Prevent browser context menu from appearing
+	const handleContextMenu = useCallback((e: React.MouseEvent) => {
+		e.preventDefault()
+	}, [])
+
 	return (
-		<div className={isHidden ? "hidden" : "fixed top-0 left-0 right-0 bottom-0 flex flex-col overflow-hidden"}>
+		<div
+			className={isHidden ? "hidden" : "fixed top-0 left-0 right-0 bottom-0 flex flex-col overflow-hidden"}
+			onContextMenu={handleContextMenu}>
 			{(showAnnouncement || showAnnouncementModal) && (
 				<Announcement
 					hideAnnouncement={() => {
