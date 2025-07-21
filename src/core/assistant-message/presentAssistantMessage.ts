@@ -266,33 +266,46 @@ export async function presentAssistantMessage(cline: Task) {
 				progressStatus?: ToolProgressStatus,
 				isProtected?: boolean,
 			) => {
-				const { response, text, images } = await cline.ask(
-					type,
-					partialMessage,
-					false,
-					progressStatus,
-					isProtected || false,
-				)
+				try {
+					const { response, text, images } = await cline.ask(
+						type,
+						partialMessage,
+						false,
+						progressStatus,
+						isProtected || false,
+					)
 
-				if (response !== "yesButtonClicked") {
-					// Handle both messageResponse and noButtonClicked with text.
+					if (response !== "yesButtonClicked") {
+						// Handle both messageResponse and noButtonClicked with text.
+						if (text) {
+							await cline.say("user_feedback", text, images)
+							pushToolResult(
+								formatResponse.toolResult(formatResponse.toolDeniedWithFeedback(text), images),
+							)
+						} else {
+							pushToolResult(formatResponse.toolDenied())
+						}
+						cline.didRejectTool = true
+						return false
+					}
+
+					// Handle yesButtonClicked with text.
 					if (text) {
 						await cline.say("user_feedback", text, images)
-						pushToolResult(formatResponse.toolResult(formatResponse.toolDeniedWithFeedback(text), images))
-					} else {
-						pushToolResult(formatResponse.toolDenied())
+						pushToolResult(formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text), images))
 					}
-					cline.didRejectTool = true
+
+					return true
+				} catch (error) {
+					// Instead of silently returning false, properly handle the error
+					const errorMessage =
+						error instanceof Error ? error.message : "Unknown error occurred while processing command"
+					await cline.say("error", errorMessage)
+
+					// Use parsingError for better clarity about what happened
+					pushToolResult(formatResponse.parsingError(errorMessage))
 					return false
 				}
-
-				// Handle yesButtonClicked with text.
-				if (text) {
-					await cline.say("user_feedback", text, images)
-					pushToolResult(formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text), images))
-				}
-
-				return true
 			}
 
 			const askFinishSubTaskApproval = async () => {

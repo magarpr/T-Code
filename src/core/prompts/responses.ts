@@ -15,6 +15,9 @@ export const formatResponse = {
 
 	toolError: (error?: string) => `The tool execution failed with the following error:\n<error>\n${error}\n</error>`,
 
+	parsingError: (error?: string) =>
+		`Failed to parse command or request:\n<error>\n${error}\n</error>\n\nThis error occurred before the approval dialog could be shown. Please check the command syntax and try again.`,
+
 	rooIgnoreError: (path: string) =>
 		`Access to ${path} is blocked by the .rooignore file settings. You must try to continue in the task without using this file, or ask the user to update the .rooignore file.`,
 
