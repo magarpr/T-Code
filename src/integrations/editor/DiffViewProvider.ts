@@ -473,7 +473,7 @@ export class DiffViewProvider {
 			.map((tab) =>
 				vscode.window.tabGroups.close(tab).then(
 					() => undefined,
-					(err) => {
+					(err: any) => {
 						console.error(`Failed to close diff tab ${tab.label}`, err)
 					},
 				),

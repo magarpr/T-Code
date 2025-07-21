@@ -77,24 +77,24 @@ export class PostEditBehaviorUtils {
 		if (tab.input instanceof vscode.TabInputText) {
 			const tabPath = tab.input.uri.fsPath
 
-			// Skip the currently edited file to avoid closing it immediately
-			if (editedFilePath && arePathsEqual(tabPath, editedFilePath)) {
+			// If only autoCloseRooTabs is enabled (not autoCloseAllRooTabs),
+			// only close the edited file tab
+			if (autoCloseRooTabs && !autoCloseAllRooTabs) {
+				// Only close if this is the edited file AND it was opened by Roo
+				if (editedFilePath && arePathsEqual(tabPath, editedFilePath)) {
+					// Check if this file was opened by Roo
+					for (const trackedPath of rooOpenedTabs) {
+						if (arePathsEqual(tabPath, trackedPath)) {
+							return true
+						}
+					}
+				}
 				return false
 			}
 
 			// If autoCloseAllRooTabs is enabled, close any tab that was tracked by Roo
 			if (autoCloseAllRooTabs) {
 				// Check if this tab's path exists in our tracked set
-				for (const trackedPath of rooOpenedTabs) {
-					if (arePathsEqual(tabPath, trackedPath)) {
-						return true
-					}
-				}
-			}
-
-			// If only autoCloseRooTabs is enabled, close tabs that Roo opened (not pre-existing)
-			if (autoCloseRooTabs && !autoCloseAllRooTabs) {
-				// This requires the tab to be in our tracked set
 				for (const trackedPath of rooOpenedTabs) {
 					if (arePathsEqual(tabPath, trackedPath)) {
 						return true
@@ -115,32 +115,32 @@ export class PostEditBehaviorUtils {
 		preEditActiveEditor: vscode.TextEditor | undefined,
 		editedFilePath?: string,
 	): Promise<void> {
-		// Try to restore focus to the pre-edit active editor if it still exists
-		if (preEditActiveEditor) {
-			const stillExists = vscode.window.visibleTextEditors.some(
-				(editor) => editor.document.uri.toString() === preEditActiveEditor.document.uri.toString(),
-			)
+		try {
+			// Try to restore focus to the pre-edit active editor if it still exists
+			if (preEditActiveEditor) {
+				const stillExists = vscode.window.visibleTextEditors.some(
+					(editor) => editor.document.uri.toString() === preEditActiveEditor.document.uri.toString(),
+				)
 
-			if (stillExists) {
-				await vscode.window.showTextDocument(preEditActiveEditor.document, {
-					preserveFocus: false,
-					preview: false,
-				})
-				return
+				if (stillExists) {
+					await vscode.window.showTextDocument(preEditActiveEditor.document, {
+						preserveFocus: false,
+						preview: false,
+					})
+					return
+				}
 			}
-		}
 
-		// Otherwise, try to focus on the edited file
-		if (editedFilePath) {
-			try {
+			// Otherwise, try to focus on the edited file
+			if (editedFilePath) {
 				await vscode.window.showTextDocument(vscode.Uri.file(editedFilePath), {
 					preserveFocus: false,
 					preview: false,
 				})
-			} catch (err) {
-				// File might not exist or be accessible
-				console.debug(`Could not restore focus to edited file: ${err}`)
 			}
+		} catch (err) {
+			// File might not exist or be accessible
+			console.debug(`Could not restore focus: ${err}`)
 		}
 	}
 }

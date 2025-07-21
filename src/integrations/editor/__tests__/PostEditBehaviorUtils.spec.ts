@@ -9,6 +9,7 @@ vi.mock("vscode", () => ({
 	window: {
 		tabGroups: {
 			all: [],
+			close: vi.fn(),
 		},
 		showTextDocument: vi.fn(),
 		createTextEditorDecorationType: vi.fn(() => ({
@@ -51,6 +52,7 @@ describe("PostEditBehaviorUtils", () => {
 		// Reset mocks
 		vi.mocked(vscode.window).tabGroups = {
 			all: mockTabGroups,
+			close: vi.fn().mockResolvedValue(true),
 		} as any
 		vi.mocked(vscode.window).showTextDocument = mockShowTextDocument
 		vi.mocked(vscode.window).visibleTextEditors = mockVisibleTextEditors
@@ -68,11 +70,11 @@ describe("PostEditBehaviorUtils", () => {
 				tabs: [
 					{
 						input: { uri: { fsPath: "/path/to/file1.ts" } },
-						close: vi.fn(),
+						isDirty: false,
 					},
 					{
 						input: { uri: { fsPath: "/path/to/file2.ts" } },
-						close: vi.fn(),
+						isDirty: false,
 					},
 				],
 			}
@@ -87,8 +89,7 @@ describe("PostEditBehaviorUtils", () => {
 			)
 
 			// Assert
-			expect(mockTabGroup.tabs[0].close).not.toHaveBeenCalled()
-			expect(mockTabGroup.tabs[1].close).not.toHaveBeenCalled()
+			expect(vi.mocked(vscode.window).tabGroups.close).not.toHaveBeenCalled()
 		})
 
 		it("should close only the edited file tab when autoCloseRooTabs is true and autoCloseAllRooTabs is false", async () => {
@@ -99,11 +100,11 @@ describe("PostEditBehaviorUtils", () => {
 				tabs: [
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file1.ts")),
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file2.ts")),
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 				],
 			}
@@ -118,8 +119,8 @@ describe("PostEditBehaviorUtils", () => {
 			)
 
 			// Assert
-			expect(mockTabGroup.tabs[0].close).toHaveBeenCalled()
-			expect(mockTabGroup.tabs[1].close).not.toHaveBeenCalled()
+			expect(vi.mocked(vscode.window).tabGroups.close).toHaveBeenCalledWith(mockTabGroup.tabs[0])
+			expect(vi.mocked(vscode.window).tabGroups.close).not.toHaveBeenCalledWith(mockTabGroup.tabs[1])
 		})
 
 		it("should close all Roo-opened tabs when autoCloseAllRooTabs is true", async () => {
@@ -130,15 +131,15 @@ describe("PostEditBehaviorUtils", () => {
 				tabs: [
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file1.ts")),
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file2.ts")),
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file3.ts")),
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 				],
 			}
@@ -153,9 +154,9 @@ describe("PostEditBehaviorUtils", () => {
 			)
 
 			// Assert
-			expect(mockTabGroup.tabs[0].close).toHaveBeenCalled()
-			expect(mockTabGroup.tabs[1].close).toHaveBeenCalled()
-			expect(mockTabGroup.tabs[2].close).not.toHaveBeenCalled() // file3 was not opened by Roo
+			expect(vi.mocked(vscode.window).tabGroups.close).toHaveBeenCalledWith(mockTabGroup.tabs[0])
+			expect(vi.mocked(vscode.window).tabGroups.close).toHaveBeenCalledWith(mockTabGroup.tabs[1])
+			expect(vi.mocked(vscode.window).tabGroups.close).not.toHaveBeenCalledWith(mockTabGroup.tabs[2]) // file3 was not opened by Roo
 		})
 
 		it("should not close tabs that were not opened by Roo", async () => {
@@ -166,11 +167,11 @@ describe("PostEditBehaviorUtils", () => {
 				tabs: [
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file1.ts")),
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file2.ts")), // Not in rooOpenedTabs
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 				],
 			}
@@ -185,8 +186,8 @@ describe("PostEditBehaviorUtils", () => {
 			)
 
 			// Assert
-			expect(mockTabGroup.tabs[0].close).toHaveBeenCalled()
-			expect(mockTabGroup.tabs[1].close).not.toHaveBeenCalled()
+			expect(vi.mocked(vscode.window).tabGroups.close).toHaveBeenCalledWith(mockTabGroup.tabs[0])
+			expect(vi.mocked(vscode.window).tabGroups.close).not.toHaveBeenCalledWith(mockTabGroup.tabs[1])
 		})
 
 		it("should handle tabs without URI input gracefully", async () => {
@@ -196,15 +197,15 @@ describe("PostEditBehaviorUtils", () => {
 				tabs: [
 					{
 						input: new (vi.mocked(vscode).TabInputText)(vscode.Uri.file("/path/to/file1.ts")),
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 					{
 						input: {}, // No URI
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 					{
 						input: null, // Null input
-						close: vi.fn().mockResolvedValue(true),
+						isDirty: false,
 					},
 				],
 			}
@@ -219,9 +220,9 @@ describe("PostEditBehaviorUtils", () => {
 			)
 
 			// Assert
-			expect(mockTabGroup.tabs[0].close).toHaveBeenCalled()
-			expect(mockTabGroup.tabs[1].close).not.toHaveBeenCalled()
-			expect(mockTabGroup.tabs[2].close).not.toHaveBeenCalled()
+			expect(vi.mocked(vscode.window).tabGroups.close).toHaveBeenCalledWith(mockTabGroup.tabs[0])
+			expect(vi.mocked(vscode.window).tabGroups.close).not.toHaveBeenCalledWith(mockTabGroup.tabs[1])
+			expect(vi.mocked(vscode.window).tabGroups.close).not.toHaveBeenCalledWith(mockTabGroup.tabs[2])
 		})
 	})
 
