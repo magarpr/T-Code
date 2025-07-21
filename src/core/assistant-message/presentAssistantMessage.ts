@@ -256,8 +256,11 @@ export async function presentAssistantMessage(cline: Task) {
 
 				// Once a tool result has been collected, ignore all other tool
 				// uses since we should only ever present one tool result per
-				// message.
-				cline.didAlreadyUseTool = true
+				// message. Exception: update_todo_list is allowed to be followed
+				// by text content.
+				if (block.name !== "update_todo_list") {
+					cline.didAlreadyUseTool = true
+				}
 			}
 
 			const askApproval = async (
