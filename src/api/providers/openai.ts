@@ -126,9 +126,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 								{
 									type: "text",
 									text: systemPrompt,
-									// @ts-ignore-next-line
 									cache_control: { type: "ephemeral" },
-								},
+								} as OpenAI.Chat.ChatCompletionContentPartText & { cache_control?: { type: string } },
 							],
 						}
 					}
@@ -155,8 +154,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 									msg.content.push(lastTextPart)
 								}
 
-								// @ts-ignore-next-line
-								lastTextPart["cache_control"] = { type: "ephemeral" }
+								// Type assertion to add cache_control property
+								;(lastTextPart as any).cache_control = { type: "ephemeral" }
 							}
 						})
 					}
@@ -254,17 +253,21 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		} catch (error: any) {
 			// Handle Azure-specific errors
 			if (error?.status === 400 && error?.message?.includes("does not support 'system'")) {
+				const sanitizedModelId = String(this.options.openAiModelId || "unknown").substring(0, 100)
 				throw new Error(
 					`Azure OpenAI error: This model does not support system messages. ` +
 						`For reasoning models (o1, o3, o4), please ensure the model ID is correctly set. ` +
-						`Current model: ${this.options.openAiModelId}`,
+						`Current model: ${sanitizedModelId}`,
 				)
 			} else if (error?.status === 404) {
+				const sanitizedApiVersion = String(
+					this.options.azureApiVersion || azureOpenAiDefaultApiVersion,
+				).substring(0, 50)
 				throw new Error(
 					`Azure OpenAI error: Resource not found. Please check: ` +
 						`1) Your deployment name is correct, ` +
 						`2) The base URL format is correct (e.g., https://YOUR-RESOURCE.openai.azure.com), ` +
-						`3) The API version is supported (current: ${this.options.azureApiVersion || azureOpenAiDefaultApiVersion})`,
+						`3) The API version is supported (current: ${sanitizedApiVersion})`,
 				)
 			} else if (error?.message?.includes("api-key")) {
 				throw new Error(
@@ -469,23 +472,29 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	 */
 	private _extractBaseUrl(url: string): string {
 		try {
+			// Validate URL before parsing
+			if (!url || typeof url !== "string") {
+				return ""
+			}
+
 			const urlObj = new URL(url)
 			// For Azure OpenAI, we need to preserve the path up to /openai/deployments/{deployment-name}
 			// but remove /chat/completions and query parameters
-			const pathParts = urlObj.pathname.split("/")
+			const pathParts = urlObj.pathname.split("/").filter((part) => part.length > 0)
 			const deploymentIndex = pathParts.indexOf("deployments")
 
 			if (deploymentIndex !== -1 && deploymentIndex + 1 < pathParts.length) {
 				// Keep path up to and including the deployment name
-				const basePath = pathParts.slice(0, deploymentIndex + 2).join("/")
+				const basePath = "/" + pathParts.slice(0, deploymentIndex + 2).join("/")
 				return `${urlObj.protocol}//${urlObj.host}${basePath}`
 			}
 
 			// If not a deployment URL, just return origin + pathname without query
 			return `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`
 		} catch (error) {
-			// If URL parsing fails, return as-is
-			return url
+			// If URL parsing fails, return empty string to avoid potential security issues
+			console.error("Failed to parse URL:", error)
+			return ""
 		}
 	}
 
