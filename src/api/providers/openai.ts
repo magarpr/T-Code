@@ -45,9 +45,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const isAzureOpenAi = !!(
 			this.options.azureApiVersion ||
 			options.openAiUseAzure ||
-			(urlHost &&
-				(urlHost.includes("azure.com") || urlHost.includes("azure.us")) &&
-				!this.options.openAiModelId?.toLowerCase().includes("deepseek"))
+			(urlHost && this._isAzureHost(urlHost) && !this.options.openAiModelId?.toLowerCase().includes("deepseek"))
 		)
 
 		const headers = {
@@ -97,7 +95,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			const enabledLegacyFormat = this.options.openAiLegacyFormat ?? false
 			const isAzureAiInference = this._isAzureAiInference(modelUrl)
 			const deepseekReasoner = modelId.includes("deepseek-reasoner") || enabledR1Format
-			const ark = modelUrl.includes(".volces.com")
+			const ark = this._isVolcesHost(modelUrl)
 
 			// Handle reasoning models (o1, o3, o4) separately
 			// These models don't support system messages in the traditional way
@@ -337,7 +335,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const isAzureOpenAi = !!(
 			this.options.azureApiVersion ||
 			this.options.openAiUseAzure ||
-			(urlHost && (urlHost.includes("azure.com") || urlHost.includes("azure.us")))
+			(urlHost && this._isAzureHost(urlHost))
 		)
 
 		if (this.options.openAiStreamingEnabled ?? true) {
@@ -515,6 +513,25 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// Using max_completion_tokens as max_tokens is deprecated
 			requestOptions.max_completion_tokens = this.options.modelMaxTokens || modelInfo.maxTokens
 		}
+	}
+
+	/**
+	 * Checks if the host is an Azure domain
+	 * Properly validates the hostname to prevent security issues
+	 */
+	private _isAzureHost(host: string): boolean {
+		// Check for exact Azure domain suffixes
+		return host.endsWith(".azure.com") || host.endsWith(".azure.us") || host === "azure.com" || host === "azure.us"
+	}
+
+	/**
+	 * Checks if the URL is from Volces (Ark) service
+	 * Properly validates the hostname to prevent security issues
+	 */
+	private _isVolcesHost(baseUrl?: string): boolean {
+		const urlHost = this._getUrlHost(baseUrl)
+		// Check for exact Volces domain suffix
+		return urlHost.endsWith(".volces.com") || urlHost === "volces.com"
 	}
 }
 
