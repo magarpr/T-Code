@@ -880,6 +880,17 @@ export const webviewMessageHandler = async (
 		case "mcpEnabled":
 			const mcpEnabled = message.bool ?? true
 			await updateGlobalState("mcpEnabled", mcpEnabled)
+
+			// Enable or disable MCP servers based on the setting
+			const mcpHubInstance = provider.getMcpHub()
+			if (mcpHubInstance) {
+				if (mcpEnabled) {
+					await mcpHubInstance.enableServers()
+				} else {
+					await mcpHubInstance.disableServers()
+				}
+			}
+
 			await provider.postStateToWebview()
 			break
 		case "enableMcpServerCreation":

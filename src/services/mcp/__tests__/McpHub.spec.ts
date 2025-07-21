@@ -65,6 +65,19 @@ vi.mock("vscode", () => ({
 	Disposable: {
 		from: vi.fn(),
 	},
+	Uri: {
+		file: vi.fn((path) => ({
+			scheme: "file",
+			authority: "",
+			path,
+			query: "",
+			fragment: "",
+			fsPath: path,
+			with: vi.fn(),
+			toJSON: vi.fn(),
+		})),
+	},
+	RelativePattern: vi.fn((base, pattern) => ({ base, pattern })),
 }))
 vi.mock("fs/promises")
 vi.mock("../../../core/webview/ClineProvider")
@@ -1222,6 +1235,146 @@ describe("McpHub", () => {
 				expect.objectContaining({
 					command: "CMD",
 					args: ["/c", "echo", "test"],
+				}),
+			)
+		})
+	})
+
+	describe("Conditional initialization", () => {
+		it("should not initialize servers when autoInitialize is false", async () => {
+			// Clear existing mocks
+			vi.clearAllMocks()
+
+			// Create McpHub with autoInitialize = false
+			const mcpHubNoInit = new McpHub(mockProvider as ClineProvider, false)
+
+			// Verify no connections were created
+			expect(mcpHubNoInit.connections.length).toBe(0)
+
+			// Verify fs.readFile was not called for server initialization
+			expect(fs.readFile).not.toHaveBeenCalled()
+		})
+
+		it("should initialize servers when autoInitialize is true", async () => {
+			// Clear existing mocks
+			vi.clearAllMocks()
+
+			// Mock the config file read
+			vi.mocked(fs.readFile).mockResolvedValue(
+				JSON.stringify({
+					mcpServers: {
+						"test-server": {
+							type: "stdio",
+							command: "node",
+							args: ["test.js"],
+						},
+					},
+				}),
+			)
+
+			// Create McpHub with autoInitialize = true
+			const mcpHubInit = new McpHub(mockProvider as ClineProvider, true)
+
+			// Wait a bit for async initialization
+			await new Promise((resolve) => setTimeout(resolve, 100))
+
+			// Verify fs.readFile was called for initialization
+			expect(fs.readFile).toHaveBeenCalled()
+		})
+
+		it("should enable servers after creation when enableServers is called", async () => {
+			// Clear existing mocks
+			vi.clearAllMocks()
+
+			// Mock the config file read
+			vi.mocked(fs.readFile).mockResolvedValue(
+				JSON.stringify({
+					mcpServers: {
+						"test-server": {
+							type: "stdio",
+							command: "node",
+							args: ["test.js"],
+						},
+					},
+				}),
+			)
+
+			// Mock StdioClientTransport
+			const mockTransport = {
+				start: vi.fn().mockResolvedValue(undefined),
+				close: vi.fn().mockResolvedValue(undefined),
+				stderr: {
+					on: vi.fn(),
+				},
+				onerror: null,
+				onclose: null,
+			}
+
+			const stdioModule = await import("@modelcontextprotocol/sdk/client/stdio.js")
+			const StdioClientTransport = stdioModule.StdioClientTransport as ReturnType<typeof vi.fn>
+			StdioClientTransport.mockImplementation(() => mockTransport)
+
+			// Mock Client
+			const clientModule = await import("@modelcontextprotocol/sdk/client/index.js")
+			const Client = clientModule.Client as ReturnType<typeof vi.fn>
+			Client.mockImplementation(() => ({
+				connect: vi.fn().mockResolvedValue(undefined),
+				close: vi.fn().mockResolvedValue(undefined),
+				getInstructions: vi.fn().mockReturnValue("test instructions"),
+				request: vi.fn().mockResolvedValue({ tools: [], resources: [], resourceTemplates: [] }),
+			}))
+
+			// Create McpHub without auto-initialization
+			const mcpHubNoInit = new McpHub(mockProvider as ClineProvider, false)
+
+			// Verify no connections initially
+			expect(mcpHubNoInit.connections.length).toBe(0)
+
+			// Enable servers
+			await mcpHubNoInit.enableServers()
+
+			// Verify connections were created
+			expect(mcpHubNoInit.connections.length).toBeGreaterThan(0)
+		})
+
+		it("should disable all servers when disableServers is called", async () => {
+			// Create McpHub with some connections
+			mcpHub.connections = [
+				{
+					server: {
+						name: "test-server-1",
+						source: "global",
+					} as any,
+					client: {
+						close: vi.fn().mockResolvedValue(undefined),
+					} as any,
+					transport: {
+						close: vi.fn().mockResolvedValue(undefined),
+					} as any,
+				},
+				{
+					server: {
+						name: "test-server-2",
+						source: "project",
+					} as any,
+					client: {
+						close: vi.fn().mockResolvedValue(undefined),
+					} as any,
+					transport: {
+						close: vi.fn().mockResolvedValue(undefined),
+					} as any,
+				},
+			]
+
+			// Disable servers
+			await mcpHub.disableServers()
+
+			// Verify all connections were closed
+			expect(mcpHub.connections.length).toBe(0)
+			expect(mockProvider.postMessageToWebview).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: "mcpServers",
+					mcpServers: [],
 				}),
 			)
 		})

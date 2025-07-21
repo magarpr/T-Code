@@ -135,13 +135,16 @@ export class McpHub {
 	private refCount: number = 0 // Reference counter for active clients
 	private configChangeDebounceTimers: Map<string, NodeJS.Timeout> = new Map()
 
-	constructor(provider: ClineProvider) {
+	constructor(provider: ClineProvider, autoInitialize: boolean = true) {
 		this.providerRef = new WeakRef(provider)
 		this.watchMcpSettingsFile()
 		this.watchProjectMcpFile().catch(console.error)
 		this.setupWorkspaceFoldersWatcher()
-		this.initializeGlobalMcpServers()
-		this.initializeProjectMcpServers()
+
+		if (autoInitialize) {
+			this.initializeGlobalMcpServers()
+			this.initializeProjectMcpServers()
+		}
 	}
 	/**
 	 * Registers a client (e.g., ClineProvider) using this hub.
@@ -1642,5 +1645,39 @@ export class McpHub {
 			this.projectMcpWatcher = undefined
 		}
 		this.disposables.forEach((d) => d.dispose())
+	}
+
+	/**
+	 * Enable MCP servers by initializing them
+	 */
+	async enableServers(): Promise<void> {
+		if (this.connections.length > 0) {
+			console.log("MCP servers are already initialized")
+			return
+		}
+
+		console.log("Enabling MCP servers...")
+		await this.initializeGlobalMcpServers()
+		await this.initializeProjectMcpServers()
+		await this.notifyWebviewOfServerChanges()
+	}
+
+	/**
+	 * Disable MCP servers by disconnecting all connections
+	 */
+	async disableServers(): Promise<void> {
+		console.log("Disabling MCP servers...")
+
+		// Disconnect all servers
+		const allConnections = [...this.connections]
+		for (const conn of allConnections) {
+			await this.deleteConnection(conn.server.name, conn.server.source)
+		}
+
+		// Clear connections array
+		this.connections = []
+
+		// Notify webview of changes
+		await this.notifyWebviewOfServerChanges()
 	}
 }

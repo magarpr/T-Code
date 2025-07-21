@@ -148,17 +148,32 @@ export class ClineProvider
 			await this.postStateToWebview()
 		})
 
-		// Initialize MCP Hub through the singleton manager
-		McpServerManager.getInstance(this.context, this)
-			.then((hub) => {
-				this.mcpHub = hub
-				this.mcpHub.registerClient()
-			})
-			.catch((error) => {
-				this.log(`Failed to initialize MCP Hub: ${error}`)
-			})
+		// Initialize MCP Hub through the singleton manager only if mcpEnabled
+		this.initializeMcpIfEnabled()
 
 		this.marketplaceManager = new MarketplaceManager(this.context)
+	}
+
+	private async initializeMcpIfEnabled() {
+		try {
+			// Get the mcpEnabled setting from global state
+			const mcpEnabled = this.contextProxy.getValue("mcpEnabled") ?? true
+
+			if (mcpEnabled) {
+				// Initialize MCP Hub through the singleton manager
+				const hub = await McpServerManager.getInstance(this.context, this, true)
+				this.mcpHub = hub
+				this.mcpHub.registerClient()
+			} else {
+				this.log("MCP is disabled, skipping MCP Hub initialization")
+				// Still create the hub instance but don't initialize servers
+				const hub = await McpServerManager.getInstance(this.context, this, false)
+				this.mcpHub = hub
+				this.mcpHub.registerClient()
+			}
+		} catch (error) {
+			this.log(`Failed to initialize MCP Hub: ${error}`)
+		}
 	}
 
 	// Adds a new Cline instance to clineStack, marking the start of a new task.

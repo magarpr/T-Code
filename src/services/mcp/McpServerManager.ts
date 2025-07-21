@@ -17,7 +17,11 @@ export class McpServerManager {
 	 * Creates a new instance if one doesn't exist.
 	 * Thread-safe implementation using a promise-based lock.
 	 */
-	static async getInstance(context: vscode.ExtensionContext, provider: ClineProvider): Promise<McpHub> {
+	static async getInstance(
+		context: vscode.ExtensionContext,
+		provider: ClineProvider,
+		autoInitialize: boolean = true,
+	): Promise<McpHub> {
 		// Register the provider
 		this.providers.add(provider)
 
@@ -36,7 +40,7 @@ export class McpServerManager {
 			try {
 				// Double-check instance in case it was created while we were waiting
 				if (!this.instance) {
-					this.instance = new McpHub(provider)
+					this.instance = new McpHub(provider, autoInitialize)
 					// Store a unique identifier in global state to track the primary instance
 					await context.globalState.update(this.GLOBAL_STATE_KEY, Date.now().toString())
 				}
