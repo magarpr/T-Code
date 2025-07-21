@@ -49,6 +49,30 @@ export async function attemptCompletionTool(
 		return
 	}
 
+	// Check if any actual work has been done (tools used)
+	const hasUsedTools = Object.keys(cline.toolUsage).length > 0
+	const hasEditedFiles = cline.didEditFile
+
+	// Check if this is a Kimi K2 model attempting premature completion
+	const modelId = cline.api.getModel().id
+	const isKimiK2 = modelId && modelId.toLowerCase().includes("kimi") && modelId.toLowerCase().includes("k2")
+
+	if (!hasUsedTools && !hasEditedFiles && isKimiK2) {
+		cline.consecutiveMistakeCount++
+		cline.recordToolError("attempt_completion")
+
+		// Track premature completion attempts
+		TelemetryService.instance.captureToolUsage(cline.taskId, "attempt_completion")
+		TelemetryService.instance.captureConsecutiveMistakeError(cline.taskId)
+
+		pushToolResult(
+			formatResponse.toolError(
+				"Cannot complete task without performing any actions. You identified the issue but haven't implemented the fix yet. Please use the appropriate tools to make the necessary changes before attempting completion.",
+			),
+		)
+		return
+	}
+
 	try {
 		const lastMessage = cline.clineMessages.at(-1)
 

@@ -1653,6 +1653,8 @@ export class Task extends EventEmitter<ClineEvents> {
 				{
 					maxConcurrentFileReads,
 				},
+				undefined, // todoList
+				this.api.getModel().id,
 			)
 		})()
 	}

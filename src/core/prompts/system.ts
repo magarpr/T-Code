@@ -59,6 +59,7 @@ async function generatePrompt(
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
 	todoList?: TodoItem[],
+	modelId?: string,
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -113,7 +114,7 @@ ${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : u
 
 ${modesSection}
 
-${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)}
+${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager, modelId)}
 
 ${getSystemInfoSection(cwd)}
 
@@ -143,6 +144,7 @@ export const SYSTEM_PROMPT = async (
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
 	todoList?: TodoItem[],
+	modelId?: string,
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -210,5 +212,6 @@ ${customInstructions}`
 		partialReadsEnabled,
 		settings,
 		todoList,
+		modelId,
 	)
 }

@@ -50,6 +50,7 @@ export function getRulesSection(
 	supportsComputerUse: boolean,
 	diffStrategy?: DiffStrategy,
 	codeIndexManager?: CodeIndexManager,
+	modelId?: string,
 ): string {
 	const isCodebaseSearchAvailable =
 		codeIndexManager &&
@@ -61,11 +62,21 @@ export function getRulesSection(
 		? "- **CRITICAL: For ANY exploration of code you haven't examined yet in this conversation, you MUST use the `codebase_search` tool FIRST before using search_files or other file exploration tools.** This requirement applies throughout the entire conversation, not just when starting a task. The codebase_search tool uses semantic search to find relevant code based on meaning, not just keywords, making it much more effective for understanding how features are implemented. Even if you've already explored some parts of the codebase, any new area or functionality you need to understand requires using codebase_search first.\n"
 		: ""
 
+	// Add model-specific rules for Kimi K2
+	const isKimiK2 = modelId && modelId.toLowerCase().includes("kimi") && modelId.toLowerCase().includes("k2")
+	const kimiK2Rules = isKimiK2
+		? `- **CRITICAL FOR KIMI K2 MODEL**: You MUST complete the actual implementation before using attempt_completion. Simply identifying issues without fixing them is NOT acceptable. You must:
+		1. Use appropriate tools to make the necessary changes (write_to_file, apply_diff, etc.)
+		2. Verify that your changes have been applied
+		3. Only then use attempt_completion to present your completed work
+		Attempting completion without performing actual work will result in an error.\n`
+		: ""
+
 	return `====
 
 RULES
 
-- The project base directory is: ${cwd.toPosix()}
+${kimiK2Rules}- The project base directory is: ${cwd.toPosix()}
 - All file paths must be relative to this directory. However, commands may change directories in terminals, so respect working directory specified by the response to <execute_command>.
 - You cannot \`cd\` into a different directory to complete a task. You are stuck operating from '${cwd.toPosix()}', so be sure to pass in the correct 'path' parameter when using tools that require a path.
 - Do not use the ~ character or $HOME to refer to the home directory.
