@@ -1895,37 +1895,89 @@ export class Task extends EventEmitter<ClineEvents> {
 		yield* iterator
 	}
 
+	/**
+	 * Deduplicates read_file tool results in the conversation history to optimize context length.
+	 * Keeps only the most recent read_file result for each file, removing older occurrences.
+	 *
+	 * This method:
+	 * - Uses a Map for O(n) performance instead of nested loops
+	 * - Preserves messages within the LLM cache window (30 minutes)
+	 * - Validates array operations to prevent runtime errors
+	 * - Uses robust pattern matching for tool identification
+	 *
+	 * @remarks
+	 * The method assumes read_file messages have a specific structure:
+	 * - First content item contains text like "[read_file for path/to/file]"
+	 * - Second content item contains the actual file content
+	 * - Third content item contains additional metadata
+	 */
 	deduplicateReadFileHistory() {
+		const CACHE_WINDOW_MS = 30 * 60 * 1000 // 30 minutes
+		const currentTime = Date.now()
+
+		// Map to track the most recent occurrence of each file
+		const fileOccurrences = new Map<string, { index: number; timestamp?: number }>()
+
+		// Pattern to match read_file tool use more robustly
+		const READ_FILE_PATTERN = /^\[read_file for (.+?)\]/
+
+		// First pass: identify all read_file occurrences
+		for (let i = 0; i < this.apiConversationHistory.length; i++) {
+			const conversation = this.apiConversationHistory[i]
+
+			// Skip non-user messages
+			if (conversation.role !== "user") continue
+
+			// Validate content structure
+			const content = conversation.content
+			if (typeof content === "string" || !Array.isArray(content)) continue
+
+			// Check first item for read_file pattern
+			const firstItem = content[0]
+			if (!firstItem || typeof firstItem !== "object" || firstItem.type !== "text") continue
+
+			const match = firstItem.text?.match(READ_FILE_PATTERN)
+			if (!match) continue
+
+			const filePath = match[1]
+			const messageTimestamp = conversation.ts
+
+			// Store the most recent occurrence of each file
+			fileOccurrences.set(filePath, { index: i, timestamp: messageTimestamp })
+		}
+
+		// Second pass: remove older occurrences
 		for (let i = this.apiConversationHistory.length - 1; i >= 0; i--) {
 			const conversation = this.apiConversationHistory[i]
 
 			if (conversation.role !== "user") continue
 
 			const content = conversation.content
-			if (typeof content === "string") continue
+			if (typeof content === "string" || !Array.isArray(content)) continue
 
 			const firstItem = content[0]
-			if (typeof firstItem === "string" || !("type" in firstItem) || firstItem.type !== "text") continue
+			if (!firstItem || typeof firstItem !== "object" || firstItem.type !== "text") continue
 
-			const toolUseText = firstItem.text
-			if (!toolUseText || !toolUseText.startsWith("[read_file for ")) continue
+			const match = firstItem.text?.match(READ_FILE_PATTERN)
+			if (!match) continue
 
-			for (let j = i - 1; j >= 0; j--) {
-				const prevConversation = this.apiConversationHistory[j]
+			const filePath = match[1]
+			const mostRecent = fileOccurrences.get(filePath)
 
-				if (prevConversation.role === "assistant") continue
+			// Skip if this is the most recent occurrence
+			if (mostRecent && mostRecent.index === i) continue
 
-				const prevContent = prevConversation.content
-				if (typeof prevContent === "string") continue
+			// Check if message is within cache window
+			const messageTimestamp = conversation.ts
+			if (messageTimestamp && currentTime - messageTimestamp < CACHE_WINDOW_MS) {
+				// Preserve messages within cache window
+				continue
+			}
 
-				const prevFirstItem = prevContent[0]
-				if (typeof prevFirstItem === "string" || !("type" in prevFirstItem) || prevFirstItem.type !== "text")
-					continue
-
-				if (prevFirstItem.text === toolUseText && prevContent.length === 3) {
-					prevContent.splice(1, 1)
-					break
-				}
+			// Safely remove the file content (second item) if structure is as expected
+			if (content.length >= 2 && content[1]?.type === "text") {
+				// Remove the file content while preserving the tool use and any additional items
+				content.splice(1, 1)
 			}
 		}
 	}
