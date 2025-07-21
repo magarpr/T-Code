@@ -31,7 +31,8 @@
 		"prompts": "Промпты",
 		"experimental": "Экспериментальное",
 		"language": "Язык",
-		"about": "О Roo Code"
+		"about": "О Roo Code",
+		"fileEditing": "File Editing"
 	},
 	"prompts": {
 		"description": "Настройте промпты поддержки, используемые для быстрых действий, таких как улучшение промптов, объяснение кода и исправление проблем. Эти промпты помогают Roo обеспечить лучшую поддержку для общих задач разработки."
@@ -612,6 +613,15 @@
 			"name": "Включить одновременное редактирование файлов",
 			"description": "Когда включено, Roo может редактировать несколько файлов в одном запросе. Когда отключено, Roo должен редактировать файлы по одному. Отключение этой функции может помочь при работе с менее способными моделями или когда вы хотите больше контроля над изменениями файлов."
 		}
+	},
+	"fileEditing": {
+		"description": "Configure how Roo edits files - either through visual diffs or direct file writes",
+		"fileBasedEditingLabel": "Enable file-based editing mode",
+		"fileBasedEditingDescription": "When enabled, Roo will write changes directly to files without showing diffs. This is faster but provides less visibility into changes.",
+		"diffEnabledLabel": "Show diff view",
+		"diffEnabledDescription": "When enabled, Roo will show a visual diff of changes before applying them. This is disabled when file-based editing is active.",
+		"writeDelayLabel": "Write delay",
+		"writeDelayDescription": "Delay in milliseconds after file writes to allow diagnostics to detect potential problems"
 	},
 	"promptCaching": {
 		"label": "Отключить кэширование промптов",

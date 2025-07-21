@@ -31,7 +31,8 @@
 		"prompts": "Podpowiedzi",
 		"experimental": "Eksperymentalne",
 		"language": "Język",
-		"about": "O Roo Code"
+		"about": "O Roo Code",
+		"fileEditing": "File Editing"
 	},
 	"prompts": {
 		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Roo zapewnić lepsze wsparcie dla typowych zadań programistycznych."
@@ -612,6 +613,15 @@
 			"name": "Włącz równoczesne edycje plików",
 			"description": "Gdy włączone, Roo może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Roo musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików."
 		}
+	},
+	"fileEditing": {
+		"description": "Configure how Roo edits files - either through visual diffs or direct file writes",
+		"fileBasedEditingLabel": "Enable file-based editing mode",
+		"fileBasedEditingDescription": "When enabled, Roo will write changes directly to files without showing diffs. This is faster but provides less visibility into changes.",
+		"diffEnabledLabel": "Show diff view",
+		"diffEnabledDescription": "When enabled, Roo will show a visual diff of changes before applying them. This is disabled when file-based editing is active.",
+		"writeDelayLabel": "Write delay",
+		"writeDelayDescription": "Delay in milliseconds after file writes to allow diagnostics to detect potential problems"
 	},
 	"promptCaching": {
 		"label": "Wyłącz buforowanie promptów",

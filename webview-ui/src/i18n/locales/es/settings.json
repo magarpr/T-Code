@@ -31,7 +31,8 @@
 		"prompts": "Indicaciones",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Acerca de Roo Code"
+		"about": "Acerca de Roo Code",
+		"fileEditing": "File Editing"
 	},
 	"prompts": {
 		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Roo a brindar mejor asistencia para tareas comunes de desarrollo."
@@ -612,6 +613,15 @@
 			"name": "Habilitar ediciones de archivos concurrentes",
 			"description": "Cuando está habilitado, Roo puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Roo debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
 		}
+	},
+	"fileEditing": {
+		"description": "Configure how Roo edits files - either through visual diffs or direct file writes",
+		"fileBasedEditingLabel": "Enable file-based editing mode",
+		"fileBasedEditingDescription": "When enabled, Roo will write changes directly to files without showing diffs. This is faster but provides less visibility into changes.",
+		"diffEnabledLabel": "Show diff view",
+		"diffEnabledDescription": "When enabled, Roo will show a visual diff of changes before applying them. This is disabled when file-based editing is active.",
+		"writeDelayLabel": "Write delay",
+		"writeDelayDescription": "Delay in milliseconds after file writes to allow diagnostics to detect potential problems"
 	},
 	"promptCaching": {
 		"label": "Desactivar caché de prompts",

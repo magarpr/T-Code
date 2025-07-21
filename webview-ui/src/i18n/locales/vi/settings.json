@@ -31,7 +31,8 @@
 		"prompts": "Lời nhắc",
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
-		"about": "Giới thiệu"
+		"about": "Giới thiệu",
+		"fileEditing": "File Editing"
 	},
 	"prompts": {
 		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Roo cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
@@ -612,6 +613,15 @@
 			"name": "Bật chỉnh sửa tệp đồng thời",
 			"description": "Khi được bật, Roo có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Roo phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
 		}
+	},
+	"fileEditing": {
+		"description": "Configure how Roo edits files - either through visual diffs or direct file writes",
+		"fileBasedEditingLabel": "Enable file-based editing mode",
+		"fileBasedEditingDescription": "When enabled, Roo will write changes directly to files without showing diffs. This is faster but provides less visibility into changes.",
+		"diffEnabledLabel": "Show diff view",
+		"diffEnabledDescription": "When enabled, Roo will show a visual diff of changes before applying them. This is disabled when file-based editing is active.",
+		"writeDelayLabel": "Write delay",
+		"writeDelayDescription": "Delay in milliseconds after file writes to allow diagnostics to detect potential problems"
 	},
 	"promptCaching": {
 		"label": "Tắt bộ nhớ đệm prompt",

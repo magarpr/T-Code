@@ -31,7 +31,8 @@
 		"prompts": "Prompt",
 		"experimental": "Sperimentale",
 		"language": "Lingua",
-		"about": "Informazioni su Roo Code"
+		"about": "Informazioni su Roo Code",
+		"fileEditing": "File Editing"
 	},
 	"prompts": {
 		"description": "Configura i prompt di supporto utilizzati per azioni rapide come il miglioramento dei prompt, la spiegazione del codice e la risoluzione dei problemi. Questi prompt aiutano Roo a fornire una migliore assistenza per le attività di sviluppo comuni."
@@ -612,6 +613,15 @@
 			"name": "Abilita modifiche di file concorrenti",
 			"description": "Quando abilitato, Roo può modificare più file in una singola richiesta. Quando disabilitato, Roo deve modificare i file uno alla volta. Disabilitare questa opzione può aiutare quando lavori con modelli meno capaci o quando vuoi più controllo sulle modifiche dei file."
 		}
+	},
+	"fileEditing": {
+		"description": "Configure how Roo edits files - either through visual diffs or direct file writes",
+		"fileBasedEditingLabel": "Enable file-based editing mode",
+		"fileBasedEditingDescription": "When enabled, Roo will write changes directly to files without showing diffs. This is faster but provides less visibility into changes.",
+		"diffEnabledLabel": "Show diff view",
+		"diffEnabledDescription": "When enabled, Roo will show a visual diff of changes before applying them. This is disabled when file-based editing is active.",
+		"writeDelayLabel": "Write delay",
+		"writeDelayDescription": "Delay in milliseconds after file writes to allow diagnostics to detect potential problems"
 	},
 	"promptCaching": {
 		"label": "Disattiva la cache dei prompt",

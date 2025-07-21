@@ -31,7 +31,8 @@
 		"prompts": "प्रॉम्प्ट्स",
 		"experimental": "प्रायोगिक",
 		"language": "भाषा",
-		"about": "परिचय"
+		"about": "परिचय",
+		"fileEditing": "File Editing"
 	},
 	"prompts": {
 		"description": "प्रॉम्प्ट्स को बेहतर बनाना, कोड की व्याख्या करना और समस्याओं को ठीक करना जैसी त्वरित कार्रवाइयों के लिए उपयोग किए जाने वाले सहायक प्रॉम्प्ट्स को कॉन्फ़िगर करें। ये प्रॉम्प्ट्स Roo को सामान्य विकास कार्यों के लिए बेहतर सहायता प्रदान करने में मदद करते हैं।"
@@ -612,6 +613,15 @@
 			"name": "समानांतर फ़ाइल संपादन सक्षम करें",
 			"description": "जब सक्षम किया जाता है, तो Roo एक ही अनुरोध में कई फ़ाइलों को संपादित कर सकता है। जब अक्षम किया जाता है, तो Roo को एक समय में एक फ़ाइल संपादित करनी होगी। इसे अक्षम करना तब मदद कर सकता है जब आप कम सक्षम मॉडल के साथ काम कर रहे हों या जब आप फ़ाइल संशोधनों पर अधिक नियंत्रण चाहते हों।"
 		}
+	},
+	"fileEditing": {
+		"description": "Configure how Roo edits files - either through visual diffs or direct file writes",
+		"fileBasedEditingLabel": "Enable file-based editing mode",
+		"fileBasedEditingDescription": "When enabled, Roo will write changes directly to files without showing diffs. This is faster but provides less visibility into changes.",
+		"diffEnabledLabel": "Show diff view",
+		"diffEnabledDescription": "When enabled, Roo will show a visual diff of changes before applying them. This is disabled when file-based editing is active.",
+		"writeDelayLabel": "Write delay",
+		"writeDelayDescription": "Delay in milliseconds after file writes to allow diagnostics to detect potential problems"
 	},
 	"promptCaching": {
 		"label": "प्रॉम्प्ट कैशिंग अक्षम करें",
