@@ -40,15 +40,32 @@ function fuzzySearch(lines: string[], searchChunk: string, startIndex: number, e
 
 	const searchLen = searchChunk.split(/\r?\n/).length
 
+	// Early return if search range is invalid
+	if (startIndex < 0 || endIndex > lines.length || startIndex >= endIndex || searchLen > endIndex - startIndex) {
+		return { bestScore, bestMatchIndex, bestMatchContent }
+	}
+
 	// Middle-out from the midpoint
 	const midPoint = Math.floor((startIndex + endIndex) / 2)
 	let leftIndex = midPoint
 	let rightIndex = midPoint + 1
 
-	while (leftIndex >= startIndex || rightIndex <= endIndex - searchLen) {
-		if (leftIndex >= startIndex) {
+	// Add a maximum iteration count to prevent infinite loops
+	const maxIterations = endIndex - startIndex
+	let iterations = 0
+
+	while ((leftIndex >= startIndex || rightIndex <= endIndex - searchLen) && iterations < maxIterations) {
+		iterations++
+
+		// Check left side
+		if (leftIndex >= startIndex && leftIndex + searchLen <= endIndex) {
 			const originalChunk = lines.slice(leftIndex, leftIndex + searchLen).join("\n")
 			const similarity = getSimilarity(originalChunk, searchChunk)
+
+			// Early termination if we find an exact match
+			if (similarity === 1.0) {
+				return { bestScore: similarity, bestMatchIndex: leftIndex, bestMatchContent: originalChunk }
+			}
 
 			if (similarity > bestScore) {
 				bestScore = similarity
@@ -56,11 +73,19 @@ function fuzzySearch(lines: string[], searchChunk: string, startIndex: number, e
 				bestMatchContent = originalChunk
 			}
 			leftIndex--
+		} else {
+			leftIndex = startIndex - 1 // Force it out of bounds
 		}
 
-		if (rightIndex <= endIndex - searchLen) {
+		// Check right side
+		if (rightIndex <= endIndex - searchLen && rightIndex >= startIndex) {
 			const originalChunk = lines.slice(rightIndex, rightIndex + searchLen).join("\n")
 			const similarity = getSimilarity(originalChunk, searchChunk)
+
+			// Early termination if we find an exact match
+			if (similarity === 1.0) {
+				return { bestScore: similarity, bestMatchIndex: rightIndex, bestMatchContent: originalChunk }
+			}
 
 			if (similarity > bestScore) {
 				bestScore = similarity
@@ -68,6 +93,8 @@ function fuzzySearch(lines: string[], searchChunk: string, startIndex: number, e
 				bestMatchContent = originalChunk
 			}
 			rightIndex++
+		} else {
+			rightIndex = endIndex + 1 // Force it out of bounds
 		}
 	}
 
@@ -446,6 +473,10 @@ Each file requires its own path, start_line, and diff elements.
 		diffContent: string,
 		_paramStartLine?: number,
 	): Promise<DiffResult> {
+		// Add a timeout mechanism to prevent indefinite hanging
+		const DIFF_TIMEOUT_MS = 30000 // 30 seconds timeout
+		const startTime = Date.now()
+
 		const validseq = this.validateMarkerSequencing(diffContent)
 		if (!validseq.success) {
 			return {
@@ -494,6 +525,15 @@ Each file requires its own path, start_line, and diff elements.
 			.sort((a, b) => a.startLine - b.startLine)
 
 		for (const replacement of replacements) {
+			// Check for timeout
+			if (Date.now() - startTime > DIFF_TIMEOUT_MS) {
+				return {
+					success: false,
+					error: `Operation timed out after ${DIFF_TIMEOUT_MS / 1000} seconds. This may indicate the file is too large or complex for the current search pattern.`,
+					failParts: diffResults,
+				}
+			}
+
 			let { searchContent, replaceContent } = replacement
 			let startLine = replacement.startLine + (replacement.startLine === 0 ? 0 : delta)
 
