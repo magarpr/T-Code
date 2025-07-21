@@ -589,6 +589,13 @@ export async function readFileTool(
 			// No status message, just push the files XML
 			pushToolResult(filesXml)
 		}
+
+		// Deduplicate read_file history after successful read operations
+		// This optimizes context length by keeping only the most recent read_file result for each file
+		const successfulReads = fileResults.filter((result) => result.status === "approved" && result.xmlContent)
+		if (successfulReads.length > 0) {
+			cline.deduplicateReadFileHistory()
+		}
 	} catch (error) {
 		// Handle all errors using per-file format for consistency
 		const relPath = fileEntries[0]?.path || "unknown"

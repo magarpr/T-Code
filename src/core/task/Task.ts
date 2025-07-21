@@ -1670,8 +1670,6 @@ export class Task extends EventEmitter<ClineEvents> {
 			profileThresholds = {},
 		} = state ?? {}
 
-		this.deduplicateReadFileHistory()
-
 		// Get condensing configuration for automatic triggers
 		const customCondensingPrompt = state?.customCondensingPrompt
 		const condensingApiConfigId = state?.condensingApiConfigId
