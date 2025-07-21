@@ -81,6 +81,8 @@ export interface WebviewMessage {
 		| "allowedMaxRequests"
 		| "alwaysAllowSubtasks"
 		| "alwaysAllowUpdateTodoList"
+		| "autoCloseRooTabs"
+		| "autoCloseAllRooTabs"
 		| "autoCondenseContext"
 		| "autoCondenseContextPercent"
 		| "condensingApiConfigId"

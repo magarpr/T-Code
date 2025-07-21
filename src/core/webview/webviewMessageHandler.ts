@@ -1241,6 +1241,14 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("showRooIgnoredFiles", message.bool ?? true)
 			await provider.postStateToWebview()
 			break
+		case "autoCloseRooTabs":
+			await updateGlobalState("autoCloseRooTabs", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
+		case "autoCloseAllRooTabs":
+			await updateGlobalState("autoCloseAllRooTabs", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
 		case "hasOpenedModeSelector":
 			await updateGlobalState("hasOpenedModeSelector", message.bool ?? true)
 			await provider.postStateToWebview()

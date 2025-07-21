@@ -22,6 +22,7 @@ import {
 	Globe,
 	Info,
 	MessageSquare,
+	FileEdit,
 	LucideIcon,
 } from "lucide-react"
 
@@ -66,6 +67,7 @@ import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
 import { cn } from "@/lib/utils"
+import { FileEditingOptions } from "./FileEditingOptions"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
 export const settingsTabList =
@@ -86,6 +88,7 @@ const sectionNames = [
 	"notifications",
 	"contextManagement",
 	"terminal",
+	"fileEditing",
 	"prompts",
 	"experimental",
 	"language",
@@ -177,6 +180,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
+		autoCloseRooTabs,
+		autoCloseAllRooTabs,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -333,6 +338,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
+			vscode.postMessage({ type: "autoCloseRooTabs", bool: autoCloseRooTabs })
+			vscode.postMessage({ type: "autoCloseAllRooTabs", bool: autoCloseAllRooTabs })
 			setChangeDetected(false)
 		}
 	}
@@ -409,6 +416,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
+			{ id: "fileEditing", icon: FileEdit },
 			{ id: "prompts", icon: MessageSquare },
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
@@ -684,6 +692,15 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							terminalZshP10k={terminalZshP10k}
 							terminalZdotdir={terminalZdotdir}
 							terminalCompressProgressBar={terminalCompressProgressBar}
+							setCachedStateField={setCachedStateField}
+						/>
+					)}
+
+					{/* File Editing Section */}
+					{activeTab === "fileEditing" && (
+						<FileEditingOptions
+							autoCloseRooTabs={autoCloseRooTabs}
+							autoCloseAllRooTabs={autoCloseAllRooTabs}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}

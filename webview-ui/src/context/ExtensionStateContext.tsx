@@ -134,6 +134,10 @@ export interface ExtensionStateContextType extends ExtensionState {
 	routerModels?: RouterModels
 	alwaysAllowUpdateTodoList?: boolean
 	setAlwaysAllowUpdateTodoList: (value: boolean) => void
+	autoCloseRooTabs?: boolean
+	setAutoCloseRooTabs: (value: boolean) => void
+	autoCloseAllRooTabs?: boolean
+	setAutoCloseAllRooTabs: (value: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -473,6 +477,14 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		alwaysAllowUpdateTodoList: state.alwaysAllowUpdateTodoList,
 		setAlwaysAllowUpdateTodoList: (value) => {
 			setState((prevState) => ({ ...prevState, alwaysAllowUpdateTodoList: value }))
+		},
+		autoCloseRooTabs: state.autoCloseRooTabs,
+		setAutoCloseRooTabs: (value) => {
+			setState((prevState) => ({ ...prevState, autoCloseRooTabs: value }))
+		},
+		autoCloseAllRooTabs: state.autoCloseAllRooTabs,
+		setAutoCloseAllRooTabs: (value) => {
+			setState((prevState) => ({ ...prevState, autoCloseAllRooTabs: value }))
 		},
 	}
 

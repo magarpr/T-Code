@@ -31,7 +31,8 @@
 		"prompts": "Prompts",
 		"experimental": "Experimental",
 		"language": "Language",
-		"about": "About Roo Code"
+		"about": "About Roo Code",
+		"fileEditing": "File Editing"
 	},
 	"prompts": {
 		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Roo provide better assistance for common development tasks."
@@ -718,5 +719,18 @@
 		"useCustomArn": "Use custom ARN..."
 	},
 	"includeMaxOutputTokens": "Include max output tokens",
-	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this."
+	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this.",
+	"fileEditing": {
+		"title": "File Editing",
+		"description": "Configure how Roo handles tabs after editing files.",
+		"autoCloseRooTabs": {
+			"label": "Auto-close tabs opened during current task",
+			"description": "Automatically close tabs that were opened by Roo during the current task after saving changes."
+		},
+		"autoCloseAllRooTabs": {
+			"label": "Auto-close all Roo tabs",
+			"description": "Automatically close all tabs that were opened or edited by Roo, regardless of when they were opened."
+		},
+		"tabClosingInfo": "Tab closing happens after file changes are saved. Tabs with unsaved changes will not be closed."
+	}
 }

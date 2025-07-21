@@ -15,6 +15,7 @@ import { Task } from "../../core/task/Task"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { DecorationController } from "./DecorationController"
+import { PostEditBehaviorUtils } from "./PostEditBehaviorUtils"
 
 export const DIFF_VIEW_URI_SCHEME = "cline-diff"
 export const DIFF_VIEW_LABEL_CHANGES = "Original ↔ Roo's Changes"
@@ -36,6 +37,7 @@ export class DiffViewProvider {
 	private activeLineController?: DecorationController
 	private streamedLines: string[] = []
 	private preDiagnostics: [vscode.Uri, vscode.Diagnostic[]][] = []
+	private rooOpenedTabs: Set<string> = new Set()
 
 	constructor(private cwd: string) {}
 
@@ -94,6 +96,9 @@ export class DiffViewProvider {
 			}
 			this.documentWasOpen = true
 		}
+
+		// Track that we opened this file
+		this.rooOpenedTabs.add(absolutePath)
 
 		this.activeDiffEditor = await this.openDiffEditor()
 		this.fadedOverlayController = new DecorationController("fadedOverlay", this.activeDiffEditor)
@@ -181,7 +186,12 @@ export class DiffViewProvider {
 		}
 	}
 
-	async saveChanges(diagnosticsEnabled: boolean = true, writeDelayMs: number = DEFAULT_WRITE_DELAY_MS): Promise<{
+	async saveChanges(
+		diagnosticsEnabled: boolean = true,
+		writeDelayMs: number = DEFAULT_WRITE_DELAY_MS,
+		autoCloseRooTabs: boolean = false,
+		autoCloseAllRooTabs: boolean = false,
+	): Promise<{
 		newProblemsMessage: string | undefined
 		userEdits: string | undefined
 		finalContent: string | undefined
@@ -201,6 +211,14 @@ export class DiffViewProvider {
 		await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), { preview: false, preserveFocus: true })
 		await this.closeAllDiffViews()
 
+		// Apply post-edit behavior (auto-close tabs if configured)
+		await PostEditBehaviorUtils.closeRooTabs(
+			autoCloseRooTabs,
+			autoCloseAllRooTabs,
+			this.rooOpenedTabs,
+			absolutePath,
+		)
+
 		// Getting diagnostics before and after the file edit is a better approach than
 		// automatically tracking problems in real-time. This method ensures we only
 		// report new problems that are a direct result of this specific edit.
@@ -216,22 +234,22 @@ export class DiffViewProvider {
 		// and can address them accordingly. If problems don't change immediately after
 		// applying a fix, won't be notified, which is generally fine since the
 		// initial fix is usually correct and it may just take time for linters to catch up.
-		
+
 		let newProblemsMessage = ""
-		
+
 		if (diagnosticsEnabled) {
 			// Add configurable delay to allow linters time to process and clean up issues
 			// like unused imports (especially important for Go and other languages)
 			// Ensure delay is non-negative
 			const safeDelayMs = Math.max(0, writeDelayMs)
-			
+
 			try {
 				await delay(safeDelayMs)
 			} catch (error) {
 				// Log error but continue - delay failure shouldn't break the save operation
 				console.warn(`Failed to apply write delay: ${error}`)
 			}
-			
+
 			const postDiagnostics = vscode.languages.getDiagnostics()
 
 			const newProblems = await diagnosticsToProblemsString(
@@ -610,5 +628,14 @@ export class DiffViewProvider {
 		this.activeLineController = undefined
 		this.streamedLines = []
 		this.preDiagnostics = []
+		this.rooOpenedTabs.clear()
+	}
+
+	/**
+	 * Gets the set of file paths that were opened by Roo during the current session
+	 * @returns Set of absolute file paths
+	 */
+	getRooOpenedTabs(): Set<string> {
+		return new Set(this.rooOpenedTabs)
 	}
 }

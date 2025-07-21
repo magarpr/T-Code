@@ -108,6 +108,8 @@ export const globalSettingsSchema = z.object({
 	rateLimitSeconds: z.number().optional(),
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
+	autoCloseRooTabs: z.boolean().optional(),
+	autoCloseAllRooTabs: z.boolean().optional(),
 	experiments: experimentsSchema.optional(),
 
 	codebaseIndexModels: codebaseIndexModelsSchema.optional(),
