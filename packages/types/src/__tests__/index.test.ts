@@ -22,4 +22,8 @@ describe("GLOBAL_STATE_KEYS", () => {
 	it("should not contain OpenAI Compatible API key (secret)", () => {
 		expect(GLOBAL_STATE_KEYS).not.toContain("codebaseIndexOpenAiCompatibleApiKey")
 	})
+
+	it("should contain openTabsAtEndOfList setting", () => {
+		expect(GLOBAL_STATE_KEYS).toContain("openTabsAtEndOfList")
+	})
 })

@@ -260,7 +260,21 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.consecutiveMistakeLimit = consecutiveMistakeLimit ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
 		this.providerRef = new WeakRef(provider)
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
-		this.diffViewProvider = new DiffViewProvider(this.cwd)
+
+		// Get openTabsAtEndOfList setting asynchronously
+		provider
+			.getState()
+			.then((state) => {
+				const openTabsAtEndOfList = state?.openTabsAtEndOfList ?? false
+				this.diffViewProvider = new DiffViewProvider(this.cwd, openTabsAtEndOfList)
+			})
+			.catch((error) => {
+				console.error("Failed to get openTabsAtEndOfList setting:", error)
+				this.diffViewProvider = new DiffViewProvider(this.cwd, false)
+			})
+
+		// Initialize with default value for immediate use
+		this.diffViewProvider = new DiffViewProvider(this.cwd, false)
 		this.enableCheckpoints = enableCheckpoints
 
 		this.rootTask = rootTask
