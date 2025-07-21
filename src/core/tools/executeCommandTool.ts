@@ -51,6 +51,68 @@ export async function executeCommandTool(
 				return
 			}
 
+			// Validate command against allowed/denied lists
+			const clineProvider = await cline.providerRef.deref()
+			if (clineProvider) {
+				const state = await clineProvider.getState()
+				const { allowedCommands, deniedCommands, alwaysAllowExecute } = state
+
+				// Skip validation if alwaysAllowExecute is true
+				if (!alwaysAllowExecute) {
+					// Extract the base command (first word) for validation
+					const baseCommand = command.trim().split(/\s+/)[0]
+
+					// Check denied commands first (takes precedence)
+					if (deniedCommands && deniedCommands.length > 0) {
+						const isDenied = deniedCommands.some((deniedCmd) => {
+							const trimmedDenied = deniedCmd.trim()
+							// Skip empty strings
+							if (!trimmedDenied) return false
+							const deniedBase = trimmedDenied.split(/\s+/)[0]
+							return baseCommand === deniedBase || command!.startsWith(trimmedDenied)
+						})
+
+						if (isDenied) {
+							await cline.say(
+								"error",
+								`Command '${baseCommand}' is in the denied commands list and cannot be executed.`,
+							)
+							pushToolResult(
+								formatResponse.toolError(`Command '${baseCommand}' is denied by user configuration`),
+							)
+							return
+						}
+					}
+
+					// Check allowed commands if list exists
+					if (allowedCommands && allowedCommands.length > 0) {
+						// Filter out empty strings and check if any non-empty commands exist
+						const nonEmptyAllowedCommands = allowedCommands.filter((cmd) => cmd.trim())
+
+						if (nonEmptyAllowedCommands.length > 0) {
+							const isAllowed = nonEmptyAllowedCommands.some((allowedCmd) => {
+								const trimmedAllowed = allowedCmd.trim()
+								const allowedBase = trimmedAllowed.split(/\s+/)[0]
+								return baseCommand === allowedBase || command!.startsWith(trimmedAllowed)
+							})
+
+							if (!isAllowed) {
+								await cline.say(
+									"error",
+									`Command '${baseCommand}' is not in the allowed commands list. Add it to the allowed commands in settings to execute it.`,
+								)
+								pushToolResult(
+									formatResponse.toolError(
+										`Command '${baseCommand}' is not allowed by user configuration`,
+									),
+								)
+								return
+							}
+						}
+					}
+				}
+			}
+
 			cline.consecutiveMistakeCount = 0
 
 			command = unescapeHtmlEntities(command) // Unescape HTML entities.
@@ -61,8 +123,8 @@ export async function executeCommandTool(
 			}
 
 			const executionId = cline.lastMessageTs?.toString() ?? Date.now().toString()
-			const clineProvider = await cline.providerRef.deref()
-			const clineProviderState = await clineProvider?.getState()
+			const clineProviderForExecution = await cline.providerRef.deref()
+			const clineProviderState = await clineProviderForExecution?.getState()
 			const {
 				terminalOutputLineLimit = 500,
 				terminalOutputCharacterLimit = DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
@@ -105,7 +167,10 @@ export async function executeCommandTool(
 				pushToolResult(result)
 			} catch (error: unknown) {
 				const status: CommandExecutionStatus = { executionId, status: "fallback" }
-				clineProvider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+				clineProviderForExecution?.postMessageToWebview({
+					type: "commandExecutionStatus",
+					text: JSON.stringify(status),
+				})
 				await cline.say("shell_integration_warning")
 
 				if (error instanceof ShellIntegrationError) {
