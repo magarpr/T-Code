@@ -260,7 +260,22 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.consecutiveMistakeLimit = consecutiveMistakeLimit ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
 		this.providerRef = new WeakRef(provider)
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
-		this.diffViewProvider = new DiffViewProvider(this.cwd)
+
+		// Get diffViewAutoFocus setting from provider state
+		provider
+			.getState()
+			.then((state) => {
+				const diffViewAutoFocus = (state as any)?.diffViewAutoFocus ?? false
+				this.diffViewProvider = new DiffViewProvider(this.cwd, diffViewAutoFocus)
+			})
+			.catch(() => {
+				// Fallback if state retrieval fails
+				this.diffViewProvider = new DiffViewProvider(this.cwd, false)
+			})
+
+		// Create with default for immediate use
+		this.diffViewProvider = new DiffViewProvider(this.cwd, false)
+
 		this.enableCheckpoints = enableCheckpoints
 
 		this.rootTask = rootTask

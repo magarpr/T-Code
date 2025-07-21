@@ -190,6 +190,13 @@
 			"label": "Todo",
 			"description": "Automatically update the to-do list without requiring approval"
 		},
+		"diffView": {
+			"label": "Diff View",
+			"autoFocus": {
+				"label": "Auto-focus diff editors",
+				"description": "When enabled, diff editors opened by Roo will automatically gain focus. When disabled, diff editors will open in the background without taking focus from your current editor."
+			}
+		},
 		"apiRequestLimit": {
 			"title": "Max Requests",
 			"description": "Automatically make this many API requests before asking for approval to continue with the task.",

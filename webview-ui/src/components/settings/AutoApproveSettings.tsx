@@ -33,6 +33,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	followupAutoApproveTimeoutMs?: number
 	allowedCommands?: string[]
 	deniedCommands?: string[]
+	diffViewAutoFocus?: boolean
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
 		| "alwaysAllowReadOnlyOutsideWorkspace"
@@ -52,6 +53,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "allowedCommands"
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
+		| "diffViewAutoFocus"
 	>
 }
 
@@ -74,6 +76,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowUpdateTodoList,
 	allowedCommands,
 	deniedCommands,
+	diffViewAutoFocus,
 	setCachedStateField,
 	...props
 }: AutoApproveSettingsProps) => {
@@ -393,6 +396,25 @@ export const AutoApproveSettings = ({
 						</div>
 					</div>
 				)}
+
+				{/* Diff View Settings */}
+				<div className="mt-6">
+					<div className="flex items-center gap-4 font-bold mb-3">
+						<span className="codicon codicon-diff" />
+						<div>{t("settings:autoApprove.diffView.label")}</div>
+					</div>
+					<div>
+						<VSCodeCheckbox
+							checked={diffViewAutoFocus}
+							onChange={(e: any) => setCachedStateField("diffViewAutoFocus", e.target.checked)}
+							data-testid="diff-view-auto-focus-checkbox">
+							<span className="font-medium">{t("settings:autoApprove.diffView.autoFocus.label")}</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:autoApprove.diffView.autoFocus.description")}
+						</div>
+					</div>
+				</div>
 			</Section>
 		</div>
 	)
