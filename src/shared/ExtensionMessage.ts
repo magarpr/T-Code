@@ -217,6 +217,7 @@ export type ExtensionState = Pick<
 	| "terminalCompressProgressBar"
 	| "diagnosticsEnabled"
 	| "diffEnabled"
+	| "fileBasedEditing"
 	| "fuzzyMatchThreshold"
 	// | "experiments" // Optional in GlobalSettings, required here.
 	| "language"
@@ -247,6 +248,7 @@ export type ExtensionState = Pick<
 	writeDelayMs: number
 	requestDelaySeconds: number
 
+	fileBasedEditing?: boolean
 	enableCheckpoints: boolean
 	maxOpenTabsContext: number // Maximum number of VSCode open tabs to include in context (0-500)
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)

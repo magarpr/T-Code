@@ -932,6 +932,11 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("diffEnabled", diffEnabled)
 			await provider.postStateToWebview()
 			break
+		case "fileBasedEditing":
+			const fileBasedEditing = message.bool ?? false
+			await updateGlobalState("fileBasedEditing", fileBasedEditing)
+			await provider.postStateToWebview()
+			break
 		case "enableCheckpoints":
 			const enableCheckpoints = message.bool ?? true
 			await updateGlobalState("enableCheckpoints", enableCheckpoints)

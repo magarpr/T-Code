@@ -134,6 +134,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	routerModels?: RouterModels
 	alwaysAllowUpdateTodoList?: boolean
 	setAlwaysAllowUpdateTodoList: (value: boolean) => void
+	fileBasedEditing?: boolean
+	setFileBasedEditing: (value: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -171,6 +173,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		ttsEnabled: false,
 		ttsSpeed: 1.0,
 		diffEnabled: false,
+		fileBasedEditing: false,
 		enableCheckpoints: true,
 		fuzzyMatchThreshold: 1.0,
 		language: "en", // Default language code
@@ -405,6 +408,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setTtsEnabled: (value) => setState((prevState) => ({ ...prevState, ttsEnabled: value })),
 		setTtsSpeed: (value) => setState((prevState) => ({ ...prevState, ttsSpeed: value })),
 		setDiffEnabled: (value) => setState((prevState) => ({ ...prevState, diffEnabled: value })),
+		setFileBasedEditing: (value) => setState((prevState) => ({ ...prevState, fileBasedEditing: value })),
 		setEnableCheckpoints: (value) => setState((prevState) => ({ ...prevState, enableCheckpoints: value })),
 		setBrowserViewportSize: (value: string) =>
 			setState((prevState) => ({ ...prevState, browserViewportSize: value })),

@@ -54,6 +54,8 @@ import { RepoPerTaskCheckpointService } from "../../services/checkpoints"
 
 // integrations
 import { DiffViewProvider } from "../../integrations/editor/DiffViewProvider"
+import { FileWriter } from "../../integrations/editor/FileWriter"
+import { IEditingProvider } from "../../integrations/editor/IEditingProvider"
 import { findToolName, formatContentBlockToMarkdown } from "../../integrations/misc/export-markdown"
 import { RooTerminalProcess } from "../../integrations/terminal/types"
 import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
@@ -172,7 +174,7 @@ export class Task extends EventEmitter<ClineEvents> {
 	browserSession: BrowserSession
 
 	// Editing
-	diffViewProvider: DiffViewProvider
+	editingProvider: IEditingProvider
 	diffStrategy?: DiffStrategy
 	diffEnabled: boolean = false
 	fuzzyMatchThreshold: number
@@ -260,7 +262,28 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.consecutiveMistakeLimit = consecutiveMistakeLimit ?? DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
 		this.providerRef = new WeakRef(provider)
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
-		this.diffViewProvider = new DiffViewProvider(this.cwd)
+
+		// Default to DiffViewProvider initially
+		this.editingProvider = new DiffViewProvider(this.cwd)
+
+		// Initialize editing provider based on settings
+		if (provider.getState) {
+			provider
+				.getState()
+				.then((state) => {
+					const fileBasedEditing = state?.fileBasedEditing ?? false
+					if (fileBasedEditing) {
+						this.editingProvider = new FileWriter(this.cwd)
+					} else {
+						this.editingProvider = new DiffViewProvider(this.cwd)
+					}
+				})
+				.catch((error) => {
+					console.error("Failed to get provider state for editing provider initialization:", error)
+					// Keep the default DiffViewProvider
+				})
+		}
+
 		this.enableCheckpoints = enableCheckpoints
 
 		this.rootTask = rootTask
@@ -1066,8 +1089,8 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		try {
 			// If we're not streaming then `abortStream` won't be called
-			if (this.isStreaming && this.diffViewProvider.isEditing) {
-				this.diffViewProvider.revertChanges().catch(console.error)
+			if (this.isStreaming && this.editingProvider.isEditing) {
+				this.editingProvider.revertChanges().catch(console.error)
 			}
 		} catch (error) {
 			console.error("Error reverting diff changes:", error)
@@ -1296,8 +1319,8 @@ export class Task extends EventEmitter<ClineEvents> {
 			}
 
 			const abortStream = async (cancelReason: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
-				if (this.diffViewProvider.isEditing) {
-					await this.diffViewProvider.revertChanges() // closes diff view
+				if (this.editingProvider.isEditing) {
+					await this.editingProvider.revertChanges() // closes diff view
 				}
 
 				// if last message is a partial we need to update and save it
@@ -1349,7 +1372,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			this.presentAssistantMessageLocked = false
 			this.presentAssistantMessageHasPendingUpdates = false
 
-			await this.diffViewProvider.reset()
+			await this.editingProvider.reset()
 
 			// Yields only if the first chunk is successful, otherwise will
 			// allow the user to retry the request (most likely due to rate

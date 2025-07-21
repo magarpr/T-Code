@@ -23,6 +23,7 @@ import {
 	Info,
 	MessageSquare,
 	LucideIcon,
+	FileText,
 } from "lucide-react"
 
 import type { ProviderSettings, ExperimentId } from "@roo-code/types"
@@ -65,6 +66,7 @@ import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
+import { FileEditingOptions } from "./FileEditingOptions"
 import { cn } from "@/lib/utils"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
@@ -81,6 +83,7 @@ export interface SettingsViewRef {
 const sectionNames = [
 	"providers",
 	"autoApprove",
+	"fileEditing",
 	"browser",
 	"checkpoints",
 	"notifications",
@@ -177,6 +180,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
+		fileBasedEditing,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -294,6 +298,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "ttsSpeed", value: ttsSpeed })
 			vscode.postMessage({ type: "soundVolume", value: soundVolume })
 			vscode.postMessage({ type: "diffEnabled", bool: diffEnabled })
+			vscode.postMessage({ type: "fileBasedEditing", bool: fileBasedEditing })
 			vscode.postMessage({ type: "enableCheckpoints", bool: enableCheckpoints })
 			vscode.postMessage({ type: "browserViewportSize", text: browserViewportSize })
 			vscode.postMessage({ type: "remoteBrowserHost", text: remoteBrowserHost })
@@ -404,6 +409,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		() => [
 			{ id: "providers", icon: Webhook },
 			{ id: "autoApprove", icon: CheckCheck },
+			{ id: "fileEditing", icon: FileText },
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "notifications", icon: Bell },
@@ -619,6 +625,16 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							followupAutoApproveTimeoutMs={followupAutoApproveTimeoutMs}
 							allowedCommands={allowedCommands}
 							deniedCommands={deniedCommands}
+							setCachedStateField={setCachedStateField}
+						/>
+					)}
+
+					{/* File Editing Section */}
+					{activeTab === "fileEditing" && (
+						<FileEditingOptions
+							fileBasedEditing={fileBasedEditing ?? false}
+							diffEnabled={diffEnabled ?? false}
+							writeDelayMs={writeDelayMs}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}
