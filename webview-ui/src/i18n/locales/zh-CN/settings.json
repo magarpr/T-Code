@@ -197,7 +197,14 @@
 			"description": "在请求批准以继续执行任务之前，自动发出此数量的 API 请求。",
 			"unlimited": "无限制"
 		},
-		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准"
+		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准",
+		"diffView": {
+			"label": "差异视图",
+			"autoFocus": {
+				"label": "自动聚焦差异编辑器",
+				"description": "启用后，Roo 打开的差异编辑器将自动获得焦点。禁用后，差异编辑器将在后台打开，而不会从当前编辑器中夺取焦点。"
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文档",

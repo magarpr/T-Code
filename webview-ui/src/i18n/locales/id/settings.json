@@ -201,7 +201,14 @@
 			"description": "Secara otomatis membuat sejumlah permintaan API ini sebelum meminta persetujuan untuk melanjutkan tugas.",
 			"unlimited": "Tidak terbatas"
 		},
-		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis"
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis",
+		"diffView": {
+			"label": "Tampilan Diff",
+			"autoFocus": {
+				"label": "Fokus otomatis editor diff",
+				"description": "Ketika diaktifkan, editor diff yang dibuka oleh Roo akan secara otomatis mendapatkan fokus. Ketika dinonaktifkan, editor diff akan terbuka di latar belakang tanpa mengambil fokus dari editor Anda saat ini."
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Dokumentasi {{provider}}",

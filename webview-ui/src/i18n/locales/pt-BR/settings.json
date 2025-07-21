@@ -197,7 +197,14 @@
 			"description": "Fazer automaticamente este número de requisições à API antes de pedir aprovação para continuar com a tarefa.",
 			"unlimited": "Ilimitado"
 		},
-		"selectOptionsFirst": "Selecione pelo menos uma opção abaixo para habilitar a aprovação automática"
+		"selectOptionsFirst": "Selecione pelo menos uma opção abaixo para habilitar a aprovação automática",
+		"diffView": {
+			"label": "Visualização de diferenças",
+			"autoFocus": {
+				"label": "Focar automaticamente editores de diferenças",
+				"description": "Quando ativado, os editores de diferenças abertos pelo Roo ganharão foco automaticamente. Quando desativado, os editores de diferenças serão abertos em segundo plano sem tirar o foco do seu editor atual."
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Documentação do {{provider}}",

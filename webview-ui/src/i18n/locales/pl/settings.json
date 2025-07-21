@@ -197,7 +197,14 @@
 			"description": "Automatycznie wykonaj tyle żądań API przed poproszeniem o zgodę na kontynuowanie zadania.",
 			"unlimited": "Bez limitu"
 		},
-		"selectOptionsFirst": "Wybierz co najmniej jedną opcję poniżej, aby włączyć automatyczne zatwierdzanie"
+		"selectOptionsFirst": "Wybierz co najmniej jedną opcję poniżej, aby włączyć automatyczne zatwierdzanie",
+		"diffView": {
+			"label": "Widok różnic",
+			"autoFocus": {
+				"label": "Automatyczne skupienie edytorów różnic",
+				"description": "Gdy włączone, edytory różnic otwarte przez Roo automatycznie uzyskają fokus. Gdy wyłączone, edytory różnic otworzą się w tle bez zabierania fokusu z bieżącego edytora."
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Dokumentacja {{provider}}",

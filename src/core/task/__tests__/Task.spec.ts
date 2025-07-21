@@ -116,6 +116,7 @@ vi.mock("vscode", () => {
 				stat: vi.fn().mockResolvedValue({ type: 1 }), // FileType.File = 1
 			},
 			onDidSaveTextDocument: vi.fn(() => mockDisposable),
+			onDidChangeWorkspaceFolders: vi.fn(() => mockDisposable),
 			getConfiguration: vi.fn(() => ({ get: (key: string, defaultValue: any) => defaultValue })),
 		},
 		env: {
@@ -127,6 +128,11 @@ vi.mock("vscode", () => {
 			from: vi.fn(),
 		},
 		TabInputText: vi.fn(),
+		Uri: {
+			file: vi.fn((path: string) => ({ fsPath: path, scheme: "file", path })),
+			parse: vi.fn((str: string) => ({ fsPath: str, scheme: "file", path: str })),
+		},
+		RelativePattern: vi.fn().mockImplementation((base, pattern) => ({ base, pattern })),
 	}
 })
 
@@ -1386,6 +1392,9 @@ describe("Cline", () => {
 			})
 
 			it("should not create diff strategy when enableDiff is false", async () => {
+				// Ensure getState returns a valid response
+				mockProvider.getState.mockResolvedValue({})
+
 				const task = new Task({
 					provider: mockProvider,
 					apiConfiguration: mockApiConfig,

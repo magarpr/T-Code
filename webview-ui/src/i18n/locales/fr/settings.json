@@ -197,6 +197,13 @@
 			"title": "Requêtes maximales",
 			"description": "Effectuer automatiquement ce nombre de requêtes API avant de demander l'approbation pour continuer la tâche.",
 			"unlimited": "Illimité"
+		},
+		"diffView": {
+			"label": "Vue des différences",
+			"autoFocus": {
+				"label": "Focus automatique sur les éditeurs de différences",
+				"description": "Lorsqu'activé, les éditeurs de différences ouverts par Roo obtiendront automatiquement le focus. Lorsque désactivé, les éditeurs de différences s'ouvriront en arrière-plan sans prendre le focus de votre éditeur actuel."
+			}
 		}
 	},
 	"providers": {

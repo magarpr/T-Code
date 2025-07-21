@@ -197,7 +197,14 @@
 			"description": "Voer automatisch dit aantal API-verzoeken uit voordat om goedkeuring wordt gevraagd om door te gaan met de taak.",
 			"unlimited": "Onbeperkt"
 		},
-		"selectOptionsFirst": "Selecteer ten minste één optie hieronder om automatische goedkeuring in te schakelen"
+		"selectOptionsFirst": "Selecteer ten minste één optie hieronder om automatische goedkeuring in te schakelen",
+		"diffView": {
+			"label": "Diff-weergave",
+			"autoFocus": {
+				"label": "Diff-editors automatisch focussen",
+				"description": "Wanneer ingeschakeld, krijgen diff-editors geopend door Roo automatisch focus. Wanneer uitgeschakeld, worden diff-editors op de achtergrond geopend zonder focus van uw huidige editor te nemen."
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} documentatie",

@@ -197,7 +197,14 @@
 			"description": "在請求批准以繼續執行工作之前，自動發出此數量的 API 請求。",
 			"unlimited": "無限制"
 		},
-		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准"
+		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准",
+		"diffView": {
+			"label": "差異檢視",
+			"autoFocus": {
+				"label": "自動聚焦差異編輯器",
+				"description": "啟用後，Roo 開啟的差異編輯器將自動獲得焦點。停用後，差異編輯器將在背景開啟，而不會從目前的編輯器中奪取焦點。"
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文件",

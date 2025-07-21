@@ -197,7 +197,14 @@
 			"description": "Tự động thực hiện số lượng API request này trước khi yêu cầu phê duyệt để tiếp tục với nhiệm vụ.",
 			"unlimited": "Không giới hạn"
 		},
-		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt"
+		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt",
+		"diffView": {
+			"label": "Xem khác biệt",
+			"autoFocus": {
+				"label": "Tự động lấy nét trình chỉnh sửa khác biệt",
+				"description": "Khi được bật, các trình chỉnh sửa khác biệt được mở bởi Roo sẽ tự động nhận được tiêu điểm. Khi bị tắt, các trình chỉnh sửa khác biệt sẽ mở trong nền mà không lấy tiêu điểm từ trình chỉnh sửa hiện tại của bạn."
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Tài liệu {{provider}}",
