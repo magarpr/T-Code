@@ -115,56 +115,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			return () => document.removeEventListener("mousedown", handleClickOutside)
 		}, [showDropdown])
 
-		// Handle enhanced prompt response and search results.
-		useEffect(() => {
-			const messageHandler = (event: MessageEvent) => {
-				const message = event.data
-
-				if (message.type === "enhancedPrompt") {
-					if (message.text && textAreaRef.current) {
-						try {
-							// Use execCommand to replace text while preserving undo history
-							if (document.execCommand) {
-								// Use native browser methods to preserve undo stack
-								const textarea = textAreaRef.current
-
-								// Focus the textarea to ensure it's the active element
-								textarea.focus()
-
-								// Select all text first
-								textarea.select()
-								document.execCommand("insertText", false, message.text)
-							} else {
-								setInputValue(message.text)
-							}
-						} catch {
-							setInputValue(message.text)
-						}
-					}
-
-					setIsEnhancingPrompt(false)
-				} else if (message.type === "commitSearchResults") {
-					const commits = message.commits.map((commit: any) => ({
-						type: ContextMenuOptionType.Git,
-						value: commit.hash,
-						label: commit.subject,
-						description: `${commit.shortHash} by ${commit.author} on ${commit.date}`,
-						icon: "$(git-commit)",
-					}))
-
-					setGitCommits(commits)
-				} else if (message.type === "fileSearchResults") {
-					setSearchLoading(false)
-					if (message.requestId === searchRequestId) {
-						setFileSearchResults(message.results || [])
-					}
-				}
-			}
-
-			window.addEventListener("message", messageHandler)
-			return () => window.removeEventListener("message", messageHandler)
-		}, [setInputValue, searchRequestId])
-
 		const [isDraggingOver, setIsDraggingOver] = useState(false)
 		const [textAreaBaseHeight, setTextAreaBaseHeight] = useState<number | undefined>(undefined)
 		const [showContextMenu, setShowContextMenu] = useState(false)
@@ -217,6 +167,59 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [inputValue, sendingDisabled, setInputValue, t])
 
 		const allModes = useMemo(() => getAllModes(customModes), [customModes])
+
+		// Handle enhanced prompt response and search results.
+		useEffect(() => {
+			const messageHandler = (event: MessageEvent) => {
+				const message = event.data
+
+				if (message.type === "enhancedPrompt") {
+					if (message.text && textAreaRef.current) {
+						try {
+							// Use execCommand to replace text while preserving undo history
+							if (document.execCommand) {
+								// Use native browser methods to preserve undo stack
+								const textarea = textAreaRef.current
+
+								// Focus the textarea to ensure it's the active element
+								textarea.focus()
+
+								// Select all text first
+								textarea.select()
+								document.execCommand("insertText", false, message.text)
+							} else {
+								setInputValue(message.text)
+							}
+						} catch {
+							setInputValue(message.text)
+						}
+					}
+
+					setIsEnhancingPrompt(false)
+				} else if (message.type === "triggerEnhancePrompt") {
+					// Handle the keyboard shortcut trigger
+					handleEnhancePrompt()
+				} else if (message.type === "commitSearchResults") {
+					const commits = message.commits.map((commit: any) => ({
+						type: ContextMenuOptionType.Git,
+						value: commit.hash,
+						label: commit.subject,
+						description: `${commit.shortHash} by ${commit.author} on ${commit.date}`,
+						icon: "$(git-commit)",
+					}))
+
+					setGitCommits(commits)
+				} else if (message.type === "fileSearchResults") {
+					setSearchLoading(false)
+					if (message.requestId === searchRequestId) {
+						setFileSearchResults(message.results || [])
+					}
+				}
+			}
+
+			window.addEventListener("message", messageHandler)
+			return () => window.removeEventListener("message", messageHandler)
+		}, [setInputValue, searchRequestId, handleEnhancePrompt])
 
 		const queryItems = useMemo(() => {
 			return [
