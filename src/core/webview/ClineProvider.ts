@@ -1726,6 +1726,7 @@ export class ClineProvider
 				codebaseIndexSearchMinScore: stateValues.codebaseIndexConfig?.codebaseIndexSearchMinScore,
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
+			openTabsInCorrectGroup: stateValues.openTabsInCorrectGroup ?? false,
 		}
 	}
 

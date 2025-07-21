@@ -217,6 +217,7 @@ export type ExtensionState = Pick<
 	| "terminalCompressProgressBar"
 	| "diagnosticsEnabled"
 	| "diffEnabled"
+	| "openTabsInCorrectGroup"
 	| "fuzzyMatchThreshold"
 	// | "experiments" // Optional in GlobalSettings, required here.
 	| "language"

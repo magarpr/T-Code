@@ -33,6 +33,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	followupAutoApproveTimeoutMs?: number
 	allowedCommands?: string[]
 	deniedCommands?: string[]
+	openTabsInCorrectGroup?: boolean
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
 		| "alwaysAllowReadOnlyOutsideWorkspace"
@@ -52,6 +53,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "allowedCommands"
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
+		| "openTabsInCorrectGroup"
 	>
 }
 
@@ -74,6 +76,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowUpdateTodoList,
 	allowedCommands,
 	deniedCommands,
+	openTabsInCorrectGroup,
 	setCachedStateField,
 	...props
 }: AutoApproveSettingsProps) => {
@@ -393,6 +396,27 @@ export const AutoApproveSettings = ({
 						</div>
 					</div>
 				)}
+
+				{/* FILE EDITING OPTIONS */}
+				<div className="mt-6">
+					<div className="flex items-center gap-4 font-bold mb-3">
+						<span className="codicon codicon-file-code" />
+						<div>{t("settings:autoApprove.fileEditing.label")}</div>
+					</div>
+					<div className="pl-3 border-l-2 border-vscode-button-background">
+						<VSCodeCheckbox
+							checked={openTabsInCorrectGroup}
+							onChange={(e: any) => setCachedStateField("openTabsInCorrectGroup", e.target.checked)}
+							data-testid="open-tabs-in-correct-group-checkbox">
+							<span className="font-medium">
+								{t("settings:autoApprove.fileEditing.openTabsInCorrectGroup.label")}
+							</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:autoApprove.fileEditing.openTabsInCorrectGroup.description")}
+						</div>
+					</div>
+				</div>
 			</Section>
 		</div>
 	)

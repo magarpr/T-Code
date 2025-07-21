@@ -932,6 +932,11 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("diffEnabled", diffEnabled)
 			await provider.postStateToWebview()
 			break
+		case "openTabsInCorrectGroup":
+			const openTabsInCorrectGroup = message.bool ?? false
+			await updateGlobalState("openTabsInCorrectGroup", openTabsInCorrectGroup)
+			await provider.postStateToWebview()
+			break
 		case "enableCheckpoints":
 			const enableCheckpoints = message.bool ?? true
 			await updateGlobalState("enableCheckpoints", enableCheckpoints)

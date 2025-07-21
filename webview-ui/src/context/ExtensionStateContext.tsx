@@ -134,6 +134,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	routerModels?: RouterModels
 	alwaysAllowUpdateTodoList?: boolean
 	setAlwaysAllowUpdateTodoList: (value: boolean) => void
+	openTabsInCorrectGroup?: boolean
+	setOpenTabsInCorrectGroup: (value: boolean) => void
 }
 
 export const ExtensionStateContext = createContext<ExtensionStateContextType | undefined>(undefined)
@@ -229,6 +231,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		},
 		codebaseIndexModels: { ollama: {}, openai: {} },
 		alwaysAllowUpdateTodoList: true,
+		openTabsInCorrectGroup: false,
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -473,6 +476,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		alwaysAllowUpdateTodoList: state.alwaysAllowUpdateTodoList,
 		setAlwaysAllowUpdateTodoList: (value) => {
 			setState((prevState) => ({ ...prevState, alwaysAllowUpdateTodoList: value }))
+		},
+		openTabsInCorrectGroup: state.openTabsInCorrectGroup,
+		setOpenTabsInCorrectGroup: (value) => {
+			setState((prevState) => ({ ...prevState, openTabsInCorrectGroup: value }))
 		},
 	}
 

@@ -197,7 +197,14 @@
 		},
 		"toggleAriaLabel": "Toggle auto-approval",
 		"disabledAriaLabel": "Auto-approval disabled - select options first",
-		"selectOptionsFirst": "Select at least one option below to enable auto-approval"
+		"selectOptionsFirst": "Select at least one option below to enable auto-approval",
+		"fileEditing": {
+			"label": "File Editing Options",
+			"openTabsInCorrectGroup": {
+				"label": "Open tabs in correct group",
+				"description": "When enabled, Roo will open diff tabs beside the original file in the same editor group. When disabled, tabs open in the currently active group."
+			}
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} documentation",

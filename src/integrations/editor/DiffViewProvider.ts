@@ -13,6 +13,7 @@ import { diagnosticsToProblemsString, getNewDiagnostics } from "../diagnostics"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { Task } from "../../core/task/Task"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+import { ClineProvider } from "../../core/webview/ClineProvider"
 
 import { DecorationController } from "./DecorationController"
 
@@ -36,8 +37,16 @@ export class DiffViewProvider {
 	private activeLineController?: DecorationController
 	private streamedLines: string[] = []
 	private preDiagnostics: [vscode.Uri, vscode.Diagnostic[]][] = []
+	private providerRef?: WeakRef<ClineProvider>
 
-	constructor(private cwd: string) {}
+	constructor(
+		private cwd: string,
+		provider?: ClineProvider,
+	) {
+		if (provider) {
+			this.providerRef = new WeakRef(provider)
+		}
+	}
 
 	async open(relPath: string): Promise<void> {
 		this.relPath = relPath
@@ -181,7 +190,10 @@ export class DiffViewProvider {
 		}
 	}
 
-	async saveChanges(diagnosticsEnabled: boolean = true, writeDelayMs: number = DEFAULT_WRITE_DELAY_MS): Promise<{
+	async saveChanges(
+		diagnosticsEnabled: boolean = true,
+		writeDelayMs: number = DEFAULT_WRITE_DELAY_MS,
+	): Promise<{
 		newProblemsMessage: string | undefined
 		userEdits: string | undefined
 		finalContent: string | undefined
@@ -216,22 +228,22 @@ export class DiffViewProvider {
 		// and can address them accordingly. If problems don't change immediately after
 		// applying a fix, won't be notified, which is generally fine since the
 		// initial fix is usually correct and it may just take time for linters to catch up.
-		
+
 		let newProblemsMessage = ""
-		
+
 		if (diagnosticsEnabled) {
 			// Add configurable delay to allow linters time to process and clean up issues
 			// like unused imports (especially important for Go and other languages)
 			// Ensure delay is non-negative
 			const safeDelayMs = Math.max(0, writeDelayMs)
-			
+
 			try {
 				await delay(safeDelayMs)
 			} catch (error) {
 				// Log error but continue - delay failure shouldn't break the save operation
 				console.warn(`Failed to apply write delay: ${error}`)
 			}
-			
+
 			const postDiagnostics = vscode.languages.getDiagnostics()
 
 			const newProblems = await diagnosticsToProblemsString(
@@ -461,6 +473,53 @@ export class DiffViewProvider {
 			return editor
 		}
 
+		// Determine the view column based on the openTabsInCorrectGroup setting
+		let targetViewColumn = vscode.ViewColumn.Active
+
+		// Check if we should open in the same group as the original file
+		const provider = this.providerRef?.deref()
+		if (provider) {
+			const state = await provider.getState()
+			const openTabsInCorrectGroup = state?.openTabsInCorrectGroup ?? false
+
+			if (openTabsInCorrectGroup) {
+				// Find which tab group contains the original file
+				const originalFileTab = vscode.window.tabGroups.all
+					.flatMap((group) => group.tabs.map((tab) => ({ tab, group })))
+					.find(
+						({ tab }) =>
+							tab.input instanceof vscode.TabInputText && arePathsEqual(tab.input.uri.fsPath, uri.fsPath),
+					)
+
+				if (originalFileTab) {
+					// Use the view column of the group containing the original file
+					targetViewColumn = originalFileTab.group.viewColumn
+				} else {
+					// If the original file isn't open, try to find the most logical group
+					// This could be the group with the most related files (same directory)
+					const fileDir = path.dirname(uri.fsPath)
+					const groupsWithRelatedFiles = vscode.window.tabGroups.all.map((group) => {
+						const relatedFilesCount = group.tabs.filter((tab) => {
+							if (tab.input instanceof vscode.TabInputText) {
+								const tabDir = path.dirname(tab.input.uri.fsPath)
+								return tabDir === fileDir
+							}
+							return false
+						}).length
+						return { group, relatedFilesCount }
+					})
+
+					// Sort by most related files
+					groupsWithRelatedFiles.sort((a, b) => b.relatedFilesCount - a.relatedFilesCount)
+
+					// Use the group with the most related files, or fall back to active
+					if (groupsWithRelatedFiles.length > 0 && groupsWithRelatedFiles[0].relatedFilesCount > 0) {
+						targetViewColumn = groupsWithRelatedFiles[0].group.viewColumn
+					}
+				}
+			}
+		}
+
 		// Open new diff editor.
 		return new Promise<vscode.TextEditor>((resolve, reject) => {
 			const fileName = path.basename(uri.fsPath)
@@ -523,7 +582,7 @@ export class DiffViewProvider {
 			// Pre-open the file as a text document to ensure it doesn't open in preview mode
 			// This fixes issues with files that have custom editor associations (like markdown preview)
 			vscode.window
-				.showTextDocument(uri, { preview: false, viewColumn: vscode.ViewColumn.Active, preserveFocus: true })
+				.showTextDocument(uri, { preview: false, viewColumn: targetViewColumn, preserveFocus: true })
 				.then(() => {
 					// Execute the diff command after ensuring the file is open as text
 					return vscode.commands.executeCommand(
@@ -533,7 +592,7 @@ export class DiffViewProvider {
 						}),
 						uri,
 						`${fileName}: ${fileExists ? `${DIFF_VIEW_LABEL_CHANGES}` : "New File"} (Editable)`,
-						{ preserveFocus: true },
+						{ preserveFocus: true, viewColumn: targetViewColumn },
 					)
 				})
 				.then(
