@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
 import { EditModeControls } from "./EditModeControls"
 
+const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
+
 interface ChatTextAreaProps {
 	inputValue: string
 	setInputValue: (value: string) => void
@@ -1110,7 +1112,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				/>
 
 				<div className="absolute top-1 right-1 z-30">
-					<StandardTooltip content={t("chat:enhancePrompt")}>
+					<StandardTooltip content={`${t("chat:enhancePrompt")} (${isMac ? "⌘" : "Ctrl"}+Shift+E)`}>
 						<button
 							aria-label={t("chat:enhancePrompt")}
 							disabled={sendingDisabled}

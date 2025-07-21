@@ -169,6 +169,10 @@ const App = () => {
 			if (message.type === "acceptInput") {
 				chatViewRef.current?.acceptInput()
 			}
+
+			if (message.type === "action" && message.action === "triggerEnhancePrompt") {
+				chatViewRef.current?.triggerEnhancePrompt()
+			}
 		},
 		[switchTab],
 	)

@@ -65,6 +65,7 @@ export interface ChatViewProps {
 
 export interface ChatViewRef {
 	acceptInput: () => void
+	triggerEnhancePrompt: () => void
 }
 
 export const MAX_IMAGES_PER_MESSAGE = 20 // Anthropic limits to 20 images
@@ -1614,6 +1615,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				handlePrimaryButtonClick(inputValue, selectedImages)
 			} else if (!sendingDisabled && !isProfileDisabled && (inputValue.trim() || selectedImages.length > 0)) {
 				handleSendMessage(inputValue, selectedImages)
+			}
+		},
+		triggerEnhancePrompt: () => {
+			// Find the enhance prompt button and trigger its click
+			const enhanceButton = document.querySelector('[aria-label*="enhance"]') as HTMLButtonElement
+			if (enhanceButton && !sendingDisabled) {
+				enhanceButton.click()
 			}
 		},
 	}))

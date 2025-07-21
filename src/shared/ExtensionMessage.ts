@@ -120,6 +120,7 @@ export interface ExtensionMessage {
 		| "didBecomeVisible"
 		| "focusInput"
 		| "switchTab"
+		| "triggerEnhancePrompt"
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]

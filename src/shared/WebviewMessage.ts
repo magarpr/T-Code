@@ -110,6 +110,7 @@ export interface WebviewMessage {
 		| "diagnosticsEnabled"
 		| "enhancePrompt"
 		| "enhancedPrompt"
+		| "triggerEnhancePrompt"
 		| "draggedImages"
 		| "deleteMessage"
 		| "deleteMessageConfirm"

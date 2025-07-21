@@ -174,6 +174,11 @@
 				"command": "roo-cline.acceptInput",
 				"title": "%command.acceptInput.title%",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "roo-cline.enhancePrompt",
+				"title": "%command.enhancePrompt.title%",
+				"category": "%configuration.title%"
 			}
 		],
 		"menus": {
@@ -388,7 +393,15 @@
 					"description": "%settings.autoImportSettingsPath.description%"
 				}
 			}
-		}
+		},
+		"keybindings": [
+			{
+				"command": "roo-cline.enhancePrompt",
+				"key": "ctrl+shift+e",
+				"mac": "cmd+shift+e",
+				"when": "view == roo-cline.SidebarProvider || activeWebviewPanelId == roo-cline.TabPanelProvider"
+			}
+		]
 	},
 	"scripts": {
 		"lint": "eslint . --ext=ts --max-warnings=0",

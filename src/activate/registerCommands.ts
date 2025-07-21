@@ -218,6 +218,15 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 
 		visibleProvider.postMessageToWebview({ type: "acceptInput" })
 	},
+	enhancePrompt: () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({ type: "action", action: "triggerEnhancePrompt" as any })
+	},
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
