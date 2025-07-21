@@ -116,6 +116,7 @@ vi.mock("vscode", () => {
 				stat: vi.fn().mockResolvedValue({ type: 1 }), // FileType.File = 1
 			},
 			onDidSaveTextDocument: vi.fn(() => mockDisposable),
+			onDidChangeWorkspaceFolders: vi.fn(() => mockDisposable),
 			getConfiguration: vi.fn(() => ({ get: (key: string, defaultValue: any) => defaultValue })),
 		},
 		env: {
@@ -127,6 +128,25 @@ vi.mock("vscode", () => {
 			from: vi.fn(),
 		},
 		TabInputText: vi.fn(),
+		Uri: {
+			file: vi.fn((path: string) => ({
+				fsPath: path,
+				scheme: "file",
+				authority: "",
+				path,
+				query: "",
+				fragment: "",
+			})),
+			parse: vi.fn((str: string) => ({
+				fsPath: str,
+				scheme: "file",
+				authority: "",
+				path: str,
+				query: "",
+				fragment: "",
+			})),
+		},
+		RelativePattern: vi.fn().mockImplementation((base, pattern) => ({ base, pattern })),
 	}
 })
 
@@ -1313,7 +1333,7 @@ describe("Cline", () => {
 					context: {
 						globalStorageUri: { fsPath: "/test/storage" },
 					},
-					getState: vi.fn(),
+					getState: vi.fn().mockResolvedValue({}),
 				}
 			})
 
