@@ -263,6 +263,13 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.diffViewProvider = new DiffViewProvider(this.cwd)
 		this.enableCheckpoints = enableCheckpoints
 
+		// Set up auto-close settings for DiffViewProvider
+		provider.getState().then((state) => {
+			const autoCloseRooTabs = (state as any).autoCloseRooTabs ?? false
+			const autoCloseAllRooTabs = (state as any).autoCloseAllRooTabs ?? false
+			this.diffViewProvider.setAutoCloseSettings(autoCloseRooTabs, autoCloseAllRooTabs)
+		})
+
 		this.rootTask = rootTask
 		this.parentTask = parentTask
 		this.taskNumber = taskNumber

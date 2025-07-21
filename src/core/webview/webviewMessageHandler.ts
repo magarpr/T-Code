@@ -1044,6 +1044,14 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("writeDelayMs", message.value)
 			await provider.postStateToWebview()
 			break
+		case "autoCloseRooTabs":
+			await updateGlobalState("autoCloseRooTabs", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
+		case "autoCloseAllRooTabs":
+			await updateGlobalState("autoCloseAllRooTabs", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
 		case "diagnosticsEnabled":
 			await updateGlobalState("diagnosticsEnabled", message.bool ?? true)
 			await provider.postStateToWebview()

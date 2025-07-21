@@ -107,6 +107,8 @@ export interface WebviewMessage {
 		| "updateMcpTimeout"
 		| "fuzzyMatchThreshold"
 		| "writeDelayMs"
+		| "autoCloseRooTabs"
+		| "autoCloseAllRooTabs"
 		| "diagnosticsEnabled"
 		| "enhancePrompt"
 		| "enhancedPrompt"

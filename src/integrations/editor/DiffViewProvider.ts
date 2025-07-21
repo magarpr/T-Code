@@ -15,6 +15,7 @@ import { Task } from "../../core/task/Task"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { DecorationController } from "./DecorationController"
+import { PostEditBehaviorUtils } from "./PostEditBehaviorUtils"
 
 export const DIFF_VIEW_URI_SCHEME = "cline-diff"
 export const DIFF_VIEW_LABEL_CHANGES = "Original ↔ Roo's Changes"
@@ -36,14 +37,46 @@ export class DiffViewProvider {
 	private activeLineController?: DecorationController
 	private streamedLines: string[] = []
 	private preDiagnostics: [vscode.Uri, vscode.Diagnostic[]][] = []
+	private rooOpenedTabs: Set<string> = new Set()
+	private preEditActiveEditor?: vscode.TextEditor
+	private autoCloseRooTabs: boolean = false
+	private autoCloseAllRooTabs: boolean = false
 
 	constructor(private cwd: string) {}
+
+	/**
+	 * Set the auto-close settings for this DiffViewProvider instance
+	 */
+	setAutoCloseSettings(autoCloseRooTabs: boolean, autoCloseAllRooTabs: boolean) {
+		this.autoCloseRooTabs = autoCloseRooTabs
+		this.autoCloseAllRooTabs = autoCloseAllRooTabs
+	}
+
+	/**
+	 * Track a tab that Roo opened
+	 */
+	trackOpenedTab(filePath: string) {
+		this.rooOpenedTabs.add(filePath)
+	}
+
+	/**
+	 * Clear all tracked tabs
+	 */
+	clearTrackedTabs() {
+		this.rooOpenedTabs.clear()
+	}
 
 	async open(relPath: string): Promise<void> {
 		this.relPath = relPath
 		const fileExists = this.editType === "modify"
 		const absolutePath = path.resolve(this.cwd, relPath)
 		this.isEditing = true
+
+		// Store the currently active editor before we start making changes
+		this.preEditActiveEditor = vscode.window.activeTextEditor
+
+		// Track that Roo is opening this file
+		this.trackOpenedTab(absolutePath)
 
 		// If the file is already open, ensure it's not dirty before getting its
 		// contents.
@@ -181,7 +214,10 @@ export class DiffViewProvider {
 		}
 	}
 
-	async saveChanges(diagnosticsEnabled: boolean = true, writeDelayMs: number = DEFAULT_WRITE_DELAY_MS): Promise<{
+	async saveChanges(
+		diagnosticsEnabled: boolean = true,
+		writeDelayMs: number = DEFAULT_WRITE_DELAY_MS,
+	): Promise<{
 		newProblemsMessage: string | undefined
 		userEdits: string | undefined
 		finalContent: string | undefined
@@ -201,6 +237,17 @@ export class DiffViewProvider {
 		await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), { preview: false, preserveFocus: true })
 		await this.closeAllDiffViews()
 
+		// Apply post-edit behaviors (tab closing)
+		await PostEditBehaviorUtils.closeRooTabs(
+			this.autoCloseRooTabs,
+			this.autoCloseAllRooTabs,
+			this.rooOpenedTabs,
+			absolutePath,
+		)
+
+		// Restore focus after closing tabs
+		await PostEditBehaviorUtils.restoreFocus(this.preEditActiveEditor, absolutePath)
+
 		// Getting diagnostics before and after the file edit is a better approach than
 		// automatically tracking problems in real-time. This method ensures we only
 		// report new problems that are a direct result of this specific edit.
@@ -216,22 +263,22 @@ export class DiffViewProvider {
 		// and can address them accordingly. If problems don't change immediately after
 		// applying a fix, won't be notified, which is generally fine since the
 		// initial fix is usually correct and it may just take time for linters to catch up.
-		
+
 		let newProblemsMessage = ""
-		
+
 		if (diagnosticsEnabled) {
 			// Add configurable delay to allow linters time to process and clean up issues
 			// like unused imports (especially important for Go and other languages)
 			// Ensure delay is non-negative
 			const safeDelayMs = Math.max(0, writeDelayMs)
-			
+
 			try {
 				await delay(safeDelayMs)
 			} catch (error) {
 				// Log error but continue - delay failure shouldn't break the save operation
 				console.warn(`Failed to apply write delay: ${error}`)
 			}
-			
+
 			const postDiagnostics = vscode.languages.getDiagnostics()
 
 			const newProblems = await diagnosticsToProblemsString(
@@ -610,5 +657,7 @@ export class DiffViewProvider {
 		this.activeLineController = undefined
 		this.streamedLines = []
 		this.preDiagnostics = []
+		this.clearTrackedTabs()
+		this.preEditActiveEditor = undefined
 	}
 }

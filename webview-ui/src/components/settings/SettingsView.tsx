@@ -22,6 +22,7 @@ import {
 	Globe,
 	Info,
 	MessageSquare,
+	FileEdit,
 	LucideIcon,
 } from "lucide-react"
 
@@ -65,6 +66,7 @@ import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
+import { FileEditingOptions } from "./FileEditingOptions"
 import { cn } from "@/lib/utils"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
@@ -81,6 +83,7 @@ export interface SettingsViewRef {
 const sectionNames = [
 	"providers",
 	"autoApprove",
+	"fileEditing",
 	"browser",
 	"checkpoints",
 	"notifications",
@@ -177,6 +180,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
+		autoCloseRooTabs,
+		autoCloseAllRooTabs,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -300,6 +305,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "remoteBrowserEnabled", bool: remoteBrowserEnabled })
 			vscode.postMessage({ type: "fuzzyMatchThreshold", value: fuzzyMatchThreshold ?? 1.0 })
 			vscode.postMessage({ type: "writeDelayMs", value: writeDelayMs })
+			vscode.postMessage({ type: "autoCloseRooTabs", bool: autoCloseRooTabs })
+			vscode.postMessage({ type: "autoCloseAllRooTabs", bool: autoCloseAllRooTabs })
 			vscode.postMessage({ type: "screenshotQuality", value: screenshotQuality ?? 75 })
 			vscode.postMessage({ type: "terminalOutputLineLimit", value: terminalOutputLineLimit ?? 500 })
 			vscode.postMessage({ type: "terminalOutputCharacterLimit", value: terminalOutputCharacterLimit ?? 50000 })
@@ -404,6 +411,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		() => [
 			{ id: "providers", icon: Webhook },
 			{ id: "autoApprove", icon: CheckCheck },
+			{ id: "fileEditing", icon: FileEdit },
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "notifications", icon: Bell },
@@ -621,6 +629,26 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							deniedCommands={deniedCommands}
 							setCachedStateField={setCachedStateField}
 						/>
+					)}
+
+					{/* File Editing Section */}
+					{activeTab === "fileEditing" && (
+						<div>
+							<SectionHeader>
+								<div className="flex items-center gap-2">
+									<FileEdit className="w-4" />
+									<div>{t("settings:sections.fileEditing")}</div>
+								</div>
+							</SectionHeader>
+
+							<Section>
+								<FileEditingOptions
+									autoCloseRooTabs={autoCloseRooTabs}
+									autoCloseAllRooTabs={autoCloseAllRooTabs}
+									setCachedStateField={setCachedStateField}
+								/>
+							</Section>
+						</div>
 					)}
 
 					{/* Browser Section */}
