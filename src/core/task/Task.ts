@@ -1245,6 +1245,9 @@ export class Task extends EventEmitter<ClineEvents> {
 		await this.addToApiConversationHistory({ role: "user", content: finalUserContent })
 		TelemetryService.instance.captureConversationMessage(this.taskId, "user")
 
+		// Save checkpoint after user message to preserve any manual edits
+		await checkpointSave(this)
+
 		// Since we sent off a placeholder api_req_started message to update the
 		// webview while waiting to actually start the API request (to load
 		// potential details for example), we need to update the text of that
