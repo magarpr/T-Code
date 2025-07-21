@@ -49,11 +49,9 @@ ${ruleInstructions
 
 5. **Keep rules concise** - aim for 20 lines per file, focusing on the most important guidelines
 
-6. **Open the generated files** in the editor for review after creation
-
 ${
 	addToGitignore
-		? `7. **Add the generated files to .gitignore**:
+		? `6. **Add the generated files to .gitignore**:
    - After generating all rule files, add entries to .gitignore to prevent them from being committed
    - Add each generated file path to .gitignore (e.g., .roo/rules/coding-standards.md)
    - If .gitignore doesn't exist, create it

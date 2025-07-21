@@ -1864,51 +1864,23 @@ export const webviewMessageHandler = async (
 		case "generateRules":
 			// Generate rules for the current workspace by spawning a new task
 			try {
-				const workspacePath = getWorkspacePath()
-				if (!workspacePath) {
-					vscode.window.showErrorMessage("No workspace folder open. Please open a folder to generate rules.")
-					break
-				}
-
 				// Import the rules generation service
-				const { createRulesGenerationTaskMessage } = await import("../../services/rules/rulesGenerator")
+				const { handleGenerateRules } = await import("../../services/rules/rulesGenerator")
 
-				// Get selected rule types and options from the message
-				const selectedRuleTypes = message.selectedRuleTypes || ["general"]
-				const addToGitignore = message.addToGitignore || false
-				const alwaysAllowWriteProtected = message.alwaysAllowWriteProtected || false
-				const apiConfigName = message.apiConfigName
-				const includeCustomRules = message.includeCustomRules || false
-				const customRulesText = message.customRulesText || ""
-
-				// Switch to the selected API config if provided
-				if (apiConfigName) {
-					const currentApiConfig = getGlobalState("currentApiConfigName")
-					if (apiConfigName !== currentApiConfig) {
-						await updateGlobalState("currentApiConfigName", apiConfigName)
-						await provider.activateProviderProfile({ name: apiConfigName })
-					}
-				}
-
-				// Create a comprehensive message for the rules generation task using existing analysis logic
-				const rulesGenerationMessage = await createRulesGenerationTaskMessage(
-					workspacePath,
-					selectedRuleTypes,
-					addToGitignore,
-					alwaysAllowWriteProtected,
-					includeCustomRules,
-					customRulesText,
+				// Call the refactored function with all necessary parameters
+				await handleGenerateRules(
+					provider,
+					{
+						selectedRuleTypes: message.selectedRuleTypes,
+						addToGitignore: message.addToGitignore,
+						alwaysAllowWriteProtected: message.alwaysAllowWriteProtected,
+						apiConfigName: message.apiConfigName,
+						includeCustomRules: message.includeCustomRules,
+						customRulesText: message.customRulesText,
+					},
+					getGlobalState,
+					updateGlobalState,
 				)
-
-				// Spawn a new task in code mode to generate the rules
-				await provider.initClineWithTask(rulesGenerationMessage)
-
-				// Automatically navigate to the chat tab to show the new task
-				await provider.postMessageToWebview({
-					type: "action",
-					action: "switchTab",
-					tab: "chat",
-				})
 			} catch (error) {
 				// Show error message to user
 				const errorMessage = error instanceof Error ? error.message : String(error)

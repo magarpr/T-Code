@@ -116,22 +116,6 @@ describe("ruleTypeDefinitions", () => {
 		expect(result).toContain("If found, incorporate and improve upon their content")
 	})
 
-	it("should include instructions to open files after generation", () => {
-		const ruleInstructions: RuleInstruction[] = [ruleTypeDefinitions.general]
-		const options: RulesGenerationOptions = {
-			selectedRuleTypes: ["general"],
-			addToGitignore: false,
-			alwaysAllowWriteProtected: false,
-			includeCustomRules: false,
-			customRulesText: "",
-		}
-
-		const result = generateRulesInstructions(ruleInstructions, options)
-
-		expect(result).toContain("Open the generated files")
-		expect(result).toContain("in the editor for review after creation")
-	})
-
 	it("should include proper formatting instructions", () => {
 		const ruleInstructions: RuleInstruction[] = [ruleTypeDefinitions.general]
 		const options: RulesGenerationOptions = {

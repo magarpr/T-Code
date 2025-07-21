@@ -1,11 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "fs/promises"
 import * as path from "path"
-import { createRulesGenerationTaskMessage } from "../rulesGenerator"
+import * as vscode from "vscode"
+import { createRulesGenerationTaskMessage, handleGenerateRules } from "../rulesGenerator"
+import { ClineProvider } from "../../../core/webview/ClineProvider"
 
 // Mock fs module
 vi.mock("fs/promises", () => ({
 	mkdir: vi.fn(),
+}))
+
+// Mock vscode module
+vi.mock("vscode", () => ({
+	window: {
+		showErrorMessage: vi.fn(),
+	},
+}))
+
+// Mock getWorkspacePath
+vi.mock("../../../utils/path", () => ({
+	getWorkspacePath: vi.fn(),
 }))
 
 describe("rulesGenerator", () => {
@@ -176,6 +190,112 @@ describe("rulesGenerator", () => {
 			expect(message).toContain(".roo/rules-architect/architecture-rules.md")
 			expect(message).toContain(".roo/rules-debug/debugging-rules.md")
 			expect(message).toContain(".roo/rules-docs-extractor/documentation-rules.md")
+		})
+	})
+
+	describe("handleGenerateRules", () => {
+		let mockProvider: ClineProvider
+		let mockGetGlobalState: any
+		let mockUpdateGlobalState: any
+		let mockGetWorkspacePath: any
+
+		beforeEach(async () => {
+			// Mock provider
+			mockProvider = {
+				activateProviderProfile: vi.fn(),
+				initClineWithTask: vi.fn(),
+				postMessageToWebview: vi.fn(),
+			} as any
+
+			// Mock global state functions
+			mockGetGlobalState = vi.fn()
+			mockUpdateGlobalState = vi.fn()
+
+			// Import and mock getWorkspacePath
+			const pathModule = await import("../../../utils/path")
+			mockGetWorkspacePath = vi.spyOn(pathModule, "getWorkspacePath")
+			mockGetWorkspacePath.mockReturnValue(mockWorkspacePath)
+		})
+
+		it("should show error when no workspace is open", async () => {
+			mockGetWorkspacePath.mockReturnValue(undefined)
+
+			await handleGenerateRules(mockProvider, {}, mockGetGlobalState, mockUpdateGlobalState)
+
+			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+				"No workspace folder open. Please open a folder to generate rules.",
+			)
+			expect(mockProvider.initClineWithTask).not.toHaveBeenCalled()
+		})
+
+		it("should switch API config when different from current", async () => {
+			mockGetGlobalState.mockReturnValue("current-config")
+
+			await handleGenerateRules(
+				mockProvider,
+				{ apiConfigName: "new-config" },
+				mockGetGlobalState,
+				mockUpdateGlobalState,
+			)
+
+			expect(mockUpdateGlobalState).toHaveBeenCalledWith("currentApiConfigName", "new-config")
+			expect(mockProvider.activateProviderProfile).toHaveBeenCalledWith({ name: "new-config" })
+		})
+
+		it("should not switch API config when same as current", async () => {
+			mockGetGlobalState.mockReturnValue("current-config")
+
+			await handleGenerateRules(
+				mockProvider,
+				{ apiConfigName: "current-config" },
+				mockGetGlobalState,
+				mockUpdateGlobalState,
+			)
+
+			expect(mockUpdateGlobalState).not.toHaveBeenCalled()
+			expect(mockProvider.activateProviderProfile).not.toHaveBeenCalled()
+		})
+
+		it("should create task and switch to chat tab", async () => {
+			await handleGenerateRules(
+				mockProvider,
+				{ selectedRuleTypes: ["general"] },
+				mockGetGlobalState,
+				mockUpdateGlobalState,
+			)
+
+			expect(mockProvider.initClineWithTask).toHaveBeenCalled()
+			expect(mockProvider.postMessageToWebview).toHaveBeenCalledWith({
+				type: "action",
+				action: "switchTab",
+				tab: "chat",
+			})
+		})
+
+		it("should pass all options to createRulesGenerationTaskMessage", async () => {
+			const options = {
+				selectedRuleTypes: ["general", "code"],
+				addToGitignore: true,
+				alwaysAllowWriteProtected: true,
+				includeCustomRules: true,
+				customRulesText: "Custom rules text",
+			}
+
+			await handleGenerateRules(mockProvider, options, mockGetGlobalState, mockUpdateGlobalState)
+
+			// Verify the task was created with the correct message
+			expect(mockProvider.initClineWithTask).toHaveBeenCalled()
+			const taskMessage = vi.mocked(mockProvider.initClineWithTask).mock.calls[0][0]
+			expect(taskMessage).toContain("Custom rules text")
+		})
+
+		it("should use default values when options are not provided", async () => {
+			await handleGenerateRules(mockProvider, {}, mockGetGlobalState, mockUpdateGlobalState)
+
+			expect(mockProvider.initClineWithTask).toHaveBeenCalled()
+			// The default selectedRuleTypes should be ["general"]
+			const taskMessage = vi.mocked(mockProvider.initClineWithTask).mock.calls[0][0]
+			expect(taskMessage).toContain(".roo/rules/coding-standards.md")
 		})
 	})
 })

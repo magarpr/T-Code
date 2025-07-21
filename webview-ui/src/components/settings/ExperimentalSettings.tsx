@@ -70,7 +70,7 @@ export const ExperimentalSettings = ({
 					})}
 			</Section>
 
-			<RulesSettings className="mt-6" hasUnsavedChanges={hasUnsavedChanges} />
+			<RulesSettings className="mt-3" hasUnsavedChanges={hasUnsavedChanges} />
 		</div>
 	)
 }
