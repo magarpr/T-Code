@@ -138,13 +138,20 @@ export const webviewMessageHandler = async (
 	 * Handles message editing operations with user confirmation
 	 */
 	const handleEditOperation = async (messageTs: number, editedContent: string, images?: string[]): Promise<void> => {
-		// Send message to webview to show edit confirmation dialog
-		await provider.postMessageToWebview({
-			type: "showEditMessageDialog",
-			messageTs,
-			text: editedContent,
-			images,
-		})
+		// Check if we've already shown the edit warning in this session
+		if (!provider.hasShownEditWarning) {
+			// First time editing in this session - show the warning dialog
+			provider.hasShownEditWarning = true
+			await provider.postMessageToWebview({
+				type: "showEditMessageDialog",
+				messageTs,
+				text: editedContent,
+				images,
+			})
+		} else {
+			// Already shown the warning in this session - proceed directly with the edit
+			await handleEditMessageConfirm(messageTs, editedContent, images)
+		}
 	}
 
 	/**

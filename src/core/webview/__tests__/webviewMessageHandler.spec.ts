@@ -517,8 +517,9 @@ describe("webviewMessageHandler - message dialog preferences", () => {
 	})
 
 	describe("submitEditedMessage", () => {
-		it("should always show dialog for edit confirmation", async () => {
+		it("should show dialog for edit confirmation on first edit in session", async () => {
 			vi.mocked(mockClineProvider.getCurrentCline).mockReturnValue({} as any) // Mock current cline exists
+			mockClineProvider.hasShownEditWarning = false // Reset the flag
 
 			await webviewMessageHandler(mockClineProvider, {
 				type: "submitEditedMessage",
@@ -531,6 +532,75 @@ describe("webviewMessageHandler - message dialog preferences", () => {
 				messageTs: 123456789,
 				text: "edited content",
 			})
+			expect(mockClineProvider.hasShownEditWarning).toBe(true)
+		})
+
+		it("should not show dialog for subsequent edits in the same session", async () => {
+			const editMessageTs = 1234567890000 // Message to edit
+			const mockCline = {
+				taskId: "test-task-id",
+				apiConversationHistory: [
+					{ role: "user", content: "Previous message", ts: editMessageTs - 5000 },
+					{ role: "assistant", content: "Response", ts: editMessageTs - 4000 },
+					{ role: "user", content: "Message to edit", ts: editMessageTs },
+					{ role: "assistant", content: "Later response", ts: editMessageTs + 2000 },
+				],
+				clineMessages: [
+					{ ts: editMessageTs - 5000, type: "say", say: "text", text: "Much earlier message" },
+					{ ts: editMessageTs - 2000, type: "say", say: "text", text: "Earlier message" },
+					{ ts: editMessageTs, type: "say", say: "user_feedback", text: "Original message to edit" },
+					{ ts: editMessageTs + 2000, type: "say", say: "text", text: "Later message" },
+				],
+				overwriteClineMessages: vi.fn().mockResolvedValue(undefined),
+				overwriteApiConversationHistory: vi.fn().mockResolvedValue(undefined),
+				handleWebviewAskResponse: vi.fn(),
+			}
+
+			// Mock getCurrentCline to always return our mockCline
+			vi.mocked(mockClineProvider.getCurrentCline).mockReturnValue(mockCline as any)
+
+			vi.mocked(mockClineProvider.getTaskWithId).mockResolvedValue({
+				historyItem: { id: "test-task-id" } as any,
+				taskDirPath: "/test/path",
+				apiConversationHistoryFilePath: "/test/path/api.json",
+				uiMessagesFilePath: "/test/path/ui.json",
+				apiConversationHistory: [],
+			})
+			vi.mocked(mockClineProvider.initClineWithHistoryItem).mockResolvedValue({} as any)
+
+			mockClineProvider.hasShownEditWarning = true // Flag already set from previous edit
+
+			await webviewMessageHandler(mockClineProvider, {
+				type: "submitEditedMessage",
+				value: editMessageTs,
+				editedMessageContent: "edited content",
+				images: undefined,
+			})
+
+			// Should not show dialog
+			expect(mockClineProvider.postMessageToWebview).not.toHaveBeenCalledWith({
+				type: "showEditMessageDialog",
+				messageTs: editMessageTs,
+				text: "edited content",
+			})
+
+			// Should have called overwrite methods to remove messages from the timestamp onwards
+			// The cutoff is editMessageTs - 1000, so messages before that should remain
+			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([
+				{ ts: editMessageTs - 5000, type: "say", say: "text", text: "Much earlier message" },
+				{ ts: editMessageTs - 2000, type: "say", say: "text", text: "Earlier message" },
+			])
+			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([
+				{ role: "user", content: "Previous message", ts: editMessageTs - 5000 },
+				{ role: "assistant", content: "Response", ts: editMessageTs - 4000 },
+			])
+
+			// Should have called handleWebviewAskResponse
+			expect(mockCline.handleWebviewAskResponse).toHaveBeenCalledWith(
+				"messageResponse",
+				"edited content",
+				undefined,
+			)
 		})
 	})
 })

@@ -2909,21 +2909,24 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 			await Promise.all([edit1Promise, edit2Promise])
 
-			// Verify dialogs were shown for both edits
+			// With the new implementation, only the first edit shows the dialog
+			// The second edit happens after hasShownEditWarning is already true
 			expect(mockPostMessage).toHaveBeenCalledWith({
 				type: "showEditMessageDialog",
 				messageTs: 2000,
 				text: "Edited message 1",
+				images: undefined,
 			})
-			expect(mockPostMessage).toHaveBeenCalledWith({
+
+			// The second edit should not show a dialog
+			expect(mockPostMessage).not.toHaveBeenCalledWith({
 				type: "showEditMessageDialog",
 				messageTs: 4000,
 				text: "Edited message 2",
 			})
 
-			// Simulate user confirming both edits
+			// Simulate user confirming the first edit
 			await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: "Edited message 1" })
-			await messageHandler({ type: "editMessageConfirm", messageTs: 4000, text: "Edited message 2" })
 
 			// Both operations should complete without throwing
 			expect(mockCline.overwriteClineMessages).toHaveBeenCalled()

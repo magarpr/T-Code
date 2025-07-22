@@ -115,6 +115,7 @@ export class ClineProvider
 	public readonly latestAnnouncementId = "jul-09-2025-3-23-0" // Update for v3.23.0 announcement
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
+	public hasShownEditWarning = false // Session-based flag for edit warning dialog
 
 	constructor(
 		readonly context: vscode.ExtensionContext,
