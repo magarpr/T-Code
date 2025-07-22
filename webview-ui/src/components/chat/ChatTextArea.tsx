@@ -12,6 +12,7 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import {
 	ContextMenuOptionType,
+	ContextMenuQueryItem,
 	getContextMenuOptions,
 	insertMention,
 	removeMention,
@@ -506,9 +507,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				// Announce menu state changes for screen readers
 				if (showMenu && !wasMenuVisible) {
-					setScreenReaderAnnouncement("File insertion menu opened")
+					setScreenReaderAnnouncement(t("chat:contextMenu.menuOpened"))
 				} else if (!showMenu && wasMenuVisible) {
-					setScreenReaderAnnouncement("File insertion menu closed")
+					setScreenReaderAnnouncement(t("chat:contextMenu.menuClosed"))
 				}
 
 				if (showMenu) {
@@ -559,7 +560,14 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					setFileSearchResults([]) // Clear file search results.
 				}
 			},
-			[setInputValue, setSearchRequestId, setFileSearchResults, setSearchLoading, resetOnInputChange, showContextMenu],
+			[
+				setInputValue,
+				setSearchRequestId,
+				setFileSearchResults,
+				setSearchLoading,
+				resetOnInputChange,
+				showContextMenu,
+			],
 		)
 
 		useEffect(() => {
@@ -568,9 +576,52 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		}, [showContextMenu])
 
-		// Announce selected menu item for screen readers
+		// Helper function to get announcement text for screen readers
+		const getAnnouncementText = useCallback(
+			(option: ContextMenuQueryItem, index: number, total: number) => {
+				const position = t("chat:contextMenu.position", { current: index + 1, total })
+
+				switch (option.type) {
+					case ContextMenuOptionType.File:
+					case ContextMenuOptionType.OpenedFile:
+						return t("chat:contextMenu.announceFile", {
+							name: option.value || option.label,
+							position,
+						})
+					case ContextMenuOptionType.Folder:
+						return t("chat:contextMenu.announceFolder", {
+							name: option.value || option.label,
+							position,
+						})
+					case ContextMenuOptionType.Problems:
+						return t("chat:contextMenu.announceProblems", { position })
+					case ContextMenuOptionType.Terminal:
+						return t("chat:contextMenu.announceTerminal", { position })
+					case ContextMenuOptionType.Git:
+						return t("chat:contextMenu.announceGit", {
+							name: option.label || option.value,
+							position,
+						})
+					case ContextMenuOptionType.Mode:
+						return t("chat:contextMenu.announceMode", {
+							name: option.label,
+							position,
+						})
+					default:
+						return t("chat:contextMenu.announceGeneric", {
+							name: option.label || option.value,
+							position,
+						})
+				}
+			},
+			[t],
+		)
+
+		// Announce selected menu item for screen readers with debouncing
 		useEffect(() => {
-			if (showContextMenu && selectedMenuIndex >= 0) {
+			if (!showContextMenu || selectedMenuIndex < 0) return
+
+			const timeoutId = setTimeout(() => {
 				const options = getContextMenuOptions(
 					searchQuery,
 					inputValue,
@@ -581,34 +632,23 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				)
 				const selectedOption = options[selectedMenuIndex]
 				if (selectedOption && selectedOption.type !== ContextMenuOptionType.NoResults) {
-					let announcement = ""
-					switch (selectedOption.type) {
-						case ContextMenuOptionType.File:
-						case ContextMenuOptionType.OpenedFile:
-							announcement = `File: ${selectedOption.value || selectedOption.label}, ${selectedMenuIndex + 1} of ${options.length}`
-							break
-						case ContextMenuOptionType.Folder:
-							announcement = `Folder: ${selectedOption.value || selectedOption.label}, ${selectedMenuIndex + 1} of ${options.length}`
-							break
-						case ContextMenuOptionType.Problems:
-							announcement = `Problems, ${selectedMenuIndex + 1} of ${options.length}`
-							break
-						case ContextMenuOptionType.Terminal:
-							announcement = `Terminal, ${selectedMenuIndex + 1} of ${options.length}`
-							break
-						case ContextMenuOptionType.Git:
-							announcement = `Git: ${selectedOption.label || selectedOption.value}, ${selectedMenuIndex + 1} of ${options.length}`
-							break
-						case ContextMenuOptionType.Mode:
-							announcement = `Mode: ${selectedOption.label}, ${selectedMenuIndex + 1} of ${options.length}`
-							break
-						default:
-							announcement = `${selectedOption.label || selectedOption.value}, ${selectedMenuIndex + 1} of ${options.length}`
-					}
+					const announcement = getAnnouncementText(selectedOption, selectedMenuIndex, options.length)
 					setScreenReaderAnnouncement(announcement)
 				}
-			}
-		}, [showContextMenu, selectedMenuIndex, searchQuery, inputValue, selectedType, queryItems, fileSearchResults, allModes])
+			}, 100) // Small delay to avoid rapid announcements
+
+			return () => clearTimeout(timeoutId)
+		}, [
+			showContextMenu,
+			selectedMenuIndex,
+			searchQuery,
+			inputValue,
+			selectedType,
+			queryItems,
+			fileSearchResults,
+			allModes,
+			getAnnouncementText,
+		])
 
 		const handleBlur = useCallback(() => {
 			// Only hide the context menu if the user didn't click on it.
@@ -1308,20 +1348,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						<div
 							aria-live="polite"
 							aria-atomic="true"
-							className="sr-only"
-							style={{
-								position: "absolute",
-								left: "-10000px",
-								width: "1px",
-								height: "1px",
-								overflow: "hidden",
-							}}>
+							className="sr-only absolute -left-[10000px] w-px h-px overflow-hidden">
 							{screenReaderAnnouncement}
 						</div>
 
 						{/* Instructions for screen readers */}
 						<div id="context-menu-instructions" className="sr-only">
-							Type @ to open file insertion menu. Use arrow keys to navigate, Enter to select, Escape to close.
+							{t("chat:contextMenu.instructions")}
 						</div>
 
 						{renderTextAreaSection()}
