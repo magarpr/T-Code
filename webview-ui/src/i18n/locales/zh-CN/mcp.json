@@ -54,7 +54,8 @@
 	},
 	"serverStatus": {
 		"retrying": "重试中...",
-		"retryConnection": "重试连接"
+		"retryConnection": "重试连接",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "刷新 MCP 服务器",
 	"execution": {

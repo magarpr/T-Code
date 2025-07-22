@@ -54,7 +54,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Wiederhole...",
-		"retryConnection": "Verbindung wiederholen"
+		"retryConnection": "Verbindung wiederholen",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "MCP-Server aktualisieren",
 	"execution": {

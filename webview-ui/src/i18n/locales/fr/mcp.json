@@ -54,7 +54,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Nouvelle tentative...",
-		"retryConnection": "Réessayer la connexion"
+		"retryConnection": "Réessayer la connexion",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "Rafraîchir les serveurs MCP",
 	"execution": {

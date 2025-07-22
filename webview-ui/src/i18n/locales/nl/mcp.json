@@ -55,7 +55,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Opnieuw proberen...",
-		"retryConnection": "Verbinding opnieuw proberen"
+		"retryConnection": "Verbinding opnieuw proberen",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "MCP-servers vernieuwen",
 	"execution": {

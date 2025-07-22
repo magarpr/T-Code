@@ -54,7 +54,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Ponawianie...",
-		"retryConnection": "Ponów połączenie"
+		"retryConnection": "Ponów połączenie",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "Odśwież serwery MCP",
 	"execution": {

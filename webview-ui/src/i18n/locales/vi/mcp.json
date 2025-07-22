@@ -54,7 +54,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Đang thử lại...",
-		"retryConnection": "Thử kết nối lại"
+		"retryConnection": "Thử kết nối lại",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "Làm mới Máy chủ MCP",
 	"execution": {

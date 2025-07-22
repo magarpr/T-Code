@@ -54,7 +54,8 @@
 	},
 	"serverStatus": {
 		"retrying": "再試行中...",
-		"retryConnection": "再接続"
+		"retryConnection": "再接続",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "MCPサーバーを更新",
 	"execution": {

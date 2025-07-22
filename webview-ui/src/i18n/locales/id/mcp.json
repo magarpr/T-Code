@@ -55,7 +55,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Mencoba lagi...",
-		"retryConnection": "Coba Koneksi Lagi"
+		"retryConnection": "Coba Koneksi Lagi",
+		"disabled": "Server is disabled"
 	},
 	"execution": {
 		"running": "Berjalan",

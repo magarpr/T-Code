@@ -54,7 +54,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Tekrar deneniyor...",
-		"retryConnection": "Bağlantıyı tekrar dene"
+		"retryConnection": "Bağlantıyı tekrar dene",
+		"disabled": "Server is disabled"
 	},
 	"refreshMCP": "MCP Sunucularını Yenile",
 	"execution": {
