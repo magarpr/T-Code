@@ -80,7 +80,9 @@ describe("CacheManager", () => {
 				relativePath = path.relative(homedir, mockWorkspacePath)
 			}
 
-			const compositeKey = `${workspaceName}::${relativePath}`
+			// Normalize path separators for consistency
+			const normalizedRelativePath = relativePath.replace(/\\/g, "/")
+			const compositeKey = `${workspaceName}::${normalizedRelativePath}`
 			const expectedHash = createHash("sha256").update(compositeKey).digest("hex")
 
 			expect(vscode.Uri.joinPath).toHaveBeenCalledWith(

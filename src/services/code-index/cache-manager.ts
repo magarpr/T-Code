@@ -56,10 +56,14 @@ export class CacheManager implements ICacheManager {
 			console.warn("Failed to get relative path from home directory:", error)
 		}
 
-		// Create a composite key using workspace name and relative path
+		// Normalize path separators to forward slashes for consistency across platforms
+		// This ensures the same cache key is generated regardless of the OS
+		const normalizedRelativePath = relativePath.replace(/\\/g, "/")
+
+		// Create a composite key using workspace name and normalized relative path
 		// This should be more stable across SSH sessions where the absolute path might change
 		// but the relative structure remains the same
-		const compositeKey = `${workspaceName}::${relativePath}`
+		const compositeKey = `${workspaceName}::${normalizedRelativePath}`
 
 		// Generate hash from the composite key
 		return createHash("sha256").update(compositeKey).digest("hex")
