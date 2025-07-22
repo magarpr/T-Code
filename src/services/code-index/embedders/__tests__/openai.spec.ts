@@ -505,19 +505,18 @@ describe("OpenAiEmbedder", () => {
 				// Always reject with auth error
 				mockWithResponse.mockRejectedValue(authError)
 
-				const resultPromise = embedder.createEmbeddings(testTexts)
+				// Use real timers for this test to avoid unhandled promise rejection issues
+				vitest.useRealTimers()
 
-				// Fast-forward through all retry delays
-				for (let i = 0; i < MAX_BATCH_RETRIES - 1; i++) {
-					await vitest.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY_MS * Math.pow(2, i))
-				}
-
-				await expect(resultPromise).rejects.toThrow(
+				await expect(embedder.createEmbeddings(testTexts)).rejects.toThrow(
 					"Failed to create embeddings: Authentication failed. Please check your OpenAI API key.",
 				)
 
 				expect(mockEmbeddingsCreate).toHaveBeenCalledTimes(MAX_BATCH_RETRIES)
 				expect(console.warn).not.toHaveBeenCalledWith(expect.stringContaining("Rate limit hit"))
+
+				// Re-enable fake timers for other tests
+				vitest.useFakeTimers()
 			})
 
 			it("should retry non-rate-limit errors up to MAX_RETRIES", async () => {
@@ -534,14 +533,10 @@ describe("OpenAiEmbedder", () => {
 					mockWithResponse.mockRejectedValueOnce(serverError)
 				}
 
-				const resultPromise = embedder.createEmbeddings(testTexts)
+				// Use real timers for this test to avoid unhandled promise rejection issues
+				vitest.useRealTimers()
 
-				// Fast-forward through all retry delays
-				for (let i = 0; i < MAX_BATCH_RETRIES - 1; i++) {
-					await vitest.advanceTimersByTimeAsync(INITIAL_RETRY_DELAY_MS * Math.pow(2, i))
-				}
-
-				await expect(resultPromise).rejects.toThrow(
+				await expect(embedder.createEmbeddings(testTexts)).rejects.toThrow(
 					"Failed to create embeddings after 3 attempts: HTTP 500 - Internal server error",
 				)
 
@@ -551,6 +546,9 @@ describe("OpenAiEmbedder", () => {
 					expect.stringContaining("OpenAI embedder error"),
 					expect.stringContaining("Internal server error"),
 				)
+
+				// Re-enable fake timers for other tests
+				vitest.useFakeTimers()
 			})
 		})
 
