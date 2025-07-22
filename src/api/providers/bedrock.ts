@@ -169,7 +169,11 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 	constructor(options: ProviderSettings) {
 		super()
 		this.options = options
-		let region = this.options.awsRegion
+		// Use custom region if awsRegion is "custom"
+		let region =
+			this.options.awsRegion === "custom" && this.options.awsCustomRegion
+				? this.options.awsCustomRegion
+				: this.options.awsRegion
 
 		// process the various user input options, be opinionated about the intent of the options
 		// and determine the model to use during inference and for cost calculations
@@ -216,7 +220,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		this.costModelConfig = this.getModel()
 
 		const clientConfig: BedrockRuntimeClientConfig = {
-			region: this.options.awsRegion,
+			region: region, // Use the resolved region (either standard or custom)
 			// Add the endpoint configuration when specified and enabled
 			...(this.options.awsBedrockEndpoint &&
 				this.options.awsBedrockEndpointEnabled && { endpoint: this.options.awsBedrockEndpoint }),
@@ -943,10 +947,18 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			modelConfig = this.getModelById(this.options.apiModelId as string)
 
 			// Add cross-region inference prefix if enabled
-			if (this.options.awsUseCrossRegionInference && this.options.awsRegion) {
-				const prefix = AwsBedrockHandler.getPrefixForRegion(this.options.awsRegion)
-				if (prefix) {
-					modelConfig.id = `${prefix}${modelConfig.id}`
+			if (this.options.awsUseCrossRegionInference) {
+				// Use custom region if awsRegion is "custom"
+				const regionToUse =
+					this.options.awsRegion === "custom" && this.options.awsCustomRegion
+						? this.options.awsCustomRegion
+						: this.options.awsRegion
+
+				if (regionToUse) {
+					const prefix = AwsBedrockHandler.getPrefixForRegion(regionToUse)
+					if (prefix) {
+						modelConfig.id = `${prefix}${modelConfig.id}`
+					}
 				}
 			}
 		}

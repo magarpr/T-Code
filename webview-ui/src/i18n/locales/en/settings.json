@@ -273,6 +273,14 @@
 		"awsSessionToken": "AWS Session Token",
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Use cross-region inference",
+		"awsCustomRegion": {
+			"placeholder": "Enter custom region (e.g., us-west-3)",
+			"examples": "Examples of new or custom regions:",
+			"validation": {
+				"required": "Custom region is required when 'Custom region...' is selected",
+				"format": "Region must be in format: region-direction-number (e.g., us-west-3, eu-central-2)"
+			}
+		},
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Use custom VPC endpoint",
 			"vpcEndpointUrlPlaceholder": "Enter VPC Endpoint URL (optional)",
@@ -686,6 +694,7 @@
 		"keyFilePath": "Enter Key File Path...",
 		"projectId": "Enter Project ID...",
 		"customArn": "Enter ARN (e.g. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+		"customRegion": "Enter custom region (e.g., us-west-3)",
 		"baseUrl": "Enter base URL...",
 		"modelId": {
 			"lmStudio": "e.g. meta-llama-3.1-8b-instruct",

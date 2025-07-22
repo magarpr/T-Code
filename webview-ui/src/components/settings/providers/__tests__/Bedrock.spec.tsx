@@ -61,11 +61,18 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 
 // Mock the UI components
 vi.mock("@src/components/ui", () => ({
-	Select: ({ children }: any) => <div>{children}</div>,
+	Select: ({ children, onValueChange }: any) => {
+		// Store the onValueChange callback on the window for testing
+		if (typeof window !== "undefined") {
+			;(window as any).__selectOnValueChange = onValueChange
+		}
+		return <div data-testid="select-component">{children}</div>
+	},
 	SelectContent: ({ children }: any) => <div>{children}</div>,
 	SelectItem: () => <div>Item</div>,
-	SelectTrigger: ({ children }: any) => <div>{children}</div>,
+	SelectTrigger: ({ children }: any) => <div role="combobox">{children}</div>,
 	SelectValue: () => <div>Value</div>,
+	StandardTooltip: ({ children }: any) => <div>{children}</div>,
 }))
 
 // Mock the constants
@@ -634,6 +641,198 @@ describe("Bedrock Component", () => {
 
 			// Verify examples are shown
 			expect(screen.getByText("settings:providers.awsCustomRegion.examples")).toBeInTheDocument()
+		})
+	})
+
+	// Test Scenario 7: Custom Region Validation Tests
+	describe("Custom Region Validation", () => {
+		it("should show validation error when custom region is empty", () => {
+			const apiConfiguration: Partial<ProviderSettings> = {
+				awsRegion: "custom",
+				awsCustomRegion: "",
+				awsUseProfile: true,
+			}
+
+			render(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			// The custom region input should be visible
+			const customRegionInput = screen.getByTestId("custom-region-input")
+			expect(customRegionInput).toBeInTheDocument()
+
+			// Trigger validation by changing input
+			fireEvent.change(customRegionInput, { target: { value: "" } })
+
+			// Should show required validation error
+			expect(screen.getByText("settings:providers.awsCustomRegion.validation.required")).toBeInTheDocument()
+		})
+
+		it("should show validation error for invalid region format", () => {
+			const apiConfiguration: Partial<ProviderSettings> = {
+				awsRegion: "custom",
+				awsCustomRegion: "",
+				awsUseProfile: true,
+			}
+
+			render(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			const customRegionInput = screen.getByTestId("custom-region-input")
+
+			// Test various invalid formats
+			const invalidRegions = [
+				"invalid-region",
+				"us-west",
+				"us-3",
+				"uswest3",
+				"US-WEST-3",
+				"us-west-three",
+				"123-west-3",
+			]
+
+			for (const invalidRegion of invalidRegions) {
+				fireEvent.change(customRegionInput, { target: { value: invalidRegion } })
+
+				// Should show format validation error
+				expect(screen.getByText("settings:providers.awsCustomRegion.validation.format")).toBeInTheDocument()
+			}
+		})
+
+		it("should accept valid region formats", () => {
+			const apiConfiguration: Partial<ProviderSettings> = {
+				awsRegion: "custom",
+				awsCustomRegion: "",
+				awsUseProfile: true,
+			}
+
+			render(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			const customRegionInput = screen.getByTestId("custom-region-input")
+
+			// Test various valid formats
+			const validRegions = [
+				"us-west-3",
+				"eu-central-2",
+				"ap-southeast-4",
+				"sa-east-2",
+				"ca-west-1",
+				"me-south-2",
+				"af-south-1",
+			]
+
+			for (const validRegion of validRegions) {
+				fireEvent.change(customRegionInput, { target: { value: validRegion } })
+
+				// Should update the field
+				expect(mockSetApiConfigurationField).toHaveBeenCalledWith("awsCustomRegion", validRegion)
+
+				// Should not show any error
+				expect(
+					screen.queryByText("settings:providers.awsCustomRegion.validation.format"),
+				).not.toBeInTheDocument()
+				expect(
+					screen.queryByText("settings:providers.awsCustomRegion.validation.required"),
+				).not.toBeInTheDocument()
+			}
+		})
+
+		it("should preserve custom region value when switching between regions", () => {
+			const apiConfiguration: Partial<ProviderSettings> = {
+				awsRegion: "custom",
+				awsCustomRegion: "us-west-3",
+				awsUseProfile: true,
+			}
+
+			const { rerender } = render(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			// Custom region input should be visible with the value
+			let customRegionInput = screen.getByTestId("custom-region-input") as HTMLInputElement
+			expect(customRegionInput.value).toBe("us-west-3")
+
+			// Switch to a standard region by calling the onValueChange directly
+			if ((window as any).__selectOnValueChange) {
+				;(window as any).__selectOnValueChange("us-east-1")
+			}
+
+			// Update the configuration
+			apiConfiguration.awsRegion = "us-east-1"
+			rerender(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			// Custom region input should be hidden
+			expect(screen.queryByTestId("custom-region-input")).not.toBeInTheDocument()
+
+			// Switch back to custom region
+			if ((window as any).__selectOnValueChange) {
+				;(window as any).__selectOnValueChange("custom")
+			}
+
+			// Update the configuration
+			apiConfiguration.awsRegion = "custom"
+			rerender(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			// Custom region input should be visible again with the preserved value
+			customRegionInput = screen.getByTestId("custom-region-input") as HTMLInputElement
+			expect(customRegionInput.value).toBe("us-west-3")
+		})
+
+		it("should validate existing custom region when switching back to custom", () => {
+			const apiConfiguration: Partial<ProviderSettings> = {
+				awsRegion: "us-east-1",
+				awsCustomRegion: "invalid-region", // Invalid format
+				awsUseProfile: true,
+			}
+
+			const { rerender } = render(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			// Switch to custom region
+			if ((window as any).__selectOnValueChange) {
+				;(window as any).__selectOnValueChange("custom")
+			}
+
+			// Update the configuration
+			apiConfiguration.awsRegion = "custom"
+			rerender(
+				<Bedrock
+					apiConfiguration={apiConfiguration as ProviderSettings}
+					setApiConfigurationField={mockSetApiConfigurationField}
+				/>,
+			)
+
+			// Should show validation error for the existing invalid value
+			expect(screen.getByText("settings:providers.awsCustomRegion.validation.format")).toBeInTheDocument()
 		})
 	})
 })

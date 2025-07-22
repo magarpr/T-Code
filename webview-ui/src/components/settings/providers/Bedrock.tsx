@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Standard
 
 import { inputEventTransform, noTransform } from "../transforms"
 
+// AWS region format validation regex
+const AWS_REGION_REGEX = /^[a-z]{2,}-[a-z]+-\d+$/
+
 type BedrockProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
@@ -19,6 +22,7 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 	const { t } = useAppTranslation()
 	const [awsEndpointSelected, setAwsEndpointSelected] = useState(!!apiConfiguration?.awsBedrockEndpointEnabled)
 	const [customRegionSelected, setCustomRegionSelected] = useState(apiConfiguration?.awsRegion === "custom")
+	const [customRegionError, setCustomRegionError] = useState<string | null>(null)
 
 	// Update the endpoint enabled state when the configuration changes
 	useEffect(() => {
@@ -39,6 +43,34 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 				setApiConfigurationField(field, transform(event as E))
 			},
 		[setApiConfigurationField],
+	)
+
+	// Validate custom region format
+	const validateCustomRegion = useCallback(
+		(value: string) => {
+			if (!value && customRegionSelected) {
+				setCustomRegionError(t("settings:providers.awsCustomRegion.validation.required"))
+				return false
+			}
+			if (value && !AWS_REGION_REGEX.test(value)) {
+				setCustomRegionError(t("settings:providers.awsCustomRegion.validation.format"))
+				return false
+			}
+			setCustomRegionError(null)
+			return true
+		},
+		[customRegionSelected, t],
+	)
+
+	// Handle custom region input change with validation
+	const handleCustomRegionChange = useCallback(
+		(event: Event | React.FormEvent<HTMLElement>) => {
+			const target = event.target as HTMLInputElement
+			const value = target.value
+			validateCustomRegion(value)
+			setApiConfigurationField("awsCustomRegion", value)
+		},
+		[setApiConfigurationField, validateCustomRegion],
 	)
 
 	return (
@@ -98,9 +130,13 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 					onValueChange={(value) => {
 						setApiConfigurationField("awsRegion", value)
 						setCustomRegionSelected(value === "custom")
-						// Clear custom region when switching to a standard region
-						if (value !== "custom") {
-							setApiConfigurationField("awsCustomRegion", "")
+						// Don't clear custom region when switching away - preserve the value
+						if (value === "custom" && apiConfiguration?.awsCustomRegion) {
+							// Validate the existing custom region value
+							validateCustomRegion(apiConfiguration.awsCustomRegion)
+						} else {
+							// Clear validation error when not using custom region
+							setCustomRegionError(null)
 						}
 					}}>
 					<SelectTrigger className="w-full">
@@ -120,10 +156,14 @@ export const Bedrock = ({ apiConfiguration, setApiConfigurationField, selectedMo
 					<VSCodeTextField
 						value={apiConfiguration?.awsCustomRegion || ""}
 						style={{ width: "100%", marginTop: 3, marginBottom: 5 }}
-						onInput={handleInputChange("awsCustomRegion")}
-						placeholder={t("settings:placeholders.customRegion")}
+						onInput={handleCustomRegionChange}
+						placeholder={t("settings:providers.awsCustomRegion.placeholder")}
 						data-testid="custom-region-input"
+						className={customRegionError ? "error" : ""}
 					/>
+					{customRegionError && (
+						<div className="text-sm text-vscode-errorForeground ml-6 mt-1 mb-2">{customRegionError}</div>
+					)}
 					<div className="text-sm text-vscode-descriptionForeground ml-6 mt-1 mb-3">
 						{t("settings:providers.awsCustomRegion.examples")}
 						<div className="ml-2">• us-west-3</div>
