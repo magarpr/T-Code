@@ -59,17 +59,29 @@ vi.mock("@src/i18n/TranslationContext", () => ({
 	}),
 }))
 
+// Store mock callbacks globally for test access
+const mockSelectCallbacks: { [key: string]: any } = {}
+
 // Mock the UI components
 vi.mock("@src/components/ui", () => ({
-	Select: ({ children, onValueChange }: any) => {
-		// Store the onValueChange callback on the window for testing
+	Select: ({ children, onValueChange, value }: any) => {
+		// Store the onValueChange callback on the window for testing (for new tests)
 		if (typeof window !== "undefined") {
 			;(window as any).__selectOnValueChange = onValueChange
 		}
-		return <div data-testid="select-component">{children}</div>
+		// Also store the callback for test access (for existing tests)
+		if (onValueChange) {
+			mockSelectCallbacks.onValueChange = onValueChange
+		}
+
+		return (
+			<div data-testid="select-component" data-value={value}>
+				{children}
+			</div>
+		)
 	},
 	SelectContent: ({ children }: any) => <div>{children}</div>,
-	SelectItem: () => <div>Item</div>,
+	SelectItem: ({ value }: any) => <div data-value={value}>Item</div>,
 	SelectTrigger: ({ children }: any) => <div role="combobox">{children}</div>,
 	SelectValue: () => <div>Value</div>,
 	StandardTooltip: ({ children }: any) => <div>{children}</div>,
@@ -451,13 +463,12 @@ describe("Bedrock Component", () => {
 			// Custom region input should not be visible initially
 			expect(screen.queryByTestId("custom-region-input")).not.toBeInTheDocument()
 
-			// Mock the Select component to simulate selecting "custom"
-			// Since we're mocking the Select component, we need to simulate the onValueChange call
-			const selectComponent = screen.getByRole("combobox", { hidden: true })
-			if (selectComponent) {
-				// Simulate selecting "custom" region
-				const onValueChange = (selectComponent as any).onValueChange || (() => {})
-				onValueChange("custom")
+			// Verify the Select component is rendered
+			expect(screen.getByTestId("select-component")).toBeInTheDocument()
+
+			// Call the onValueChange callback directly
+			if (mockSelectCallbacks.onValueChange) {
+				mockSelectCallbacks.onValueChange("custom")
 			}
 
 			// Verify that setApiConfigurationField was called with "custom"
@@ -482,11 +493,12 @@ describe("Bedrock Component", () => {
 			expect(screen.getByTestId("custom-region-input")).toBeInTheDocument()
 			expect(screen.getByTestId("custom-region-input")).toHaveValue("us-west-3")
 
-			// Mock selecting a standard region
-			const selectComponent = screen.getByRole("combobox", { hidden: true })
-			if (selectComponent) {
-				const onValueChange = (selectComponent as any).onValueChange || (() => {})
-				onValueChange("us-east-1")
+			// Verify the Select component is rendered
+			expect(screen.getByTestId("select-component")).toBeInTheDocument()
+
+			// Call the onValueChange callback directly
+			if (mockSelectCallbacks.onValueChange) {
+				mockSelectCallbacks.onValueChange("us-east-1")
 			}
 
 			// Verify that both awsRegion and awsCustomRegion were updated
