@@ -5,6 +5,8 @@ import debounce from "lodash.debounce"
 import { safeWriteJson } from "../../utils/safeWriteJson"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
+import * as path from "path"
+import * as os from "os"
 
 /**
  * Manages the cache for code indexing
@@ -23,13 +25,44 @@ export class CacheManager implements ICacheManager {
 		private context: vscode.ExtensionContext,
 		private workspacePath: string,
 	) {
-		this.cachePath = vscode.Uri.joinPath(
-			context.globalStorageUri,
-			`roo-index-cache-${createHash("sha256").update(workspacePath).digest("hex")}.json`,
-		)
+		// Generate a stable cache key that persists across SSH sessions
+		const cacheKey = this.generateStableCacheKey(workspacePath)
+		this.cachePath = vscode.Uri.joinPath(context.globalStorageUri, `roo-index-cache-${cacheKey}.json`)
 		this._debouncedSaveCache = debounce(async () => {
 			await this._performSave()
 		}, 1500)
+	}
+
+	/**
+	 * Generates a stable cache key for the workspace that persists across SSH sessions
+	 * @param workspacePath The workspace path
+	 * @returns A stable hash key
+	 */
+	private generateStableCacheKey(workspacePath: string): string {
+		// Get the workspace folder name
+		const workspaceName = path.basename(workspacePath)
+
+		// Try to get a relative path from home directory for additional stability
+		const homedir = os.homedir()
+		let relativePath = workspacePath
+
+		try {
+			// If the workspace is under the home directory, use the relative path
+			if (workspacePath.startsWith(homedir)) {
+				relativePath = path.relative(homedir, workspacePath)
+			}
+		} catch (error) {
+			// If we can't get relative path, just use the full path
+			console.warn("Failed to get relative path from home directory:", error)
+		}
+
+		// Create a composite key using workspace name and relative path
+		// This should be more stable across SSH sessions where the absolute path might change
+		// but the relative structure remains the same
+		const compositeKey = `${workspaceName}::${relativePath}`
+
+		// Generate hash from the composite key
+		return createHash("sha256").update(compositeKey).digest("hex")
 	}
 
 	/**

@@ -3,6 +3,8 @@ import * as vscode from "vscode"
 import { createHash } from "crypto"
 import debounce from "lodash.debounce"
 import { CacheManager } from "../cache-manager"
+import * as path from "path"
+import * as os from "os"
 
 // Mock safeWriteJson utility
 vitest.mock("../../../utils/safeWriteJson", () => ({
@@ -38,6 +40,11 @@ vitest.mock("@roo-code/telemetry", () => ({
 	},
 }))
 
+// Mock os module
+vitest.mock("os", () => ({
+	homedir: vitest.fn(() => "/home/user"),
+}))
+
 describe("CacheManager", () => {
 	let mockContext: vscode.ExtensionContext
 	let mockWorkspacePath: string
@@ -63,8 +70,18 @@ describe("CacheManager", () => {
 	})
 
 	describe("constructor", () => {
-		it("should correctly set up cachePath using Uri.joinPath and crypto.createHash", () => {
-			const expectedHash = createHash("sha256").update(mockWorkspacePath).digest("hex")
+		it("should correctly set up cachePath using Uri.joinPath with stable cache key", () => {
+			// The cache key should be based on workspace name and relative path
+			const workspaceName = path.basename(mockWorkspacePath)
+			const homedir = os.homedir()
+			let relativePath = mockWorkspacePath
+
+			if (mockWorkspacePath.startsWith(homedir)) {
+				relativePath = path.relative(homedir, mockWorkspacePath)
+			}
+
+			const compositeKey = `${workspaceName}::${relativePath}`
+			const expectedHash = createHash("sha256").update(compositeKey).digest("hex")
 
 			expect(vscode.Uri.joinPath).toHaveBeenCalledWith(
 				mockContext.globalStorageUri,
@@ -74,6 +91,36 @@ describe("CacheManager", () => {
 
 		it("should set up debounced save function", () => {
 			expect(debounce).toHaveBeenCalledWith(expect.any(Function), 1500)
+		})
+
+		it("should generate stable cache key for workspace under home directory", () => {
+			// os.homedir is already mocked to return '/home/user'
+			const workspaceUnderHome = "/home/user/projects/myproject"
+			const cacheManagerHome = new CacheManager(mockContext, workspaceUnderHome)
+
+			// Expected key should use relative path from home
+			const expectedKey = `myproject::projects/myproject`
+			const expectedHash = createHash("sha256").update(expectedKey).digest("hex")
+
+			expect(vscode.Uri.joinPath).toHaveBeenCalledWith(
+				mockContext.globalStorageUri,
+				`roo-index-cache-${expectedHash}.json`,
+			)
+		})
+
+		it("should generate stable cache key for workspace outside home directory", () => {
+			// os.homedir is already mocked to return '/home/user'
+			const workspaceOutsideHome = "/opt/projects/myproject"
+			const cacheManagerOutside = new CacheManager(mockContext, workspaceOutsideHome)
+
+			// Expected key should use full path since it's outside home
+			const expectedKey = `myproject::/opt/projects/myproject`
+			const expectedHash = createHash("sha256").update(expectedKey).digest("hex")
+
+			expect(vscode.Uri.joinPath).toHaveBeenCalledWith(
+				mockContext.globalStorageUri,
+				`roo-index-cache-${expectedHash}.json`,
+			)
 		})
 	})
 
