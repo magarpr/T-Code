@@ -29,6 +29,7 @@ import {
 	ChutesHandler,
 	LiteLLMHandler,
 	ClaudeCodeHandler,
+	SambaNovaHandler,
 } from "./providers"
 
 export interface SingleCompletionHandler {
@@ -112,6 +113,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ChutesHandler(options)
 		case "litellm":
 			return new LiteLLMHandler(options)
+		case "sambanova":
+			return new SambaNovaHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

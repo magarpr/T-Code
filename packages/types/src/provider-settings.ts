@@ -32,6 +32,7 @@ export const providerNames = [
 	"groq",
 	"chutes",
 	"litellm",
+	"sambanova",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -229,6 +230,10 @@ const litellmSchema = baseProviderSettingsSchema.extend({
 	litellmModelId: z.string().optional(),
 })
 
+const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
+	sambaNovaApiKey: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -258,6 +263,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	chutesSchema.merge(z.object({ apiProvider: z.literal("chutes") })),
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
+	sambaNovaSchema.merge(z.object({ apiProvider: z.literal("sambanova") })),
 	defaultSchema,
 ])
 
@@ -287,6 +293,7 @@ export const providerSettingsSchema = z.object({
 	...groqSchema.shape,
 	...chutesSchema.shape,
 	...litellmSchema.shape,
+	...sambaNovaSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
 

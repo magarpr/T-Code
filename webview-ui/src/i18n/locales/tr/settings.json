@@ -259,6 +259,8 @@
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
+		"getSambaNovaApiKey": "SambaNova API Anahtarı Al",
+		"sambaNovaApiKey": "SambaNova API Anahtarı",
 		"getGeminiApiKey": "Gemini API Anahtarı Al",
 		"openAiApiKey": "OpenAI API Anahtarı",
 		"apiKey": "API Anahtarı",

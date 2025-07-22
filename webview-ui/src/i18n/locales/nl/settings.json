@@ -259,6 +259,8 @@
 		"geminiApiKey": "Gemini API-sleutel",
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
+		"getSambaNovaApiKey": "SambaNova API-sleutel ophalen",
+		"sambaNovaApiKey": "SambaNova API-sleutel",
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
 		"apiKey": "API-sleutel",
 		"openAiApiKey": "OpenAI API-sleutel",

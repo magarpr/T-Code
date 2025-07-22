@@ -259,6 +259,8 @@
 		"geminiApiKey": "Gemini API कुंजी",
 		"getGroqApiKey": "Groq API कुंजी प्राप्त करें",
 		"groqApiKey": "Groq API कुंजी",
+		"getSambaNovaApiKey": "SambaNova API कुंजी प्राप्त करें",
+		"sambaNovaApiKey": "SambaNova API कुंजी",
 		"getGeminiApiKey": "Gemini API कुंजी प्राप्त करें",
 		"openAiApiKey": "OpenAI API कुंजी",
 		"apiKey": "API कुंजी",

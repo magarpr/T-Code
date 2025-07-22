@@ -259,6 +259,8 @@
 		"geminiApiKey": "Klucz API Gemini",
 		"getGroqApiKey": "Uzyskaj klucz API Groq",
 		"groqApiKey": "Klucz API Groq",
+		"getSambaNovaApiKey": "Uzyskaj klucz API SambaNova",
+		"sambaNovaApiKey": "Klucz API SambaNova",
 		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
 		"apiKey": "Klucz API",
 		"openAiApiKey": "Klucz API OpenAI",
