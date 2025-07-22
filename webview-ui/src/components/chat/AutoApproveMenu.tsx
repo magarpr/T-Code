@@ -129,10 +129,11 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 		setIsExpanded((prev) => !prev)
 	}, [])
 
-	// Disable main checkbox while menu is open or no options selected
+	// Disable main checkbox only when no options are selected
+	// Allow toggling even when menu is expanded for better UX and safety
 	const isCheckboxDisabled = useMemo(() => {
-		return !hasEnabledOptions || isExpanded
-	}, [hasEnabledOptions, isExpanded])
+		return !hasEnabledOptions
+	}, [hasEnabledOptions])
 
 	const enabledActionsList = Object.entries(toggles)
 		.filter(([_key, value]) => !!value)
@@ -184,14 +185,14 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 									? t("chat:autoApprove.toggleAriaLabel")
 									: t("chat:autoApprove.disabledAriaLabel")
 							}
-							onChange={() => {
+							onChange={useCallback(() => {
 								if (hasEnabledOptions) {
 									const newValue = !(autoApprovalEnabled ?? false)
 									setAutoApprovalEnabled(newValue)
 									vscode.postMessage({ type: "autoApprovalEnabled", bool: newValue })
 								}
 								// If no options enabled, do nothing
-							}}
+							}, [hasEnabledOptions, autoApprovalEnabled, setAutoApprovalEnabled])}
 						/>
 					</StandardTooltip>
 				</div>

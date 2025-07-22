@@ -13,6 +13,35 @@ vi.mock("@src/utils/vscode", () => ({
 // Mock ExtensionStateContext
 vi.mock("@src/context/ExtensionStateContext")
 
+// Mock VSCode webview UI toolkit
+vi.mock("@vscode/webview-ui-toolkit/react", () => ({
+	VSCodeCheckbox: ({ children, checked, disabled, onChange, ...props }: any) => (
+		<label>
+			<input
+				type="checkbox"
+				role="checkbox"
+				checked={checked}
+				disabled={disabled}
+				{...props}
+				onChange={(e: any) => {
+					if (!disabled && onChange) {
+						onChange(e)
+					}
+				}}
+			/>
+			{children}
+		</label>
+	),
+	VSCodeLink: ({ children, onClick, ...props }: any) => (
+		<a onClick={onClick} {...props}>
+			{children}
+		</a>
+	),
+	VSCodeTextField: ({ value, onInput, ...props }: any) => (
+		<input type="text" value={value} onInput={onInput} {...props} />
+	),
+}))
+
 // Mock translation hook
 vi.mock("@src/i18n/TranslationContext", () => ({
 	useAppTranslation: () => ({
@@ -302,6 +331,77 @@ describe("AutoApproveMenu", () => {
 				type: "autoApprovalEnabled",
 				bool: false,
 			})
+		})
+
+		it("should keep master checkbox responsive when menu is expanded", async () => {
+			const mockSetAutoApprovalEnabled = vi.fn()
+
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
+				...defaultExtensionState,
+				autoApprovalEnabled: true,
+				alwaysAllowReadOnly: true,
+				setAutoApprovalEnabled: mockSetAutoApprovalEnabled,
+			})
+
+			render(<AutoApproveMenu />)
+
+			// Expand the menu
+			const menuContainer = screen.getByText("Auto-approve").parentElement
+			fireEvent.click(menuContainer!)
+
+			// Wait for the menu to expand
+			await waitFor(() => {
+				expect(screen.getByTestId("always-allow-readonly-toggle")).toBeInTheDocument()
+			})
+
+			// The master checkbox should still be enabled and clickable
+			const masterCheckbox = screen.getByRole("checkbox")
+			expect(masterCheckbox).not.toBeDisabled()
+
+			// Click the master checkbox while menu is expanded
+			fireEvent.click(masterCheckbox)
+
+			// Should successfully toggle the master checkbox
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "autoApprovalEnabled",
+				bool: false,
+			})
+			expect(mockSetAutoApprovalEnabled).toHaveBeenCalledWith(false)
+		})
+
+		it("should not flicker when state changes rapidly", async () => {
+			const mockSetAutoApprovalEnabled = vi.fn()
+
+			// Start with enabled state
+			const enabledState = {
+				...defaultExtensionState,
+				autoApprovalEnabled: true,
+				alwaysAllowReadOnly: true,
+				setAutoApprovalEnabled: mockSetAutoApprovalEnabled,
+			}
+
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue(enabledState)
+
+			const { rerender } = render(<AutoApproveMenu />)
+
+			const masterCheckbox = screen.getByRole("checkbox")
+			expect(masterCheckbox).toBeChecked()
+
+			// Simulate rapid state changes
+			for (let i = 0; i < 5; i++) {
+				const newState = {
+					...defaultExtensionState,
+					autoApprovalEnabled: i % 2 === 0,
+					alwaysAllowReadOnly: true,
+					setAutoApprovalEnabled: mockSetAutoApprovalEnabled,
+				}
+				;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue(newState)
+				rerender(<AutoApproveMenu />)
+			}
+
+			// Checkbox should reflect the final state without issues (i=4, so 4 % 2 === 0, which is true)
+			expect(masterCheckbox).toBeChecked()
+			expect(masterCheckbox).not.toBeDisabled()
 		})
 	})
 })
