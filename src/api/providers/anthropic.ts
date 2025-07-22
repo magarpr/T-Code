@@ -278,22 +278,33 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	 * @returns A promise resolving to the token count
 	 */
 	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
-		try {
-			// Use the current model
-			const { id: model } = this.getModel()
+		// Immediately return the tiktoken estimate
+		const fallbackCount = super.countTokens(content)
 
-			const response = await this.client.messages.countTokens({
-				model,
-				messages: [{ role: "user", content: content }],
-			})
+		// Start the API call asynchronously (fire and forget)
+		this.countTokensAsync(content).catch((error) => {
+			// Log error but don't throw - we already returned the fallback
+			console.debug("Anthropic async token counting failed:", error)
+		})
 
-			return response.input_tokens
-		} catch (error) {
-			// Log error but fallback to tiktoken estimation
-			console.warn("Anthropic token counting failed, using fallback", error)
+		return fallbackCount
+	}
 
-			// Use the base provider's implementation as fallback
-			return super.countTokens(content)
-		}
+	/**
+	 * Performs the actual API call to count tokens asynchronously
+	 * This method is called in the background and doesn't block the main request
+	 */
+	private async countTokensAsync(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
+		// Use the current model
+		const { id: model } = this.getModel()
+
+		const response = await this.client.messages.countTokens({
+			model,
+			messages: [{ role: "user", content: content }],
+		})
+
+		// In the future, we could cache this result or use it for telemetry
+		console.debug(`Anthropic token count: API=${response.input_tokens}`)
+		return response.input_tokens
 	}
 }

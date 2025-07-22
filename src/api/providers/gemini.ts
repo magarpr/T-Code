@@ -168,24 +168,38 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 	}
 
 	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
-		try {
-			const { id: model } = this.getModel()
+		// Immediately return the tiktoken estimate
+		const fallbackCount = super.countTokens(content)
 
-			const response = await this.client.models.countTokens({
-				model,
-				contents: convertAnthropicContentToGemini(content),
-			})
+		// Start the API call asynchronously (fire and forget)
+		this.countTokensAsync(content).catch((error) => {
+			// Log error but don't throw - we already returned the fallback
+			console.debug("Gemini async token counting failed:", error)
+		})
 
-			if (response.totalTokens === undefined) {
-				console.warn("Gemini token counting returned undefined, using fallback")
-				return super.countTokens(content)
-			}
+		return fallbackCount
+	}
 
-			return response.totalTokens
-		} catch (error) {
-			console.warn("Gemini token counting failed, using fallback", error)
-			return super.countTokens(content)
+	/**
+	 * Performs the actual API call to count tokens asynchronously
+	 * This method is called in the background and doesn't block the main request
+	 */
+	private async countTokensAsync(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
+		const { id: model } = this.getModel()
+
+		const response = await this.client.models.countTokens({
+			model,
+			contents: convertAnthropicContentToGemini(content),
+		})
+
+		if (response.totalTokens === undefined) {
+			console.debug("Gemini token counting returned undefined")
+			return 0
 		}
+
+		// In the future, we could cache this result or use it for telemetry
+		console.debug(`Gemini token count: API=${response.totalTokens}`)
+		return response.totalTokens
 	}
 
 	public calculateCost({

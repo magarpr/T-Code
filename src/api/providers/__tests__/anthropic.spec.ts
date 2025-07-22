@@ -265,4 +265,62 @@ describe("AnthropicHandler", () => {
 			expect(result.temperature).toBe(0)
 		})
 	})
+
+	describe("countTokens", () => {
+		it("should return fallback count immediately without waiting for API", async () => {
+			// Mock the countTokens API to take a long time
+			const mockCountTokens = vitest.fn().mockImplementation(() => {
+				return new Promise((resolve) => {
+					setTimeout(() => resolve({ input_tokens: 100 }), 1000)
+				})
+			})
+
+			;(handler as any).client.messages.countTokens = mockCountTokens
+
+			// Mock the base class countTokens to return a known value
+			const baseSpy = vitest.spyOn(handler.constructor.prototype.__proto__, "countTokens")
+			baseSpy.mockResolvedValue(50)
+
+			const content: Anthropic.Messages.ContentBlockParam[] = [{ type: "text", text: "Test content" }]
+
+			const startTime = Date.now()
+			const result = await handler.countTokens(content)
+			const endTime = Date.now()
+
+			// Should return immediately (less than 100ms)
+			expect(endTime - startTime).toBeLessThan(100)
+
+			// Should return the fallback count
+			expect(result).toBe(50)
+
+			// Should have called the base class method
+			expect(baseSpy).toHaveBeenCalledWith(content)
+
+			// Should have started the async API call
+			expect(mockCountTokens).toHaveBeenCalled()
+
+			baseSpy.mockRestore()
+		})
+
+		it("should handle async API errors gracefully", async () => {
+			// Mock the countTokens API to throw an error
+			const mockCountTokens = vitest.fn().mockRejectedValue(new Error("API Error"))
+			;(handler as any).client.messages.countTokens = mockCountTokens
+
+			// Mock the base class countTokens
+			const baseSpy = vitest.spyOn(handler.constructor.prototype.__proto__, "countTokens")
+			baseSpy.mockResolvedValue(75)
+
+			const content: Anthropic.Messages.ContentBlockParam[] = [{ type: "text", text: "Test content" }]
+
+			// Should not throw even if async call fails
+			const result = await handler.countTokens(content)
+			expect(result).toBe(75)
+
+			// Wait a bit to ensure async error is handled
+			await new Promise((resolve) => setTimeout(resolve, 100))
+
+			baseSpy.mockRestore()
+		})
+	})
 })
