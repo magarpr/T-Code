@@ -72,7 +72,7 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 						href={EXTERNAL_LINKS.DOCUMENTATION}
 						target="_blank"
 						className="text-muted-foreground transition-transform duration-200 hover:scale-105 hover:text-foreground">
-						Documentation
+						Docs
 					</a>
 					<a
 						href={EXTERNAL_LINKS.CAREERS}
@@ -80,6 +80,17 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 						className="text-muted-foreground transition-transform duration-200 hover:scale-105 hover:text-foreground">
 						Careers
 					</a>
+					<div className="flex items-center rounded-full bg-muted/50 px-3 py-1.5 text-sm">
+						<span className="text-muted-foreground">Roo Code Cloud is coming</span>
+						<span className="mx-1.5 text-muted-foreground">&middot;</span>
+						<a
+							href="https://shard-dogwood-daf.notion.site/238fd1401b0a8087b858e1ad431507cf?pvs=105"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="font-medium text-primary hover:underline">
+							Sign up
+						</a>
+					</div>
 				</nav>
 
 				<div className="hidden md:flex md:items-center md:space-x-4">
@@ -162,7 +173,7 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 						target="_blank"
 						className="w-full px-8 py-3 text-left text-sm font-medium text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
 						onClick={() => setIsMenuOpen(false)}>
-						Documentation
+						Docs
 					</a>
 					<a
 						href={EXTERNAL_LINKS.CAREERS}
@@ -171,6 +182,18 @@ export function NavBar({ stars, downloads }: NavBarProps) {
 						onClick={() => setIsMenuOpen(false)}>
 						Careers
 					</a>
+					<div className="mx-8 my-3 flex items-center rounded-full bg-muted/50 px-3 py-1.5 text-sm">
+						<span className="text-foreground/80">Roo Code Cloud is coming</span>
+						<span className="mx-1.5 text-foreground/80">&middot;</span>
+						<a
+							href="https://shard-dogwood-daf.notion.site/238fd1401b0a8087b858e1ad431507cf?pvs=105"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="font-medium text-primary hover:underline"
+							onClick={() => setIsMenuOpen(false)}>
+							Sign up
+						</a>
+					</div>
 
 					<hr className="mx-8 my-2 border-t border-border/50" />
 
