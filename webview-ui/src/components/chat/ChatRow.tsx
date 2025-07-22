@@ -46,6 +46,7 @@ import { CommandExecutionError } from "./CommandExecutionError"
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
+import { LongRunningOperationIndicator } from "../common/LongRunningOperationIndicator"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -987,6 +988,9 @@ export const ChatRowContent = ({
 						/>
 					)
 				case "api_req_started":
+					// Show long-running operation indicator for streaming API requests
+					const isApiStreaming = isLast && !cost && !apiRequestFailedMessage && !apiReqCancelReason
+
 					return (
 						<>
 							<div
@@ -1035,6 +1039,16 @@ export const ChatRowContent = ({
 										)}
 									</p>
 								</>
+							)}
+
+							{isApiStreaming && (
+								<LongRunningOperationIndicator
+									isRunning={true}
+									elapsedTime={Date.now() - message.ts}
+									onCancel={() => {
+										vscode.postMessage({ type: "cancelTask" })
+									}}
+								/>
 							)}
 
 							{isExpanded && (

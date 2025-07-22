@@ -192,13 +192,20 @@ export class ClineProvider
 			console.log(`[subtasks] removing task ${cline.taskId}.${cline.instanceId} from stack`)
 
 			try {
-				// Abort the running task and set isAbandoned to true so
-				// all running promises will exit as well.
-				await cline.abortTask(true)
+				// Set a timeout for the abort operation
+				const abortPromise = cline.abortTask(true)
+				const timeoutPromise = new Promise((_, reject) =>
+					setTimeout(() => reject(new Error("Abort timeout")), 3000),
+				)
+
+				// Race between abort completion and timeout
+				await Promise.race([abortPromise, timeoutPromise])
 			} catch (e) {
 				this.log(
 					`[subtasks] encountered error while aborting task ${cline.taskId}.${cline.instanceId}: ${e.message}`,
 				)
+				// Force abandon the task if abort fails
+				cline.abandoned = true
 			}
 
 			// Make sure no reference kept, once promises end it will be
@@ -971,38 +978,69 @@ export class ClineProvider
 
 		console.log(`[subtasks] cancelling task ${cline.taskId}.${cline.instanceId}`)
 
-		const { historyItem } = await this.getTaskWithId(cline.taskId)
-		// Preserve parent and root task information for history item.
-		const rootTask = cline.rootTask
-		const parentTask = cline.parentTask
+		let historyItem: HistoryItem | undefined
+		let rootTask: Task | undefined
+		let parentTask: Task | undefined
 
+		try {
+			const taskData = await this.getTaskWithId(cline.taskId)
+			historyItem = taskData.historyItem
+			// Preserve parent and root task information for history item.
+			rootTask = cline.rootTask
+			parentTask = cline.parentTask
+		} catch (error) {
+			console.error(`Failed to get task history for ${cline.taskId}:`, error)
+			// Continue with cancellation even if we can't get history
+		}
+
+		// Start the abort process
 		cline.abortTask()
 
-		await pWaitFor(
-			() =>
-				this.getCurrentCline()! === undefined ||
-				this.getCurrentCline()!.isStreaming === false ||
-				this.getCurrentCline()!.didFinishAbortingStream ||
-				// If only the first chunk is processed, then there's no
-				// need to wait for graceful abort (closes edits, browser,
-				// etc).
-				this.getCurrentCline()!.isWaitingForFirstChunk,
-			{
-				timeout: 3_000,
-			},
-		).catch(() => {
-			console.error("Failed to abort task")
-		})
+		// Wait for abort to complete with a timeout
+		try {
+			await pWaitFor(
+				() => {
+					const currentCline = this.getCurrentCline()
+					return (
+						!currentCline ||
+						currentCline.taskId !== cline.taskId ||
+						!currentCline.isStreaming ||
+						currentCline.didFinishAbortingStream ||
+						currentCline.isWaitingForFirstChunk
+					)
+				},
+				{
+					timeout: 5_000, // Increased timeout for better reliability
+					interval: 100,
+				},
+			)
+		} catch (error) {
+			console.error("Timeout waiting for task abort, forcing cleanup")
+			// Force cleanup if timeout occurs
+			const currentCline = this.getCurrentCline()
+			if (currentCline && currentCline.taskId === cline.taskId) {
+				currentCline.abandoned = true
+				// Force remove from stack
+				await this.removeClineFromStack()
+			}
+		}
 
-		if (this.getCurrentCline()) {
+		// Final check and cleanup
+		const currentCline = this.getCurrentCline()
+		if (currentCline && currentCline.taskId === cline.taskId) {
 			// 'abandoned' will prevent this Cline instance from affecting
 			// future Cline instances. This may happen if its hanging on a
 			// streaming request.
-			this.getCurrentCline()!.abandoned = true
+			currentCline.abandoned = true
 		}
 
-		// Clears task again, so we need to abortTask manually above.
-		await this.initClineWithHistoryItem({ ...historyItem, rootTask, parentTask })
+		// Only reinitialize with history if we have it
+		if (historyItem) {
+			await this.initClineWithHistoryItem({ ...historyItem, rootTask, parentTask })
+		} else {
+			// Just clear the task if no history available
+			await this.removeClineFromStack()
+		}
 	}
 
 	async updateCustomInstructions(instructions?: string) {

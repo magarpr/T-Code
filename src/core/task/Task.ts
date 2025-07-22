@@ -1072,6 +1072,13 @@ export class Task extends EventEmitter<ClineEvents> {
 		} catch (error) {
 			console.error("Error reverting diff changes:", error)
 		}
+
+		// Reset all streaming-related state
+		this.isStreaming = false
+		this.isWaitingForFirstChunk = false
+		this.didCompleteReadingStream = true
+		this.presentAssistantMessageLocked = false
+		this.presentAssistantMessageHasPendingUpdates = false
 	}
 
 	public async abortTask(isAbandoned = false) {
@@ -1091,6 +1098,10 @@ export class Task extends EventEmitter<ClineEvents> {
 			console.error(`Error during task ${this.taskId}.${this.instanceId} disposal:`, error)
 			// Don't rethrow - we want abort to always succeed
 		}
+
+		// Ensure streaming state is reset even if dispose fails
+		this.isStreaming = false
+		this.isWaitingForFirstChunk = false
 		// Save the countdown message in the automatic retry or other content.
 		try {
 			// Save the countdown message in the automatic retry or other content.
@@ -1359,6 +1370,24 @@ export class Task extends EventEmitter<ClineEvents> {
 			let reasoningMessage = ""
 			this.isStreaming = true
 
+			// Add a timeout for the entire streaming operation
+			const streamTimeout = setTimeout(
+				async () => {
+					if (this.isStreaming && !this.abort) {
+						console.error(`Stream timeout for task ${this.taskId} - aborting stream`)
+						await this.say(
+							"error",
+							"The API request timed out. This might be due to network issues or server problems. The task will be cancelled.",
+							undefined,
+							false,
+						)
+						// Trigger abort to clean up properly
+						this.abort = true
+					}
+				},
+				5 * 60 * 1000,
+			) // 5 minute timeout
+
 			try {
 				for await (const chunk of stream) {
 					if (!chunk) {
@@ -1451,19 +1480,25 @@ export class Task extends EventEmitter<ClineEvents> {
 						? undefined
 						: (error.message ?? JSON.stringify(serializeError(error), null, 2))
 
-					// Now call abortTask after determining the cancel reason
-					await this.abortTask()
+					try {
+						// Now call abortTask after determining the cancel reason
+						await this.abortTask()
 
-					await abortStream(cancelReason, streamingFailedMessage)
+						await abortStream(cancelReason, streamingFailedMessage)
 
-					const history = await provider?.getTaskWithId(this.taskId)
+						const history = await provider?.getTaskWithId(this.taskId)
 
-					if (history) {
-						await provider?.initClineWithHistoryItem(history.historyItem)
+						if (history) {
+							await provider?.initClineWithHistoryItem(history.historyItem)
+						}
+					} catch (abortError) {
+						console.error(`Error during stream failure recovery for task ${this.taskId}:`, abortError)
+						// Continue execution even if abort fails to prevent hanging
 					}
 				}
 			} finally {
 				this.isStreaming = false
+				clearTimeout(streamTimeout)
 			}
 
 			if (inputTokens > 0 || outputTokens > 0 || cacheWriteTokens > 0 || cacheReadTokens > 0) {
