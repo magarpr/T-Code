@@ -218,6 +218,11 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 	]
 
 	const getStatusColor = () => {
+		// Always show grey for disabled servers regardless of connection status
+		if (server.disabled) {
+			return "var(--vscode-descriptionForeground)"
+		}
+
 		switch (server.status) {
 			case "connected":
 				return "var(--vscode-testing-iconPassed)"
@@ -229,7 +234,8 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 	}
 
 	const handleRowClick = () => {
-		if (server.status === "connected") {
+		// Only allow expansion for connected servers that are not disabled
+		if (server.status === "connected" && !server.disabled) {
 			setIsExpanded(!isExpanded)
 		}
 	}
@@ -270,12 +276,12 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 					alignItems: "center",
 					padding: "8px",
 					background: "var(--vscode-textCodeBlock-background)",
-					cursor: server.status === "connected" ? "pointer" : "default",
+					cursor: server.status === "connected" && !server.disabled ? "pointer" : "default",
 					borderRadius: isExpanded || server.status === "connected" ? "4px" : "4px 4px 0 0",
 					opacity: server.disabled ? 0.6 : 1,
 				}}
 				onClick={handleRowClick}>
-				{server.status === "connected" && (
+				{server.status === "connected" && !server.disabled && (
 					<span
 						className={`codicon codicon-chevron-${isExpanded ? "down" : "right"}`}
 						style={{ marginRight: "8px" }}
@@ -342,7 +348,20 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 				</div>
 			</div>
 
-			{server.status === "connected" ? (
+			{server.disabled ? (
+				// Minimal UI for disabled servers - no error messages or retry buttons
+				<div
+					style={{
+						fontSize: "13px",
+						background: "var(--vscode-textCodeBlock-background)",
+						borderRadius: "0 0 4px 4px",
+						padding: "10px",
+						color: "var(--vscode-descriptionForeground)",
+						fontStyle: "italic",
+					}}>
+					{t("mcp:serverStatus.disabled")}
+				</div>
+			) : server.status === "connected" ? (
 				isExpanded && (
 					<div
 						style={{

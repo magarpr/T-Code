@@ -55,7 +55,8 @@
 	},
 	"serverStatus": {
 		"retrying": "Retrying...",
-		"retryConnection": "Retry Connection"
+		"retryConnection": "Retry Connection",
+		"disabled": "Server is disabled"
 	},
 	"execution": {
 		"running": "Running",
