@@ -1427,13 +1427,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					// get generation details.
 					// UPDATE: It's better UX to interrupt the request at the
 					// cost of the API cost not being retrieved.
-					// Exception: update_todo_list can be used multiple times
-					// Check if any update_todo_list is being processed (partial or complete)
-					const hasUpdateTodoList = this.assistantMessageContent.some(
-						(block) => block.type === "tool_use" && block.name === "update_todo_list",
-					)
-
-					if (this.didAlreadyUseTool && !hasUpdateTodoList) {
+					if (this.didAlreadyUseTool) {
 						assistantMessage +=
 							"\n\n[Response interrupted by a tool use result. Only one tool may be used at a time and should be placed at the end of the message.]"
 						break
