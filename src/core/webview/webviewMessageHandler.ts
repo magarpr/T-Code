@@ -1249,6 +1249,10 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("maxReadFileLine", message.value)
 			await provider.postStateToWebview()
 			break
+		case "largeFileLineThreshold":
+			await updateGlobalState("largeFileLineThreshold", message.value)
+			await provider.postStateToWebview()
+			break
 		case "maxConcurrentFileReads":
 			const valueToSave = message.value // Capture the value intended for saving
 			await updateGlobalState("maxConcurrentFileReads", valueToSave)

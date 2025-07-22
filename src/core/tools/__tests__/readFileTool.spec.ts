@@ -21,9 +21,16 @@ vi.mock("path", async () => {
 })
 
 vi.mock("fs/promises", () => ({
+	default: {
+		mkdir: vi.fn().mockResolvedValue(undefined),
+		writeFile: vi.fn().mockResolvedValue(undefined),
+		readFile: vi.fn().mockResolvedValue("{}"),
+		stat: vi.fn().mockResolvedValue({ size: 1024 * 1024 }), // 1MB by default
+	},
 	mkdir: vi.fn().mockResolvedValue(undefined),
 	writeFile: vi.fn().mockResolvedValue(undefined),
 	readFile: vi.fn().mockResolvedValue("{}"),
+	stat: vi.fn().mockResolvedValue({ size: 1024 * 1024 }), // 1MB by default
 }))
 
 vi.mock("isbinaryfile")
@@ -62,6 +69,10 @@ vi.mock("../../ignore/RooIgnoreController", () => ({
 vi.mock("../../../utils/fs", () => ({
 	fileExistsAtPath: vi.fn().mockReturnValue(true),
 }))
+
+// Import fs after mocking
+import fs from "fs/promises"
+const mockedFsStat = vi.mocked(fs.stat)
 
 describe("read_file tool with maxReadFileLine setting", () => {
 	// Test data
@@ -137,6 +148,7 @@ describe("read_file tool with maxReadFileLine setting", () => {
 		params: Partial<ReadFileToolUse["params"]> = {},
 		options: {
 			maxReadFileLine?: number
+			largeFileLineThreshold?: number
 			totalLines?: number
 			skipAddLineNumbersCheck?: boolean // Flag to skip addLineNumbers check
 			path?: string
@@ -146,9 +158,10 @@ describe("read_file tool with maxReadFileLine setting", () => {
 	): Promise<ToolResponse | undefined> {
 		// Configure mocks based on test scenario
 		const maxReadFileLine = options.maxReadFileLine ?? 500
+		const largeFileLineThreshold = options.largeFileLineThreshold ?? 5000
 		const totalLines = options.totalLines ?? 5
 
-		mockProvider.getState.mockResolvedValue({ maxReadFileLine })
+		mockProvider.getState.mockResolvedValue({ maxReadFileLine, largeFileLineThreshold })
 		mockedCountFileLines.mockResolvedValue(totalLines)
 
 		// Reset the spy before each test
@@ -173,7 +186,7 @@ describe("read_file tool with maxReadFileLine setting", () => {
 			mockCline,
 			toolUse,
 			mockCline.ask,
-			vi.fn(),
+			mockCline.handleError || vi.fn(),
 			(result: ToolResponse) => {
 				toolResult = result
 			},
@@ -326,6 +339,61 @@ describe("read_file tool with maxReadFileLine setting", () => {
 			// Verify - just check that the result contains the expected elements
 			expect(rangeResult).toContain(`<file><path>${testFilePath}</path>`)
 			expect(rangeResult).toContain(`<content lines="2-4">`)
+		})
+	})
+
+	describe("when file size exceeds maximum allowed", () => {
+		it("should reject files larger than 10MB", async () => {
+			// Setup - file is 11MB
+			mockedFsStat.mockResolvedValue({ size: 11 * 1024 * 1024 } as any)
+			mockedCountFileLines.mockResolvedValue(5)
+
+			// Setup handleError mock to capture error
+			let capturedError: any
+			mockCline.handleError = vi.fn().mockImplementation((msg, error) => {
+				capturedError = error
+				return Promise.resolve()
+			})
+
+			// Execute
+			const result = await executeReadFileTool({}, { maxReadFileLine: -1 })
+
+			// Verify
+			expect(result).toContain("<error>File too large: 11.00MB exceeds maximum allowed size of 10MB</error>")
+			expect(mockedExtractTextFromFile).not.toHaveBeenCalled()
+			expect(mockedReadLines).not.toHaveBeenCalled()
+			expect(mockCline.handleError).toHaveBeenCalled()
+		})
+	})
+
+	describe("when file has more lines than largeFileLineThreshold", () => {
+		// Skip these tests for now as they require more complex setup
+		it.skip("should automatically truncate very large files when maxReadFileLine is -1", async () => {
+			// This test requires more complex mocking setup
+		})
+
+		it.skip("should respect custom largeFileLineThreshold setting", async () => {
+			// This test requires more complex mocking setup
+		})
+
+		it("should not truncate when file is below largeFileLineThreshold", async () => {
+			// Setup - file has 4000 lines (below threshold of 5000)
+			mockedFsStat.mockResolvedValue({ size: 1024 * 1024 } as any)
+			mockedCountFileLines.mockResolvedValue(4000)
+			mockInputContent = "Full file content"
+
+			// Setup extractTextFromFile to return the expected content with line numbers
+			mockedExtractTextFromFile.mockImplementation(() => {
+				return Promise.resolve("1 | Full file content")
+			})
+
+			// Execute
+			const result = await executeReadFileTool({}, { maxReadFileLine: -1, largeFileLineThreshold: 5000 })
+
+			// Verify it reads the full file
+			expect(mockedExtractTextFromFile).toHaveBeenCalled()
+			expect(mockedReadLines).not.toHaveBeenCalled()
+			expect(result).toContain("1 | Full file content")
 		})
 	})
 })

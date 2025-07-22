@@ -1,5 +1,6 @@
 import path from "path"
 import { isBinaryFile } from "isbinaryfile"
+import fs from "fs/promises"
 
 import { Task } from "../task/Task"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
@@ -14,6 +15,12 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
+
+// Maximum file size in bytes (10MB) - files larger than this will be rejected
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
+// Default threshold for large files (can be overridden by configuration)
+const DEFAULT_LARGE_FILE_LINE_THRESHOLD = 5000
 
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
@@ -429,10 +436,25 @@ export async function readFileTool(
 
 			const relPath = fileResult.path
 			const fullPath = path.resolve(cline.cwd, relPath)
-			const { maxReadFileLine = -1 } = (await cline.providerRef.deref()?.getState()) ?? {}
+			const { maxReadFileLine = -1, largeFileLineThreshold = DEFAULT_LARGE_FILE_LINE_THRESHOLD } =
+				(await cline.providerRef.deref()?.getState()) ?? {}
 
 			// Process approved files
 			try {
+				// First check file size to prevent reading extremely large files
+				const stats = await fs.stat(fullPath)
+				if (stats.size > MAX_FILE_SIZE_BYTES) {
+					const sizeMB = (stats.size / (1024 * 1024)).toFixed(2)
+					const errorMsg = `File too large: ${sizeMB}MB exceeds maximum allowed size of ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`
+					updateFileResult(relPath, {
+						status: "error",
+						error: errorMsg,
+						xmlContent: `<file><path>${relPath}</path><error>${errorMsg}</error></file>`,
+					})
+					await handleError(`reading file ${relPath}`, new Error(errorMsg))
+					continue
+				}
+
 				const [totalLines, isBinary] = await Promise.all([countFileLines(fullPath), isBinaryFile(fullPath)])
 
 				// Handle binary files (but allow specific file types that extractTextFromFile can handle)
@@ -448,6 +470,31 @@ export async function readFileTool(
 						continue
 					}
 					// For supported binary formats (.pdf, .docx, .ipynb), continue to extractTextFromFile
+				}
+
+				// Check for extremely large files when maxReadFileLine is -1 (no limit)
+				if (maxReadFileLine === -1 && totalLines > largeFileLineThreshold) {
+					// For very large files, automatically switch to showing only the first part
+					// This prevents the context window exhaustion issue
+					const truncatedLines = Math.min(totalLines, 1000) // Show first 1000 lines
+					const content = addLineNumbers(await readLines(fullPath, truncatedLines - 1, 0))
+					const lineRangeAttr = ` lines="1-${truncatedLines}"`
+					let xmlInfo = `<content${lineRangeAttr}>\n${content}</content>\n`
+
+					try {
+						const defResult = await parseSourceCodeDefinitionsForFile(fullPath, cline.rooIgnoreController)
+						if (defResult) {
+							xmlInfo += `<list_code_definition_names>${defResult}</list_code_definition_names>\n`
+						}
+					} catch (error) {
+						// Ignore parse errors for definitions
+					}
+
+					xmlInfo += `<notice>File has ${totalLines} lines. Showing only first ${truncatedLines} lines to prevent context exhaustion. Use line_range parameter to read specific sections.</notice>\n`
+					updateFileResult(relPath, {
+						xmlContent: `<file><path>${relPath}</path>\n${xmlInfo}</file>`,
+					})
+					continue
 				}
 
 				// Handle range reads (bypass maxReadFileLine)
