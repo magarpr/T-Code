@@ -154,8 +154,14 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 			<div className="flex flex-col gap-2">
 				<label className="block font-medium text-sm">
 					{t("settings:providers.huggingFaceModelId")}
-					{loading && <span className="text-xs text-gray-400 ml-2">Loading...</span>}
-					{!loading && <span className="text-xs text-gray-400 ml-2">({models.length} models)</span>}
+					{loading && (
+						<span className="text-xs text-gray-400 ml-2">{t("settings:providers.huggingFaceLoading")}</span>
+					)}
+					{!loading && (
+						<span className="text-xs text-gray-400 ml-2">
+							{t("settings:providers.huggingFaceModelsCount", { count: models.length })}
+						</span>
+					)}
 				</label>
 
 				<SearchableSelect
@@ -167,21 +173,21 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 							label: model.id,
 						}),
 					)}
-					placeholder="Select a model..."
-					searchPlaceholder="Search models..."
-					emptyMessage="No models found"
+					placeholder={t("settings:providers.huggingFaceSelectModel")}
+					searchPlaceholder={t("settings:providers.huggingFaceSearchModels")}
+					emptyMessage={t("settings:providers.huggingFaceNoModelsFound")}
 					disabled={loading}
 				/>
 			</div>
 
 			{currentModel && availableProviders.length > 0 && (
 				<div className="flex flex-col gap-2">
-					<label className="block font-medium text-sm">Provider</label>
+					<label className="block font-medium text-sm">{t("settings:providers.huggingFaceProvider")}</label>
 					<SearchableSelect
 						value={selectedProvider}
 						onValueChange={handleProviderSelect}
 						options={[
-							{ value: "auto", label: "Auto" },
+							{ value: "auto", label: t("settings:providers.huggingFaceProviderAuto") },
 							...availableProviders.map(
 								(mapping): SearchableSelectOption => ({
 									value: mapping.provider,
@@ -189,9 +195,9 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 								}),
 							),
 						]}
-						placeholder="Select a provider..."
-						searchPlaceholder="Search providers..."
-						emptyMessage="No providers found"
+						placeholder={t("settings:providers.huggingFaceSelectProvider")}
+						searchPlaceholder={t("settings:providers.huggingFaceSearchProviders")}
+						emptyMessage={t("settings:providers.huggingFaceNoProvidersFound")}
 					/>
 				</div>
 			)}
