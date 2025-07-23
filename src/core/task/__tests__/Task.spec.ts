@@ -1493,5 +1493,364 @@ describe("Cline", () => {
 				expect(noModelTask.apiConfiguration.apiProvider).toBe("openai")
 			})
 		})
+
+		describe("429 Retry with Gemini Error Details", () => {
+			it("should handle 429 errors with Gemini retry details safely", async () => {
+				const [cline, task] = Task.create({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+				})
+
+				// Mock delay to track countdown timing
+				const mockDelay = vi.fn().mockResolvedValue(undefined)
+				vi.spyOn(await import("delay"), "default").mockImplementation(mockDelay)
+
+				// Mock say to track messages
+				const saySpy = vi.spyOn(cline, "say")
+
+				// Create a 429 error with Gemini retry details
+				const mockError = {
+					status: 429,
+					message: "Rate limit exceeded",
+					errorDetails: [
+						{
+							"@type": "type.googleapis.com/google.rpc.RetryInfo",
+							retryDelay: "10s", // Valid format
+						},
+					],
+				}
+
+				// Create a stream that fails on first chunk
+				const mockFailedStream = {
+					// eslint-disable-next-line require-yield
+					async *[Symbol.asyncIterator]() {
+						throw mockError
+					},
+					async next() {
+						throw mockError
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					async [Symbol.asyncDispose]() {
+						// Cleanup
+					},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				// Create a successful stream for retry
+				const mockSuccessStream = {
+					async *[Symbol.asyncIterator]() {
+						yield { type: "text", text: "Success" }
+					},
+					async next() {
+						return { done: true, value: { type: "text", text: "Success" } }
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					async [Symbol.asyncDispose]() {
+						// Cleanup
+					},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				// Mock createMessage to fail first then succeed
+				let firstAttempt = true
+				vi.spyOn(cline.api, "createMessage").mockImplementation(() => {
+					if (firstAttempt) {
+						firstAttempt = false
+						return mockFailedStream
+					}
+					return mockSuccessStream
+				})
+
+				// Set alwaysApproveResubmit
+				mockProvider.getState = vi.fn().mockResolvedValue({
+					alwaysApproveResubmit: true,
+					requestDelaySeconds: 5,
+				})
+
+				// Mock previous API request message
+				cline.clineMessages = [
+					{
+						ts: Date.now(),
+						type: "say",
+						say: "api_req_started",
+						text: JSON.stringify({
+							tokensIn: 100,
+							tokensOut: 50,
+							cacheWrites: 0,
+							cacheReads: 0,
+							request: "test request",
+						}),
+					},
+				]
+
+				// Trigger API request
+				const iterator = cline.attemptApiRequest(0)
+				await iterator.next()
+
+				// Verify the delay was calculated correctly (10 + 1 = 11 seconds)
+				const expectedDelay = 11
+				expect(mockDelay).toHaveBeenCalledTimes(expectedDelay)
+
+				// Verify countdown messages
+				for (let i = expectedDelay; i > 0; i--) {
+					expect(saySpy).toHaveBeenCalledWith(
+						"api_req_retry_delayed",
+						expect.stringContaining(`Retrying in ${i} seconds`),
+						undefined,
+						true,
+					)
+				}
+
+				await cline.abortTask(true)
+				await task.catch(() => {})
+			})
+
+			it("should handle 429 errors with invalid Gemini retry details", async () => {
+				const [cline, task] = Task.create({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+				})
+
+				// Mock delay to track countdown timing
+				const mockDelay = vi.fn().mockResolvedValue(undefined)
+				vi.spyOn(await import("delay"), "default").mockImplementation(mockDelay)
+
+				// Mock say to track messages
+				const saySpy = vi.spyOn(cline, "say")
+
+				// Create a 429 error with invalid Gemini retry details
+				const mockError = {
+					status: 429,
+					message: "Rate limit exceeded",
+					errorDetails: [
+						{
+							"@type": "type.googleapis.com/google.rpc.RetryInfo",
+							retryDelay: "invalid", // Invalid format - should not match regex
+						},
+					],
+				}
+
+				// Create a stream that fails on first chunk
+				const mockFailedStream = {
+					// eslint-disable-next-line require-yield
+					async *[Symbol.asyncIterator]() {
+						throw mockError
+					},
+					async next() {
+						throw mockError
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					async [Symbol.asyncDispose]() {
+						// Cleanup
+					},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				// Create a successful stream for retry
+				const mockSuccessStream = {
+					async *[Symbol.asyncIterator]() {
+						yield { type: "text", text: "Success" }
+					},
+					async next() {
+						return { done: true, value: { type: "text", text: "Success" } }
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					async [Symbol.asyncDispose]() {
+						// Cleanup
+					},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				// Mock createMessage to fail first then succeed
+				let firstAttempt = true
+				vi.spyOn(cline.api, "createMessage").mockImplementation(() => {
+					if (firstAttempt) {
+						firstAttempt = false
+						return mockFailedStream
+					}
+					return mockSuccessStream
+				})
+
+				// Set alwaysApproveResubmit
+				mockProvider.getState = vi.fn().mockResolvedValue({
+					alwaysApproveResubmit: true,
+					requestDelaySeconds: 5,
+				})
+
+				// Mock previous API request message
+				cline.clineMessages = [
+					{
+						ts: Date.now(),
+						type: "say",
+						say: "api_req_started",
+						text: JSON.stringify({
+							tokensIn: 100,
+							tokensOut: 50,
+							cacheWrites: 0,
+							cacheReads: 0,
+							request: "test request",
+						}),
+					},
+				]
+
+				// Trigger API request
+				const iterator = cline.attemptApiRequest(0)
+				await iterator.next()
+
+				// Should fall back to exponential backoff (5 seconds base delay)
+				const expectedDelay = 5
+				expect(mockDelay).toHaveBeenCalledTimes(expectedDelay)
+
+				// Verify countdown messages
+				for (let i = expectedDelay; i > 0; i--) {
+					expect(saySpy).toHaveBeenCalledWith(
+						"api_req_retry_delayed",
+						expect.stringContaining(`Retrying in ${i} seconds`),
+						undefined,
+						true,
+					)
+				}
+
+				await cline.abortTask(true)
+				await task.catch(() => {})
+			})
+
+			it("should handle 429 errors with missing Gemini retry details", async () => {
+				const [cline, task] = Task.create({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+				})
+
+				// Mock delay to track countdown timing
+				const mockDelay = vi.fn().mockResolvedValue(undefined)
+				vi.spyOn(await import("delay"), "default").mockImplementation(mockDelay)
+
+				// Mock say to track messages
+				const saySpy = vi.spyOn(cline, "say")
+
+				// Create a 429 error without retryDelay property
+				const mockError = {
+					status: 429,
+					message: "Rate limit exceeded",
+					errorDetails: [
+						{
+							"@type": "type.googleapis.com/google.rpc.RetryInfo",
+							// No retryDelay property
+						},
+					],
+				}
+
+				// Create a stream that fails on first chunk
+				const mockFailedStream = {
+					// eslint-disable-next-line require-yield
+					async *[Symbol.asyncIterator]() {
+						throw mockError
+					},
+					async next() {
+						throw mockError
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					async [Symbol.asyncDispose]() {
+						// Cleanup
+					},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				// Create a successful stream for retry
+				const mockSuccessStream = {
+					async *[Symbol.asyncIterator]() {
+						yield { type: "text", text: "Success" }
+					},
+					async next() {
+						return { done: true, value: { type: "text", text: "Success" } }
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					async [Symbol.asyncDispose]() {
+						// Cleanup
+					},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				// Mock createMessage to fail first then succeed
+				let firstAttempt = true
+				vi.spyOn(cline.api, "createMessage").mockImplementation(() => {
+					if (firstAttempt) {
+						firstAttempt = false
+						return mockFailedStream
+					}
+					return mockSuccessStream
+				})
+
+				// Set alwaysApproveResubmit
+				mockProvider.getState = vi.fn().mockResolvedValue({
+					alwaysApproveResubmit: true,
+					requestDelaySeconds: 5,
+				})
+
+				// Mock previous API request message
+				cline.clineMessages = [
+					{
+						ts: Date.now(),
+						type: "say",
+						say: "api_req_started",
+						text: JSON.stringify({
+							tokensIn: 100,
+							tokensOut: 50,
+							cacheWrites: 0,
+							cacheReads: 0,
+							request: "test request",
+						}),
+					},
+				]
+
+				// Trigger API request
+				const iterator = cline.attemptApiRequest(0)
+				await iterator.next()
+
+				// Should fall back to exponential backoff (5 seconds base delay)
+				const expectedDelay = 5
+				expect(mockDelay).toHaveBeenCalledTimes(expectedDelay)
+
+				// Verify countdown messages
+				for (let i = expectedDelay; i > 0; i--) {
+					expect(saySpy).toHaveBeenCalledWith(
+						"api_req_retry_delayed",
+						expect.stringContaining(`Retrying in ${i} seconds`),
+						undefined,
+						true,
+					)
+				}
+
+				await cline.abortTask(true)
+				await task.catch(() => {})
+			})
+		})
 	})
 })

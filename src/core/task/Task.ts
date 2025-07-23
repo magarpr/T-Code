@@ -1832,7 +1832,7 @@ export class Task extends EventEmitter<ClineEvents> {
 					)
 					if (geminiRetryDetails) {
 						const match = geminiRetryDetails?.retryDelay?.match(/^(\d+)s$/)
-						if (match) {
+						if (match && match[1]) {
 							exponentialDelay = Number(match[1]) + 1
 						}
 					}
