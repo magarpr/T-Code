@@ -20,7 +20,6 @@ import { saveTaskMessages } from "../task-persistence"
 
 import { ClineProvider } from "./ClineProvider"
 import { handleCheckpointRestoreOperation } from "./checkpointRestoreHandler"
-import { ValidCheckpoint, hasValidCheckpoint } from "../checkpoints/utils"
 import { changeLanguage, t } from "../../i18n"
 import { Package } from "../../shared/package"
 import { RouterName, toRouterName, ModelRecord } from "../../shared/api"

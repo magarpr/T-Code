@@ -716,27 +716,15 @@ export class Task extends EventEmitter<ClineEvents> {
 				this.lastMessageTs = sayTs
 			}
 
-			if (type === "user_feedback") {
-				await this.addToClineMessages({
-					ts: sayTs,
-					type: "say",
-					say: type,
-					text,
-					images,
-					checkpoint,
-					contextCondense,
-				})
-			} else {
-				await this.addToClineMessages({
-					ts: sayTs,
-					type: "say",
-					say: type,
-					text,
-					images,
-					checkpoint,
-					contextCondense,
-				})
-			}
+			await this.addToClineMessages({
+				ts: sayTs,
+				type: "say",
+				say: type,
+				text,
+				images,
+				checkpoint,
+				contextCondense,
+			})
 		}
 	}
 
@@ -763,7 +751,6 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.apiConversationHistory = []
 		await this.providerRef.deref()?.postStateToWebview()
 
-		// Checkpoint will be saved in handleWebviewAskResponse before this message is created
 		await this.say("text", task, images)
 		this.isInitialized = true
 
@@ -864,6 +851,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			responseText = text
 			responseImages = images
 		}
+
 		// Make sure that the api conversation history can be resumed by the API,
 		// even if it goes out of sync with cline messages.
 		let existingApiConversationHistory: ApiMessage[] = await this.getSavedApiConversationHistory()

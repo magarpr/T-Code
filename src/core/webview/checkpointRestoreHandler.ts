@@ -4,14 +4,13 @@ import { saveTaskMessages } from "../task-persistence"
 import * as vscode from "vscode"
 import pWaitFor from "p-wait-for"
 import { t } from "../../i18n"
-import { ValidCheckpoint } from "../checkpoints/utils"
 
 export interface CheckpointRestoreConfig {
 	provider: ClineProvider
 	currentCline: Task
 	messageTs: number
 	messageIndex: number
-	checkpoint: ValidCheckpoint
+	checkpoint: { hash: string }
 	operation: "delete" | "edit"
 	editData?: {
 		editedContent: string
