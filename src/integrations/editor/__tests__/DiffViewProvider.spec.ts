@@ -2,6 +2,7 @@ import { DiffViewProvider, DIFF_VIEW_URI_SCHEME, DIFF_VIEW_LABEL_CHANGES } from 
 import * as vscode from "vscode"
 import * as path from "path"
 import delay from "delay"
+import { EXPERIMENT_IDS } from "../../../shared/experiments"
 
 // Mock delay
 vi.mock("delay", () => ({
@@ -425,10 +426,11 @@ describe("DiffViewProvider", () => {
 
 	describe("experimentalPreventFocusDisruption setting", () => {
 		it("should preserve focus when experimentalPreventFocusDisruption is enabled", async () => {
-			// Mock the configuration to return true for experimentalPreventFocusDisruption
-			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
-				get: vi.fn().mockReturnValue(true),
-			} as any)
+			// Create a new DiffViewProvider with experiments enabled
+			const experiments = {
+				[EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION]: true,
+			}
+			diffViewProvider = new DiffViewProvider(mockCwd, experiments)
 
 			// Setup mock editor
 			const mockEditor = {
@@ -482,10 +484,11 @@ describe("DiffViewProvider", () => {
 		})
 
 		it("should not preserve focus when experimentalPreventFocusDisruption is disabled", async () => {
-			// Mock the configuration to return false for experimentalPreventFocusDisruption
-			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
-				get: vi.fn().mockReturnValue(false),
-			} as any)
+			// Create a new DiffViewProvider with experiments disabled
+			const experiments = {
+				[EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION]: false,
+			}
+			diffViewProvider = new DiffViewProvider(mockCwd, experiments)
 
 			// Setup mock editor
 			const mockEditor = {
@@ -539,10 +542,11 @@ describe("DiffViewProvider", () => {
 		})
 
 		it("should preserve focus in saveChanges when experimentalPreventFocusDisruption is enabled", async () => {
-			// Mock the configuration to return true
-			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
-				get: vi.fn().mockReturnValue(true),
-			} as any)
+			// Create a new DiffViewProvider with experiments enabled
+			const experiments = {
+				[EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION]: true,
+			}
+			diffViewProvider = new DiffViewProvider(mockCwd, experiments)
 
 			// Setup for saveChanges
 			;(diffViewProvider as any).relPath = "test.ts"
@@ -571,10 +575,11 @@ describe("DiffViewProvider", () => {
 		})
 
 		it("should preserve focus in revertChanges when experimentalPreventFocusDisruption is enabled", async () => {
-			// Mock the configuration to return true
-			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue({
-				get: vi.fn().mockReturnValue(true),
-			} as any)
+			// Create a new DiffViewProvider with experiments enabled
+			const experiments = {
+				[EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION]: true,
+			}
+			diffViewProvider = new DiffViewProvider(mockCwd, experiments)
 
 			// Setup for revertChanges
 			;(diffViewProvider as any).relPath = "test.ts"

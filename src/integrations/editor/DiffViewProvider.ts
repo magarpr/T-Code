@@ -14,6 +14,8 @@ import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { Task } from "../../core/task/Task"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { Package } from "../../shared/package"
+import { EXPERIMENT_IDS, experiments as Experiments } from "../../shared/experiments"
+import type { Experiments as ExperimentsType } from "@roo-code/types"
 
 import { DecorationController } from "./DecorationController"
 
@@ -37,8 +39,18 @@ export class DiffViewProvider {
 	private activeLineController?: DecorationController
 	private streamedLines: string[] = []
 	private preDiagnostics: [vscode.Uri, vscode.Diagnostic[]][] = []
+	private experiments?: ExperimentsType
 
-	constructor(private cwd: string) {}
+	constructor(
+		private cwd: string,
+		experiments?: ExperimentsType,
+	) {
+		this.experiments = experiments
+	}
+
+	public setExperiments(experiments: ExperimentsType) {
+		this.experiments = experiments
+	}
 
 	async open(relPath: string): Promise<void> {
 		this.relPath = relPath
@@ -203,9 +215,9 @@ export class DiffViewProvider {
 		}
 
 		// Check if the experimental setting is enabled
-		const preventFocusDisruption = vscode.workspace
-			.getConfiguration(Package.name)
-			.get<boolean>("experimentalPreventFocusDisruption", false)
+		const preventFocusDisruption = this.experiments
+			? Experiments.isEnabled(this.experiments, EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION)
+			: false
 
 		await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
 			preview: false,
@@ -401,9 +413,9 @@ export class DiffViewProvider {
 
 			if (this.documentWasOpen) {
 				// Check if the experimental setting is enabled
-				const preventFocusDisruption = vscode.workspace
-					.getConfiguration(Package.name)
-					.get<boolean>("experimentalPreventFocusDisruption", false)
+				const preventFocusDisruption = this.experiments
+					? Experiments.isEnabled(this.experiments, EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION)
+					: false
 
 				await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
 					preview: false,
@@ -462,9 +474,9 @@ export class DiffViewProvider {
 		const uri = vscode.Uri.file(path.resolve(this.cwd, this.relPath))
 
 		// Check if the experimental setting is enabled
-		const preventFocusDisruption = vscode.workspace
-			.getConfiguration(Package.name)
-			.get<boolean>("experimentalPreventFocusDisruption", false)
+		const preventFocusDisruption = this.experiments
+			? Experiments.isEnabled(this.experiments, EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION)
+			: false
 
 		// If this diff editor is already open (ie if a previous write file was
 		// interrupted) then we should activate that instead of opening a new

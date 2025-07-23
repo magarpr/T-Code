@@ -288,6 +288,9 @@ export class Task extends EventEmitter<ClineEvents> {
 				if (isMultiFileApplyDiffEnabled) {
 					this.diffStrategy = new MultiFileSearchReplaceDiffStrategy(this.fuzzyMatchThreshold)
 				}
+
+				// Update DiffViewProvider with experiments
+				this.diffViewProvider.setExperiments(state.experiments ?? {})
 			})
 		}
 
