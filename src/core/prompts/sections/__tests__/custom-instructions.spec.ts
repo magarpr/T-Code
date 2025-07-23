@@ -3,6 +3,11 @@
 // Mock fs/promises
 vi.mock("fs/promises")
 
+// Mock os module
+vi.mock("os", () => ({
+	homedir: vi.fn().mockReturnValue("/home/user"),
+}))
+
 // Mock path.resolve and path.join to be predictable in tests
 vi.mock("path", async () => ({
 	...(await vi.importActual("path")),
@@ -46,6 +51,7 @@ vi.mock("path", async () => ({
 
 import fs from "fs/promises"
 import type { PathLike } from "fs"
+import * as os from "os"
 
 import { loadRuleFiles, addCustomInstructions } from "../custom-instructions"
 
@@ -1197,5 +1203,282 @@ describe("Rules directory reading", () => {
 
 		const result = await loadRuleFiles("/fake/path")
 		expect(result).toBe("\n# Rules from .roorules:\nfallback content\n")
+	})
+})
+
+describe("External file path support", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it("should load instructions from external file path when provided", async () => {
+		// Mock file existence check
+		statMock.mockImplementation((path) => {
+			const normalizedPath = path.toString().replace(/\\/g, "/")
+			if (normalizedPath === "/fake/path/.github/copilot-instructions.md") {
+				return Promise.resolve({
+					isFile: vi.fn().mockReturnValue(true),
+					isDirectory: vi.fn().mockReturnValue(false),
+				} as any)
+			}
+			// For .roo/rules directory check
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		// Mock file reading
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+			if (normalizedPath === "/fake/path/.github/copilot-instructions.md") {
+				return Promise.resolve("External file instructions content")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"",
+			"./.github/copilot-instructions.md", // File path reference
+			"/fake/path",
+			"",
+		)
+
+		expect(result).toContain("Global Instructions:\nExternal file instructions content")
+		expect(readFileMock).toHaveBeenCalledWith(
+			process.platform === "win32"
+				? "\\fake\\path\\.github\\copilot-instructions.md"
+				: "/fake/path/.github/copilot-instructions.md",
+			"utf-8",
+		)
+	})
+
+	it("should handle absolute file paths", async () => {
+		const absolutePath = "/absolute/path/to/instructions.md"
+
+		// Mock file existence check
+		statMock.mockImplementation((path) => {
+			const normalizedPath = path.toString().replace(/\\/g, "/")
+			if (normalizedPath === absolutePath) {
+				return Promise.resolve({
+					isFile: vi.fn().mockReturnValue(true),
+					isDirectory: vi.fn().mockReturnValue(false),
+				} as any)
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		// Mock file reading
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+			if (normalizedPath === absolutePath) {
+				return Promise.resolve("Absolute path instructions")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions("", absolutePath, "/fake/path", "")
+
+		expect(result).toContain("Global Instructions:\nAbsolute path instructions")
+	})
+
+	it("should fall back to literal string if file path doesn't exist", async () => {
+		// Mock all file checks to fail
+		statMock.mockRejectedValue({ code: "ENOENT" })
+		readFileMock.mockRejectedValue({ code: "ENOENT" })
+
+		const result = await addCustomInstructions("", "./non-existent/file.md", "/fake/path", "")
+
+		expect(result).toContain("Global Instructions:\n./non-existent/file.md")
+	})
+
+	it("should treat non-path strings as literal instructions", async () => {
+		// Mock to ensure no file operations succeed
+		statMock.mockRejectedValue({ code: "ENOENT" })
+		readFileMock.mockRejectedValue({ code: "ENOENT" })
+
+		const result = await addCustomInstructions("", "This is just a regular instruction string", "/fake/path", "")
+
+		expect(result).toContain("Global Instructions:\nThis is just a regular instruction string")
+	})
+
+	it("should support file paths for mode-specific instructions", async () => {
+		// Mock file existence check
+		statMock.mockImplementation((path) => {
+			const normalizedPath = path.toString().replace(/\\/g, "/")
+			if (normalizedPath === "/fake/path/mode-specific.md") {
+				return Promise.resolve({
+					isFile: vi.fn().mockReturnValue(true),
+					isDirectory: vi.fn().mockReturnValue(false),
+				} as any)
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		// Mock file reading
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+			if (normalizedPath === "/fake/path/mode-specific.md") {
+				return Promise.resolve("Mode specific file content")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"./mode-specific.md", // File path for mode instructions
+			"",
+			"/fake/path",
+			"test-mode",
+		)
+
+		expect(result).toContain("Mode-specific Instructions:\nMode specific file content")
+	})
+
+	it("should handle directories gracefully", async () => {
+		// Mock directory check
+		statMock.mockImplementation((path) => {
+			const normalizedPath = path.toString().replace(/\\/g, "/")
+			if (normalizedPath === "/fake/path/.github") {
+				return Promise.resolve({
+					isFile: vi.fn().mockReturnValue(false),
+					isDirectory: vi.fn().mockReturnValue(true),
+				} as any)
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const result = await addCustomInstructions(
+			"",
+			"./.github", // Directory path
+			"/fake/path",
+			"",
+		)
+
+		// Should treat as literal string since it's not a file
+		expect(result).toContain("Global Instructions:\n./.github")
+	})
+})
+
+describe("Extension-specific instruction targeting", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it("should load extension-specific instructions from .roo directory", async () => {
+		// Mock file reading
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+
+			// Check for both global and project .roo directories
+			if (normalizedPath.includes("/.roo/py-instruction.md")) {
+				if (normalizedPath.includes("/home/") || normalizedPath.includes("/Users/")) {
+					return Promise.resolve("Global Python instructions")
+				} else {
+					return Promise.resolve("Project Python instructions")
+				}
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const { loadExtensionSpecificInstructions } = await import("../custom-instructions")
+		const result = await loadExtensionSpecificInstructions("/fake/path", "py")
+
+		expect(result).toContain("Extension-specific instructions from")
+		expect(result).toContain("py-instruction.md")
+
+		// Should check both global and project directories
+		expect(readFileMock).toHaveBeenCalledWith(expect.stringContaining("py-instruction.md"), "utf-8")
+	})
+
+	it("should load extension-specific instructions from project root", async () => {
+		// Mock file reading - only project root file exists
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+
+			if (normalizedPath === "/fake/path/ts-instruction.md") {
+				return Promise.resolve("TypeScript specific instructions")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const { loadExtensionSpecificInstructions } = await import("../custom-instructions")
+		const result = await loadExtensionSpecificInstructions("/fake/path", "ts")
+
+		expect(result).toContain("Extension-specific instructions from")
+		expect(result).toContain("/fake/path/ts-instruction.md")
+		expect(result).toContain("TypeScript specific instructions")
+	})
+
+	it("should return empty string when no extension provided", async () => {
+		const { loadExtensionSpecificInstructions } = await import("../custom-instructions")
+		const result = await loadExtensionSpecificInstructions("/fake/path", "")
+
+		expect(result).toBe("")
+		expect(readFileMock).not.toHaveBeenCalled()
+	})
+
+	it("should return empty string when no extension-specific files found", async () => {
+		// Mock all reads to fail
+		readFileMock.mockRejectedValue({ code: "ENOENT" })
+
+		const { loadExtensionSpecificInstructions } = await import("../custom-instructions")
+		const result = await loadExtensionSpecificInstructions("/fake/path", "java")
+
+		expect(result).toBe("")
+	})
+
+	it("should combine instructions from multiple locations", async () => {
+		// Mock file reading - files exist in multiple locations
+		readFileMock.mockImplementation((filePath: PathLike) => {
+			const pathStr = filePath.toString()
+			const normalizedPath = pathStr.replace(/\\/g, "/")
+
+			if (normalizedPath === "/home/user/.roo/js-instruction.md") {
+				return Promise.resolve("Global JS instructions")
+			} else if (normalizedPath === "/fake/path/.roo/js-instruction.md") {
+				return Promise.resolve("Project .roo JS instructions")
+			} else if (normalizedPath === "/fake/path/js-instruction.md") {
+				return Promise.resolve("Project root JS instructions")
+			}
+			return Promise.reject({ code: "ENOENT" })
+		})
+
+		const { loadExtensionSpecificInstructions } = await import("../custom-instructions")
+		const result = await loadExtensionSpecificInstructions("/fake/path", "js")
+
+		// Should contain instructions from all locations
+		expect(result).toContain("Global JS instructions")
+		expect(result).toContain("Project .roo JS instructions")
+		expect(result).toContain("Project root JS instructions")
+
+		// Verify all locations were checked
+		const calls = readFileMock.mock.calls.map((call) => call[0].toString())
+		expect(calls.some((path) => path.includes("/.roo/js-instruction.md"))).toBe(true)
+		expect(calls.some((path) => path.endsWith("/fake/path/js-instruction.md"))).toBe(true)
+	})
+
+	it("should handle various file extensions correctly", async () => {
+		const extensions = ["py", "ts", "js", "jsx", "tsx", "java", "cpp", "c", "go", "rs", "rb", "php"]
+
+		for (const ext of extensions) {
+			vi.clearAllMocks()
+
+			readFileMock.mockImplementation((filePath: PathLike) => {
+				const pathStr = filePath.toString()
+				if (pathStr.includes(`${ext}-instruction.md`)) {
+					return Promise.resolve(`${ext} instructions`)
+				}
+				return Promise.reject({ code: "ENOENT" })
+			})
+
+			const { loadExtensionSpecificInstructions } = await import("../custom-instructions")
+			const result = await loadExtensionSpecificInstructions("/fake/path", ext)
+
+			if (result) {
+				expect(result).toContain(`${ext} instructions`)
+			}
+		}
 	})
 })

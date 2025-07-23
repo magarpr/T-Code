@@ -214,6 +214,35 @@ export async function loadRuleFiles(cwd: string): Promise<string> {
 	return ""
 }
 
+/**
+ * Load instruction content from a file path reference
+ * Supports both absolute and relative paths
+ */
+async function loadInstructionFromPath(instructionPath: string, cwd: string): Promise<string | null> {
+	try {
+		// Check if the path looks like a file path reference
+		if (!instructionPath.includes("/") && !instructionPath.includes("\\")) {
+			return null
+		}
+
+		// Resolve the path relative to the current working directory
+		const resolvedPath = path.isAbsolute(instructionPath) ? instructionPath : path.resolve(cwd, instructionPath)
+
+		// Check if file exists
+		const stats = await fs.stat(resolvedPath)
+		if (!stats.isFile()) {
+			return null
+		}
+
+		// Read the file content
+		const content = await fs.readFile(resolvedPath, "utf-8")
+		return content.trim()
+	} catch (err) {
+		// If file doesn't exist or can't be read, return null
+		return null
+	}
+}
+
 export async function addCustomInstructions(
 	modeCustomInstructions: string,
 	globalCustomInstructions: string,
@@ -271,14 +300,32 @@ export async function addCustomInstructions(
 		)
 	}
 
-	// Add global instructions first
+	// Process global instructions - check if it's a file path reference
+	let processedGlobalInstructions = globalCustomInstructions
 	if (typeof globalCustomInstructions === "string" && globalCustomInstructions.trim()) {
-		sections.push(`Global Instructions:\n${globalCustomInstructions.trim()}`)
+		const fileContent = await loadInstructionFromPath(globalCustomInstructions.trim(), cwd)
+		if (fileContent !== null) {
+			processedGlobalInstructions = fileContent
+		}
+	}
+
+	// Process mode-specific instructions - check if it's a file path reference
+	let processedModeInstructions = modeCustomInstructions
+	if (typeof modeCustomInstructions === "string" && modeCustomInstructions.trim()) {
+		const fileContent = await loadInstructionFromPath(modeCustomInstructions.trim(), cwd)
+		if (fileContent !== null) {
+			processedModeInstructions = fileContent
+		}
+	}
+
+	// Add global instructions first
+	if (typeof processedGlobalInstructions === "string" && processedGlobalInstructions.trim()) {
+		sections.push(`Global Instructions:\n${processedGlobalInstructions.trim()}`)
 	}
 
 	// Add mode-specific instructions after
-	if (typeof modeCustomInstructions === "string" && modeCustomInstructions.trim()) {
-		sections.push(`Mode-specific Instructions:\n${modeCustomInstructions.trim()}`)
+	if (typeof processedModeInstructions === "string" && processedModeInstructions.trim()) {
+		sections.push(`Mode-specific Instructions:\n${processedModeInstructions.trim()}`)
 	}
 
 	// Add rules - include both mode-specific and generic rules if they exist
@@ -319,6 +366,40 @@ The following additional instructions are provided by the user, and should be fo
 
 ${joinedSections}`
 		: ""
+}
+
+/**
+ * Load extension-specific instruction files (e.g., py-instruction.md for Python files)
+ * @param cwd Current working directory
+ * @param fileExtension The file extension to look for (e.g., 'py', 'ts', 'js')
+ * @returns The content of the extension-specific instruction file if found
+ */
+export async function loadExtensionSpecificInstructions(cwd: string, fileExtension: string): Promise<string> {
+	if (!fileExtension) {
+		return ""
+	}
+
+	const extensionRules: string[] = []
+	const rooDirectories = getRooDirectoriesForCwd(cwd)
+
+	// Check for extension-specific instruction files in .roo directories
+	for (const rooDir of rooDirectories) {
+		// Check for {ext}-instruction.md files
+		const extensionInstructionFile = path.join(rooDir, `${fileExtension}-instruction.md`)
+		const content = await safeReadFile(extensionInstructionFile)
+		if (content) {
+			extensionRules.push(`# Extension-specific instructions from ${extensionInstructionFile}:\n${content}`)
+		}
+	}
+
+	// Also check in the project root for legacy support
+	const rootExtensionFile = path.join(cwd, `${fileExtension}-instruction.md`)
+	const rootContent = await safeReadFile(rootExtensionFile)
+	if (rootContent) {
+		extensionRules.push(`# Extension-specific instructions from ${rootExtensionFile}:\n${rootContent}`)
+	}
+
+	return extensionRules.join("\n\n")
 }
 
 /**
