@@ -34,6 +34,8 @@ import {
 	litellmDefaultModelId,
 	claudeCodeDefaultModelId,
 	claudeCodeModels,
+	huggingFaceDefaultModelId,
+	huggingFaceModels,
 } from "@roo-code/types"
 
 import type { RouterModels } from "@roo/api"
@@ -214,11 +216,16 @@ function getSelectedModel({
 			const info = claudeCodeModels[id as keyof typeof claudeCodeModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info } }
 		}
+		case "huggingface": {
+			const id = apiConfiguration.huggingFaceModelId ?? huggingFaceDefaultModelId
+			const info = huggingFaceModels[id as keyof typeof huggingFaceModels]
+			return { id, info: info || openAiModelInfoSaneDefaults }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies "anthropic" | "gemini-cli" | "human-relay" | "fake-ai"
+			provider satisfies "anthropic" | "gemini-cli" | "human-relay" | "fake-ai" | "huggingface"
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const info = anthropicModels[id as keyof typeof anthropicModels]
 			return { id, info }
