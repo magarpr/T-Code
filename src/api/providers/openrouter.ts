@@ -137,28 +137,48 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const stream = await this.client.chat.completions.create(completionParams)
 
 		let lastUsage: CompletionUsage | undefined = undefined
+		let lastChunkTime = Date.now()
+		const CHUNK_TIMEOUT = 60000 // 60 seconds timeout between chunks
 
-		for await (const chunk of stream) {
-			// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
-			if ("error" in chunk) {
-				const error = chunk.error as { message?: string; code?: number }
-				console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
-				throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
+		// Set up a timeout checker
+		const timeoutChecker = setInterval(() => {
+			const timeSinceLastChunk = Date.now() - lastChunkTime
+			if (timeSinceLastChunk > CHUNK_TIMEOUT) {
+				clearInterval(timeoutChecker)
+				console.error(`OpenRouter stream timeout: No data received for ${CHUNK_TIMEOUT / 1000} seconds`)
+				// The stream will be aborted when the iterator is abandoned
 			}
+		}, 5000) // Check every 5 seconds
 
-			const delta = chunk.choices[0]?.delta
+		try {
+			for await (const chunk of stream) {
+				// Update last chunk time
+				lastChunkTime = Date.now()
 
-			if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
-				yield { type: "reasoning", text: delta.reasoning }
+				// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
+				if ("error" in chunk) {
+					const error = chunk.error as { message?: string; code?: number }
+					console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
+					throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
+				}
+
+				const delta = chunk.choices[0]?.delta
+
+				if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
+					yield { type: "reasoning", text: delta.reasoning }
+				}
+
+				if (delta?.content) {
+					yield { type: "text", text: delta.content }
+				}
+
+				if (chunk.usage) {
+					lastUsage = chunk.usage
+				}
 			}
-
-			if (delta?.content) {
-				yield { type: "text", text: delta.content }
-			}
-
-			if (chunk.usage) {
-				lastUsage = chunk.usage
-			}
+		} finally {
+			// Clean up the timeout checker
+			clearInterval(timeoutChecker)
 		}
 
 		if (lastUsage) {

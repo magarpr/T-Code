@@ -1810,7 +1810,31 @@ export class Task extends EventEmitter<ClineEvents> {
 		try {
 			// Awaiting first chunk to see if it will throw an error.
 			this.isWaitingForFirstChunk = true
-			const firstChunk = await iterator.next()
+
+			// Add timeout for OpenRouter to prevent indefinite hanging
+			const OPENROUTER_FIRST_CHUNK_TIMEOUT = 30000 // 30 seconds
+			const isOpenRouter = this.apiConfiguration.apiProvider === "openrouter"
+
+			let firstChunk: Awaited<ReturnType<typeof iterator.next>>
+			if (isOpenRouter) {
+				// Create a timeout promise that rejects after the specified time
+				const timeoutPromise = new Promise<never>((_, reject) => {
+					setTimeout(() => {
+						reject(
+							new Error(
+								`OpenRouter API request timed out after ${OPENROUTER_FIRST_CHUNK_TIMEOUT / 1000} seconds. This may be due to high load on OpenRouter's servers. Please try again later or switch to a different provider.`,
+							),
+						)
+					}, OPENROUTER_FIRST_CHUNK_TIMEOUT)
+				})
+
+				// Race between the actual API call and the timeout
+				firstChunk = await Promise.race([iterator.next(), timeoutPromise])
+			} else {
+				// For non-OpenRouter providers, use the original logic
+				firstChunk = await iterator.next()
+			}
+
 			yield firstChunk.value
 			this.isWaitingForFirstChunk = false
 		} catch (error) {
