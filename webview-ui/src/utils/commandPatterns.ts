@@ -1,4 +1,4 @@
-import { parseCommand } from "./command-validation"
+import { parse } from "shell-quote"
 
 export interface CommandPattern {
 	pattern: string
@@ -10,10 +10,55 @@ export interface SecurityWarning {
 	message: string
 }
 
+function processCommand(cmd: string[], patterns: Set<string>): void {
+	if (!cmd.length || typeof cmd[0] !== "string") return
+
+	const mainCmd = cmd[0]
+
+	// Skip if it's just a number (like "0" from "0 total")
+	if (/^\d+$/.test(mainCmd)) return
+
+	// Skip common output patterns that aren't commands
+	const skipWords = ["total", "error", "warning", "failed", "success", "done"]
+	if (skipWords.includes(mainCmd.toLowerCase())) return
+
+	patterns.add(mainCmd)
+
+	const breakingExps = [/^-/, /[\\/.~]/]
+
+	for (let i = 1; i < cmd.length; i++) {
+		const arg = cmd[i]
+
+		if (typeof arg !== "string" || breakingExps.some((re) => re.test(arg))) break
+
+		const pattern = cmd.slice(0, i + 1).join(" ")
+		patterns.add(pattern)
+	}
+}
+
+function extractPatterns(cmdStr: string): Set<string> {
+	const patterns = new Set<string>()
+
+	const parsed = parse(cmdStr)
+
+	const commandSeparators = new Set(["|", "&&", "||", ";"])
+	let current: string[] = []
+	for (const token of parsed) {
+		if (typeof token === "object" && "op" in token && commandSeparators.has(token.op)) {
+			if (current.length) processCommand(current, patterns)
+			current = []
+		} else {
+			current.push(String(token))
+		}
+	}
+
+	if (current.length) processCommand(current, patterns)
+
+	return patterns
+}
+
 export function extractCommandPatterns(command: string): string[] {
 	if (!command?.trim()) return []
-
-	const patterns = new Set<string>()
 
 	// First, check if the command contains subshells and remove them
 	// This is important for security - we don't want to extract patterns from subshell contents
@@ -21,49 +66,7 @@ export function extractCommandPatterns(command: string): string[] {
 		.replace(/\$\([^)]*\)/g, "") // Remove $() subshells
 		.replace(/`[^`]*`/g, "") // Remove backtick subshells
 
-	// Use parseCommand to split the cleaned command into sub-commands
-	// This ensures consistent parsing behavior with command-validation
-	const subCommands = parseCommand(cleanedCommand)
-
-	// Process each sub-command to extract patterns
-	for (const subCommand of subCommands) {
-		// Skip empty commands
-		if (!subCommand.trim()) continue
-
-		// Split the command into tokens
-		const tokens = subCommand.trim().split(/\s+/)
-
-		if (tokens.length === 0) continue
-
-		const mainCmd = tokens[0]
-
-		// Skip if it's just a number (like "0" from "0 total")
-		if (/^\d+$/.test(mainCmd)) continue
-
-		// Skip common output patterns that aren't commands
-		const skipWords = ["total", "error", "warning", "failed", "success", "done"]
-		if (skipWords.includes(mainCmd.toLowerCase())) continue
-
-		// Only add if it contains at least one letter or is a valid path
-		if (/[a-zA-Z]/.test(mainCmd) || mainCmd.includes("/")) {
-			patterns.add(mainCmd)
-
-			// Build up patterns progressively (e.g., "npm", "npm install", "npm install express")
-			// Stop at flags or special characters
-			const stopPatterns = [/^-/, /[\\/.~]/]
-
-			for (let i = 1; i < tokens.length; i++) {
-				const token = tokens[i]
-
-				// Stop if we hit a flag or special character
-				if (stopPatterns.some((re) => re.test(token))) break
-
-				// Build the pattern up to this point
-				const pattern = tokens.slice(0, i + 1).join(" ")
-				patterns.add(pattern)
-			}
-		}
-	}
+	const patterns = extractPatterns(cleanedCommand)
 
 	return Array.from(patterns).sort()
 }
