@@ -618,6 +618,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
 			"description": "Wanneer ingeschakeld, kan Roo meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Roo bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Prevent focus disruption on file edits",
+			"description": "When enabled, file edits will not automatically switch focus to the edited file. This helps maintain your current workflow when Roo makes changes to multiple files."
 		}
 	},
 	"promptCaching": {

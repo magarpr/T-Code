@@ -618,6 +618,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
 			"description": "Etkinleştirildiğinde, Roo tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Roo dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Prevent focus disruption on file edits",
+			"description": "When enabled, file edits will not automatically switch focus to the edited file. This helps maintain your current workflow when Roo makes changes to multiple files."
 		}
 	},
 	"promptCaching": {

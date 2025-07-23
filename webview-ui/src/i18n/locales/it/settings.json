@@ -618,6 +618,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Abilita modifiche di file concorrenti",
 			"description": "Quando abilitato, Roo può modificare più file in una singola richiesta. Quando disabilitato, Roo deve modificare i file uno alla volta. Disabilitare questa opzione può aiutare quando lavori con modelli meno capaci o quando vuoi più controllo sulle modifiche dei file."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Prevent focus disruption on file edits",
+			"description": "When enabled, file edits will not automatically switch focus to the edited file. This helps maintain your current workflow when Roo makes changes to multiple files."
 		}
 	},
 	"promptCaching": {
