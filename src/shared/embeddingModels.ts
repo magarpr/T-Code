@@ -45,6 +45,7 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 			scoreThreshold: 0.15,
 			queryPrefix: "Represent this query for searching relevant code: ",
 		},
+		"codestral-embed": { dimension: 3072, scoreThreshold: 0.4 },
 	},
 	gemini: {
 		"text-embedding-004": { dimension: 768 },
