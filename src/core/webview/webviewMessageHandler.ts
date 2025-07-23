@@ -1976,6 +1976,27 @@ export const webviewMessageHandler = async (
 				// Silently fail - not critical
 			}
 			break
+		case "updateRulesSettings":
+			// Save rules settings to global state
+			await updateGlobalState("rulesSettings", {
+				selectedRuleTypes: message.selectedRuleTypes || ["general", "code"],
+				addToGitignore: message.addToGitignore !== undefined ? message.addToGitignore : true,
+				includeCustomRules: message.includeCustomRules || false,
+				customRulesText: message.customRulesText || "",
+			})
+			break
+		case "getRulesSettings":
+			// Send current rules settings to webview
+			const rulesSettings = getGlobalState("rulesSettings") || {
+				selectedRuleTypes: ["general", "code"],
+				addToGitignore: true,
+			}
+			await provider.postMessageToWebview({
+				type: "rulesSettings",
+				selectedRuleTypes: rulesSettings.selectedRuleTypes,
+				addToGitignore: rulesSettings.addToGitignore,
+			})
+			break
 		case "humanRelayResponse":
 			if (message.requestId && message.text) {
 				vscode.commands.executeCommand(getCommand("handleHumanRelayResponse"), {

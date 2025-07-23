@@ -105,6 +105,7 @@ export enum ContextMenuOptionType {
 	Git = "git",
 	NoResults = "noResults",
 	Mode = "mode", // Add mode type
+	Rules = "rules", // Add rules type
 }
 
 export interface ContextMenuQueryItem {
@@ -123,38 +124,70 @@ export function getContextMenuOptions(
 	dynamicSearchResults: SearchResult[] = [],
 	modes?: ModeConfig[],
 ): ContextMenuQueryItem[] {
-	// Handle slash commands for modes
+	// Handle slash commands
 	if (query.startsWith("/") && inputValue.startsWith("/")) {
-		const modeQuery = query.slice(1)
-		if (!modes?.length) return [{ type: ContextMenuOptionType.NoResults }]
+		const commandQuery = query.slice(1).toLowerCase()
 
-		// Create searchable strings array for fzf
-		const searchableItems = modes.map((mode) => ({
-			original: mode,
-			searchStr: mode.name,
-		}))
+		// Check if it's the make-rules command
+		if (commandQuery === "" || "make-rules".startsWith(commandQuery)) {
+			const rulesCommand: ContextMenuQueryItem = {
+				type: ContextMenuOptionType.Rules,
+				value: "make-rules",
+				label: "Make Rules",
+				description: "Generate AI rules for your project",
+				icon: "$(book)",
+			}
 
-		// Initialize fzf instance for fuzzy search
-		const fzf = new Fzf(searchableItems, {
-			selector: (item) => item.searchStr,
-		})
+			// If query is empty or matches "make-rules", show rules command
+			if (commandQuery === "" || "make-rules".startsWith(commandQuery)) {
+				// Also include mode options if query is empty
+				if (commandQuery === "" && modes?.length) {
+					const modeOptions = modes.map((mode) => ({
+						type: ContextMenuOptionType.Mode,
+						value: mode.slug,
+						label: mode.name,
+						description: getModeDescription(mode),
+					}))
+					return [rulesCommand, ...modeOptions]
+				}
+				return [rulesCommand]
+			}
+		}
 
-		// Get fuzzy matching items
-		const matchingModes = modeQuery
-			? fzf.find(modeQuery).map((result) => ({
-					type: ContextMenuOptionType.Mode,
-					value: result.item.original.slug,
-					label: result.item.original.name,
-					description: getModeDescription(result.item.original),
-				}))
-			: modes.map((mode) => ({
-					type: ContextMenuOptionType.Mode,
-					value: mode.slug,
-					label: mode.name,
-					description: getModeDescription(mode),
-				}))
+		// Handle mode selection
+		if (modes?.length) {
+			const modeQuery = commandQuery
 
-		return matchingModes.length > 0 ? matchingModes : [{ type: ContextMenuOptionType.NoResults }]
+			// Create searchable strings array for fzf
+			const searchableItems = modes.map((mode) => ({
+				original: mode,
+				searchStr: mode.name.toLowerCase(),
+			}))
+
+			// Initialize fzf instance for fuzzy search
+			const fzf = new Fzf(searchableItems, {
+				selector: (item) => item.searchStr,
+			})
+
+			// Get fuzzy matching items
+			const matchingModes = modeQuery
+				? fzf.find(modeQuery).map((result) => ({
+						type: ContextMenuOptionType.Mode,
+						value: result.item.original.slug,
+						label: result.item.original.name,
+						description: getModeDescription(result.item.original),
+					}))
+				: modes.map((mode) => ({
+						type: ContextMenuOptionType.Mode,
+						value: mode.slug,
+						label: mode.name,
+						description: getModeDescription(mode),
+					}))
+
+			return matchingModes.length > 0 ? matchingModes : [{ type: ContextMenuOptionType.NoResults }]
+		}
+
+		return [{ type: ContextMenuOptionType.NoResults }]
 	}
 
 	const workingChanges: ContextMenuQueryItem = {

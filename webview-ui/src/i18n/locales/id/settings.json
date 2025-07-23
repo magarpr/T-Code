@@ -623,7 +623,6 @@
 		"addToGitignoreDescription": "Secara otomatis menambahkan file aturan yang dihasilkan ke .gitignore untuk mencegah mereka di-commit ke version control",
 		"autoApproveProtected": "Otomatis setujui penulisan file yang dilindungi",
 		"autoApproveProtectedDescription": "Izinkan Roo untuk membuat dan menulis ke direktori .roo tanpa memerlukan persetujuan manual",
-		"autoApproveRecommendation": "Untuk pengalaman generasi aturan terbaik, kami merekomendasikan mengaktifkan persetujuan otomatis untuk operasi baca dan tulis di pengaturan Auto Approval di atas.",
 		"selectApiConfig": "Pilih Konfigurasi API",
 		"includeCustomRules": "Sertakan aturan kustom saya",
 		"includeCustomRulesDescription": "Tambahkan instruksi kustom ke prompt generasi aturan",

@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "生成されたルールファイルを自動的に.gitignoreに追加して、バージョン管理にコミットされないようにします",
 		"autoApproveProtected": "保護されたファイル書き込みを自動承認",
 		"autoApproveProtectedDescription": "Rooが手動承認を必要とせずに.rooディレクトリを作成・書き込みできるようにします",
-		"autoApproveRecommendation": "ルール生成の最良の体験のために、上記の自動承認設定で読み取りと書き込み操作の両方の自動承認を有効にすることをお勧めします。",
 		"selectApiConfig": "API設定を選択",
 		"includeCustomRules": "独自のルールを含める",
 		"includeCustomRulesDescription": "ルール生成プロンプトにカスタム指示を追加",

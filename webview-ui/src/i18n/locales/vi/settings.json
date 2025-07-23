@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "Tự động thêm các tệp quy tắc được tạo vào .gitignore để ngăn chúng được commit vào kiểm soát phiên bản",
 		"autoApproveProtected": "Tự động phê duyệt ghi tệp được bảo vệ",
 		"autoApproveProtectedDescription": "Cho phép Roo tạo và ghi vào thư mục .roo mà không cần phê duyệt thủ công",
-		"autoApproveRecommendation": "Để có trải nghiệm tạo quy tắc tốt nhất, chúng tôi khuyến nghị bật tự động phê duyệt cho cả hoạt động đọc và ghi trong cài đặt Tự động phê duyệt ở trên.",
 		"selectApiConfig": "Chọn cấu hình API",
 		"includeCustomRules": "Bao gồm quy tắc tùy chỉnh của tôi",
 		"includeCustomRulesDescription": "Thêm hướng dẫn tùy chỉnh vào prompt tạo quy tắc",

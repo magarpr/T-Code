@@ -200,6 +200,8 @@ export interface WebviewMessage {
 		| "requestCodeIndexSecretStatus"
 		| "generateRules"
 		| "checkExistingRuleFiles"
+		| "updateRulesSettings"
+		| "getRulesSettings"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"

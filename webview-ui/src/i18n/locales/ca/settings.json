@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "Afegir automàticament els arxius de regles generats a .gitignore per evitar que es facin commit al control de versions",
 		"autoApproveProtected": "Aprovar automàticament l'escriptura d'arxius protegits",
 		"autoApproveProtectedDescription": "Permetre que Roo creï i escrigui al directori .roo sense requerir aprovació manual",
-		"autoApproveRecommendation": "Per a la millor experiència de generació de regles, recomanem habilitar l'aprovació automàtica tant per a operacions de lectura com d'escriptura a la configuració d'Aprovació Automàtica de dalt.",
 		"selectApiConfig": "Seleccionar configuració d'API",
 		"includeCustomRules": "Incloure les meves regles personalitzades",
 		"includeCustomRulesDescription": "Afegir instruccions personalitzades al prompt de generació de regles",

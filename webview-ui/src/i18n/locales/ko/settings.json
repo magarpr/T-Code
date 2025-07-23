@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "생성된 규칙 파일을 자동으로 .gitignore에 추가하여 버전 관리에 커밋되지 않도록 합니다",
 		"autoApproveProtected": "보호된 파일 쓰기 자동 승인",
 		"autoApproveProtectedDescription": "Roo가 수동 승인 없이 .roo 디렉토리를 생성하고 쓸 수 있도록 허용",
-		"autoApproveRecommendation": "최상의 규칙 생성 경험을 위해 위의 자동 승인 설정에서 읽기 및 쓰기 작업 모두에 대한 자동 승인을 활성화하는 것을 권장합니다.",
 		"selectApiConfig": "API 구성 선택",
 		"includeCustomRules": "내 규칙 포함",
 		"includeCustomRulesDescription": "규칙 생성 프롬프트에 사용자 정의 지침 추가",

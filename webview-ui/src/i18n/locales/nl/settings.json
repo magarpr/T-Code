@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "Voeg gegenereerde regelbestanden automatisch toe aan .gitignore om te voorkomen dat ze worden gecommit naar versiebeheer",
 		"autoApproveProtected": "Automatisch goedkeuren van schrijven naar beschermde bestanden",
 		"autoApproveProtectedDescription": "Sta Roo toe om te maken en schrijven naar de .roo directory zonder handmatige goedkeuring te vereisen",
-		"autoApproveRecommendation": "Voor de beste regelgeneratie-ervaring raden we aan om automatische goedkeuring in te schakelen voor zowel lees- als schrijfoperaties in de Auto Approval instellingen hierboven.",
 		"selectApiConfig": "Selecteer API-configuratie",
 		"includeCustomRules": "Mijn aangepaste regels opnemen",
 		"includeCustomRulesDescription": "Voeg aangepaste instructies toe aan de regelgeneratie prompt",

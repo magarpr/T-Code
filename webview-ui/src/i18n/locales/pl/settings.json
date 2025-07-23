@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "Automatycznie dodaj wygenerowane pliki zasad do .gitignore, aby zapobiec ich commitowaniu do kontroli wersji",
 		"autoApproveProtected": "Automatycznie zatwierdź pisanie chronionych plików",
 		"autoApproveProtectedDescription": "Pozwól Roo na tworzenie i pisanie do katalogu .roo bez wymagania ręcznego zatwierdzenia",
-		"autoApproveRecommendation": "Dla najlepszego doświadczenia generowania zasad zalecamy włączenie automatycznego zatwierdzania zarówno dla operacji odczytu, jak i zapisu w ustawieniach Auto Approval powyżej.",
 		"selectApiConfig": "Wybierz konfigurację API",
 		"includeCustomRules": "Uwzględnij moje niestandardowe zasady",
 		"includeCustomRulesDescription": "Dodaj niestandardowe instrukcje do promptu generowania zasad",

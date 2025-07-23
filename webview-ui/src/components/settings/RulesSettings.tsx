@@ -1,18 +1,22 @@
 import { HTMLAttributes, useState, useEffect } from "react"
+import { VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { FileText, AlertTriangle, Info, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { FileText, AlertTriangle, Terminal } from "lucide-react"
 import { vscode } from "@/utils/vscode"
 import { cn } from "@/lib/utils"
-import { useExtensionState } from "@/context/ExtensionStateContext"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StandardTooltip } from "@/components/ui"
-import { VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
 
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { SetCachedStateField } from "./types"
 
 type RulesSettingsProps = HTMLAttributes<HTMLDivElement> & {
-	hasUnsavedChanges?: boolean
+	rulesSettings?: {
+		selectedRuleTypes: string[]
+		addToGitignore: boolean
+		includeCustomRules: boolean
+		customRulesText: string
+	}
+	setCachedStateField: SetCachedStateField<"rulesSettings">
 }
 
 interface RuleType {
@@ -23,73 +27,127 @@ interface RuleType {
 	exists?: boolean
 }
 
-export const RulesSettings = ({ className, hasUnsavedChanges, ...props }: RulesSettingsProps) => {
+export const RulesSettings = ({ rulesSettings, setCachedStateField, className, ...props }: RulesSettingsProps) => {
 	const { t } = useAppTranslation()
-	const [addToGitignore, setAddToGitignore] = useState(true)
-	const [alwaysAllowWriteProtected, setAlwaysAllowWriteProtected] = useState(true)
-	const [selectedApiConfig, setSelectedApiConfig] = useState<string>("")
-	const [includeCustomRules, setIncludeCustomRules] = useState(false)
-	const [customRulesText, setCustomRulesText] = useState("")
 	const [sourceFileCount, setSourceFileCount] = useState<number | null>(null)
 
-	const { listApiConfigMeta, currentApiConfigName } = useExtensionState()
-
-	const [ruleTypes, setRuleTypes] = useState<RuleType[]>([
+	const allRuleTypes = [
 		{
 			id: "general",
 			label: t("settings:rules.types.general.label"),
 			description: t("settings:rules.types.general.description"),
-			checked: true,
-			exists: false,
 		},
 		{
 			id: "code",
 			label: t("settings:rules.types.code.label"),
 			description: t("settings:rules.types.code.description"),
-			checked: true,
-			exists: false,
 		},
 		{
 			id: "architect",
 			label: t("settings:rules.types.architect.label"),
 			description: t("settings:rules.types.architect.description"),
-			checked: true,
-			exists: false,
 		},
 		{
 			id: "debug",
 			label: t("settings:rules.types.debug.label"),
 			description: t("settings:rules.types.debug.description"),
-			checked: true,
-			exists: false,
 		},
 		{
 			id: "docs-extractor",
 			label: t("settings:rules.types.docsExtractor.label"),
 			description: t("settings:rules.types.docsExtractor.description"),
-			checked: true,
-			exists: false,
 		},
-	])
+	]
+
+	const [ruleTypes, setRuleTypes] = useState<RuleType[]>(
+		allRuleTypes.map((ruleType) => ({
+			...ruleType,
+			checked: rulesSettings?.selectedRuleTypes.includes(ruleType.id) ?? true,
+			exists: false,
+		})),
+	)
+
+	// Update rule types when rulesSettings prop changes
+	useEffect(() => {
+		if (rulesSettings) {
+			setRuleTypes((prev) =>
+				prev.map((ruleType) => ({
+					...ruleType,
+					checked: rulesSettings.selectedRuleTypes.includes(ruleType.id),
+				})),
+			)
+		}
+	}, [rulesSettings])
 
 	const handleRuleTypeToggle = (id: string) => {
 		setRuleTypes((prev) => prev.map((rule) => (rule.id === id ? { ...rule, checked: !rule.checked } : rule)))
+
+		// Update the cached state using the proper pattern
+		const updatedRules = ruleTypes.map((rule) => (rule.id === id ? { ...rule, checked: !rule.checked } : rule))
+		const selectedRuleTypes = updatedRules.filter((rule) => rule.checked).map((rule) => rule.id)
+
+		setCachedStateField("rulesSettings", {
+			selectedRuleTypes,
+			addToGitignore: rulesSettings?.addToGitignore ?? true,
+			includeCustomRules: rulesSettings?.includeCustomRules ?? false,
+			customRulesText: rulesSettings?.customRulesText ?? "",
+		})
 	}
 
-	// Check for existing files and get current settings when component mounts
+	const handleGitignoreToggle = (checked: boolean) => {
+		setCachedStateField("rulesSettings", {
+			selectedRuleTypes: rulesSettings?.selectedRuleTypes ?? [
+				"general",
+				"code",
+				"architect",
+				"debug",
+				"docs-extractor",
+			],
+			addToGitignore: checked,
+			includeCustomRules: rulesSettings?.includeCustomRules ?? false,
+			customRulesText: rulesSettings?.customRulesText ?? "",
+		})
+	}
+
+	const handleIncludeCustomRulesToggle = (checked: boolean) => {
+		setCachedStateField("rulesSettings", {
+			selectedRuleTypes: rulesSettings?.selectedRuleTypes ?? [
+				"general",
+				"code",
+				"architect",
+				"debug",
+				"docs-extractor",
+			],
+			addToGitignore: rulesSettings?.addToGitignore ?? true,
+			includeCustomRules: checked,
+			customRulesText: rulesSettings?.customRulesText ?? "",
+		})
+	}
+
+	const handleCustomRulesTextChange = (text: string) => {
+		setCachedStateField("rulesSettings", {
+			selectedRuleTypes: rulesSettings?.selectedRuleTypes ?? [
+				"general",
+				"code",
+				"architect",
+				"debug",
+				"docs-extractor",
+			],
+			addToGitignore: rulesSettings?.addToGitignore ?? true,
+			includeCustomRules: rulesSettings?.includeCustomRules ?? false,
+			customRulesText: text,
+		})
+	}
+
+	// Check for existing files when component mounts
 	useEffect(() => {
 		vscode.postMessage({
 			type: "checkExistingRuleFiles",
 		})
 
-		// Request current state to get alwaysAllowWriteProtected value
-		vscode.postMessage({ type: "webviewDidLaunch" })
-
-		// Set default API config
-		if (currentApiConfigName && !selectedApiConfig) {
-			setSelectedApiConfig(currentApiConfigName)
-		}
-	}, [currentApiConfigName, selectedApiConfig])
+		// Request current rules settings
+		vscode.postMessage({ type: "getRulesSettings" })
+	}, [])
 
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
@@ -106,11 +164,9 @@ export const RulesSettings = ({ className, hasUnsavedChanges, ...props }: RulesS
 				if (message.sourceFileCount !== undefined) {
 					setSourceFileCount(message.sourceFileCount)
 				}
-			} else if (message.type === "state") {
-				// Update alwaysAllowWriteProtected from the extension state
-				if (message.state?.alwaysAllowWriteProtected !== undefined) {
-					setAlwaysAllowWriteProtected(message.state.alwaysAllowWriteProtected)
-				}
+			} else if (message.type === "rulesSettings") {
+				// Update settings from saved preferences - this is now handled by props
+				// The component will re-render when rulesSettings prop changes
 			}
 		}
 
@@ -118,27 +174,8 @@ export const RulesSettings = ({ className, hasUnsavedChanges, ...props }: RulesS
 		return () => window.removeEventListener("message", handleMessage)
 	}, [])
 
-	const handleGenerateRules = () => {
-		const selectedRules = ruleTypes.filter((rule) => rule.checked)
-		if (selectedRules.length === 0) {
-			return
-		}
-
-		// Send message to extension to generate rules
-		vscode.postMessage({
-			type: "generateRules",
-			selectedRuleTypes: selectedRules.map((rule) => rule.id),
-			addToGitignore,
-			alwaysAllowWriteProtected,
-			apiConfigName: selectedApiConfig,
-			includeCustomRules,
-			customRulesText: includeCustomRules ? customRulesText : "",
-		})
-	}
-
 	const existingRules = ruleTypes.filter((rule) => rule.checked && rule.exists)
 	const hasExistingFiles = existingRules.length > 0
-	const hasSelectedRules = ruleTypes.some((rule) => rule.checked)
 
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
@@ -150,198 +187,139 @@ export const RulesSettings = ({ className, hasUnsavedChanges, ...props }: RulesS
 			</SectionHeader>
 
 			<Section>
-				<div className="space-y-6">
-					{/* Magic Rules Generation subsection */}
-					<div className="flex flex-col gap-4">
-						<div className="flex flex-col gap-1">
-							<div className="flex items-center gap-2 font-bold">
-								<Sparkles className="w-4 h-4" />
-								<div>{t("settings:rules.magicGeneration.title")}</div>
+				<div className="space-y-4">
+					{/* Command Line Instructions */}
+					<div className="flex items-start gap-2">
+						<Terminal className="w-4 h-4 text-vscode-foreground mt-0.5 flex-shrink-0" />
+						<div>
+							<div className="font-medium mb-1">
+								{t("settings:rules.commandTitle")}{" "}
+								<code className="bg-vscode-textBlockQuote-background px-2 py-1 rounded">
+									/make-rules
+								</code>
 							</div>
 							<div className="text-vscode-descriptionForeground">
-								{t("settings:rules.magicGeneration.description")}
-							</div>
-						</div>
-						<div className="flex flex-col gap-3 pl-3 border-l-2 border-vscode-button-background">
-							{/* Recommendation box */}
-							<div className="flex items-start gap-2 p-2 bg-vscode-inputValidation-infoBackground border border-vscode-inputValidation-infoBorder rounded-md">
-								<Info className="w-4 h-4 text-vscode-inputValidation-infoForeground mt-0.5 flex-shrink-0" />
-								<div className="text-sm text-vscode-inputValidation-infoForeground">
-									{t("settings:rules.autoApproveRecommendation")}
-								</div>
-							</div>
-
-							<div>
-								<h4 className="text-sm font-medium mb-3">{t("settings:rules.selectTypes")}</h4>
-								<div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
-									{ruleTypes.map((ruleType) => (
-										<div
-											key={ruleType.id}
-											onClick={() => handleRuleTypeToggle(ruleType.id)}
-											className={cn(
-												"relative p-3 rounded-md border cursor-pointer transition-all",
-												"hover:border-vscode-focusBorder",
-												ruleType.checked
-													? "bg-vscode-list-activeSelectionBackground border-vscode-focusBorder"
-													: "bg-vscode-editor-background border-vscode-panel-border",
-											)}>
-											<div className="flex-1">
-												<div className="text-sm font-medium flex items-center gap-1">
-													{ruleType.label}
-													{ruleType.exists && (
-														<span
-															className="text-vscode-testing-iconQueued"
-															title={t("settings:rules.fileExists")}>
-															•
-														</span>
-													)}
-												</div>
-												<div className="text-xs text-vscode-descriptionForeground mt-1">
-													{ruleType.description}
-												</div>
-											</div>
-										</div>
-									))}
-								</div>
-							</div>
-
-							{/* Small repository warning */}
-							{sourceFileCount !== null && sourceFileCount > 0 && sourceFileCount < 20 && (
-								<div className="flex items-start gap-2 p-2 bg-vscode-inputValidation-warningBackground border border-vscode-inputValidation-warningBorder rounded-md">
-									<AlertTriangle className="w-4 h-4 text-vscode-inputValidation-warningForeground mt-0.5 flex-shrink-0" />
-									<div className="text-sm text-vscode-inputValidation-warningForeground">
-										{t("settings:rules.smallRepoWarning", { count: sourceFileCount })}
-									</div>
-								</div>
-							)}
-							{hasExistingFiles && (
-								<div className="flex items-start gap-2 p-2 bg-vscode-inputValidation-warningBackground border border-vscode-inputValidation-warningBorder rounded-md">
-									<AlertTriangle className="w-4 h-4 text-vscode-inputValidation-warningForeground mt-0.5 flex-shrink-0" />
-									<div className="text-sm text-vscode-inputValidation-warningForeground">
-										<div>{t("settings:rules.overwriteWarning")}</div>
-										<ul className="mt-1 ml-4 list-disc">
-											{existingRules.map((rule) => (
-												<li key={rule.id}>{rule.label}</li>
-											))}
-										</ul>
-									</div>
-								</div>
-							)}
-
-							<div className="border-t border-vscode-panel-border pt-2 space-y-2">
-								<label className="flex items-center gap-2 cursor-pointer hover:opacity-80">
-									<input
-										type="checkbox"
-										checked={addToGitignore}
-										onChange={(e) => setAddToGitignore(e.target.checked)}
-									/>
-									<div>
-										<div className="text-sm font-medium">{t("settings:rules.addToGitignore")}</div>
-										<div className="text-xs text-vscode-descriptionForeground">
-											{t("settings:rules.addToGitignoreDescription")}
-										</div>
-									</div>
-								</label>
-
-								<label className="flex items-center gap-2 cursor-pointer hover:opacity-80">
-									<input
-										type="checkbox"
-										checked={alwaysAllowWriteProtected}
-										onChange={(e) => {
-											setAlwaysAllowWriteProtected(e.target.checked)
-											vscode.postMessage({
-												type: "alwaysAllowWriteProtected",
-												bool: e.target.checked,
-											})
-										}}
-									/>
-									<div>
-										<div className="text-sm font-medium">
-											{t("settings:rules.autoApproveProtected")}
-										</div>
-										<div className="text-xs text-vscode-descriptionForeground">
-											{t("settings:rules.autoApproveProtectedDescription")}
-										</div>
-									</div>
-								</label>
-
-								<label className="flex items-center gap-2 cursor-pointer hover:opacity-80">
-									<input
-										type="checkbox"
-										checked={includeCustomRules}
-										onChange={(e) => setIncludeCustomRules(e.target.checked)}
-									/>
-									<div>
-										<div className="text-sm font-medium">
-											{t("settings:rules.includeCustomRules")}
-										</div>
-										<div className="text-xs text-vscode-descriptionForeground">
-											{t("settings:rules.includeCustomRulesDescription")}
-										</div>
-									</div>
-								</label>
-
-								{includeCustomRules && (
-									<div className="mt-3 pl-6">
-										<VSCodeTextArea
-											resize="vertical"
-											value={customRulesText}
-											onChange={(e) => {
-												const value =
-													(e as unknown as CustomEvent)?.detail?.target?.value ||
-													((e as any).target as HTMLTextAreaElement).value
-												setCustomRulesText(value)
-											}}
-											placeholder={t("settings:rules.customRulesPlaceholder")}
-											rows={6}
-											className="w-full"
-										/>
-										<div className="text-xs text-vscode-descriptionForeground mt-1">
-											{t("settings:rules.customRulesHint")}
-										</div>
-									</div>
-								)}
-							</div>
-
-							<div className="flex flex-col gap-2 mt-3">
-								<Select value={selectedApiConfig} onValueChange={setSelectedApiConfig}>
-									<SelectTrigger className="w-fit min-w-[5rem] max-w-[8rem]">
-										<SelectValue placeholder={t("settings:rules.selectApiConfig")} />
-									</SelectTrigger>
-									<SelectContent>
-										{(listApiConfigMeta || []).map((config) => (
-											<SelectItem key={config.id} value={config.name}>
-												{config.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-
-								<StandardTooltip
-									content={
-										hasUnsavedChanges
-											? t("settings:rules.unsavedChangesError")
-											: !hasSelectedRules
-												? t("settings:rules.noRulesSelected")
-												: t("settings:rules.generateButtonTooltip")
-									}>
-									<span className="w-full">
-										<Button
-											onClick={handleGenerateRules}
-											disabled={!selectedApiConfig || hasUnsavedChanges || !hasSelectedRules}
-											variant="default"
-											size="default"
-											className="w-full">
-											<>
-												<FileText className="mr-2 h-4 w-4" />
-												{t("settings:rules.generateButton")}
-											</>
-										</Button>
-									</span>
-								</StandardTooltip>
+								{t("settings:rules.commandDescription")}
 							</div>
 						</div>
 					</div>
+
+					{/* Settings Content */}
+					<div className="pl-3 border-l-2 border-vscode-button-background space-y-4">
+						{/* Add to .gitignore option */}
+						<label className="flex items-center gap-2 cursor-pointer hover:opacity-80">
+							<input
+								type="checkbox"
+								checked={rulesSettings?.addToGitignore ?? true}
+								onChange={(e) => handleGitignoreToggle(e.target.checked)}
+							/>
+							<div>
+								<div className="font-medium">{t("settings:rules.addToGitignore")}</div>
+								<div className="text-vscode-descriptionForeground text-sm">
+									{t("settings:rules.addToGitignoreDescription")}
+								</div>
+							</div>
+						</label>
+
+						{/* Rule Type Selection */}
+						<div>
+							<h4 className="font-medium mb-3">{t("settings:rules.selectTypes")}</h4>
+							<div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+								{ruleTypes.map((ruleType) => (
+									<div
+										key={ruleType.id}
+										onClick={() => handleRuleTypeToggle(ruleType.id)}
+										className={cn(
+											"relative p-3 rounded-md border cursor-pointer transition-all",
+											"hover:border-vscode-focusBorder",
+											ruleType.checked
+												? "bg-vscode-list-activeSelectionBackground border-vscode-focusBorder"
+												: "bg-vscode-editor-background border-vscode-panel-border",
+										)}>
+										<div className="flex-1">
+											<div className="font-medium flex items-center gap-1">
+												{ruleType.label}
+												{ruleType.exists && (
+													<span
+														className="text-vscode-testing-iconQueued"
+														title={t("settings:rules.fileExists")}>
+														•
+													</span>
+												)}
+											</div>
+											<div className="text-vscode-descriptionForeground text-sm mt-1">
+												{ruleType.description}
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+
+						{/* Custom Rules Section */}
+						<div>
+							<label className="flex items-center gap-2 cursor-pointer hover:opacity-80 mb-3">
+								<input
+									type="checkbox"
+									checked={rulesSettings?.includeCustomRules ?? false}
+									onChange={(e) => handleIncludeCustomRulesToggle(e.target.checked)}
+								/>
+								<div>
+									<div className="font-medium">{t("settings:rules.includeCustomRules")}</div>
+									<div className="text-vscode-descriptionForeground text-sm">
+										{t("settings:rules.includeCustomRulesDescription")}
+									</div>
+								</div>
+							</label>
+
+							{rulesSettings?.includeCustomRules && (
+								<div className="mt-3">
+									<label className="block font-medium mb-1">Custom Rules Template</label>
+									<VSCodeTextArea
+										resize="vertical"
+										value={rulesSettings?.customRulesText ?? ""}
+										onChange={(e) => {
+											const value =
+												(e as unknown as CustomEvent)?.detail?.target?.value ||
+												((e as any).target as HTMLTextAreaElement).value
+											handleCustomRulesTextChange(value)
+										}}
+										placeholder={t("settings:rules.customRulesPlaceholder")}
+										rows={6}
+										className="w-full"
+									/>
+									<div className="text-sm text-vscode-descriptionForeground mt-1">
+										{t("settings:rules.customRulesHint")}
+									</div>
+								</div>
+							)}
+						</div>
+					</div>
+
+					{/* Small repository warning */}
+					{sourceFileCount !== null && sourceFileCount > 0 && sourceFileCount < 20 && (
+						<div className="flex items-start gap-2 p-2 bg-vscode-inputValidation-warningBackground border border-vscode-inputValidation-warningBorder rounded-md">
+							<AlertTriangle className="w-4 h-4 text-vscode-inputValidation-warningForeground mt-0.5 flex-shrink-0" />
+							<div className="text-vscode-inputValidation-warningForeground">
+								{t("settings:rules.smallRepoWarning", { count: sourceFileCount })}
+							</div>
+						</div>
+					)}
+
+					{/* Existing files warning */}
+					{hasExistingFiles && (
+						<div className="flex items-start gap-2 p-2 bg-vscode-inputValidation-warningBackground border border-vscode-inputValidation-warningBorder rounded-md">
+							<AlertTriangle className="w-4 h-4 text-vscode-inputValidation-warningForeground mt-0.5 flex-shrink-0" />
+							<div className="text-vscode-inputValidation-warningForeground">
+								<div>{t("settings:rules.overwriteWarning")}</div>
+								<ul className="mt-1 ml-4 list-disc">
+									{existingRules.map((rule) => (
+										<li key={rule.id}>{rule.label}</li>
+									))}
+								</ul>
+							</div>
+						</div>
+					)}
 				</div>
 			</Section>
 		</div>

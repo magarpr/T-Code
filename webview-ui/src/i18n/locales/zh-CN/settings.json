@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "自动将生成的规则文件添加到 .gitignore 以防止提交到版本控制",
 		"autoApproveProtected": "自动批准受保护文件写入",
 		"autoApproveProtectedDescription": "允许 Roo 创建和写入 .roo 目录而无需手动批准",
-		"autoApproveRecommendation": "为获得最佳规则生成体验，我们建议在上方的自动批准设置中启用读取和写入操作的自动批准。",
 		"selectApiConfig": "选择 API 配置",
 		"includeCustomRules": "包含我的自定义规则",
 		"includeCustomRulesDescription": "向规则生成提示添加自定义指令",

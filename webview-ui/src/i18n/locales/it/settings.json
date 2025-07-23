@@ -619,7 +619,6 @@
 		"addToGitignoreDescription": "Aggiungi automaticamente i file di regole generati a .gitignore per evitare che vengano committati nel controllo versione",
 		"autoApproveProtected": "Approva automaticamente scritture file protetti",
 		"autoApproveProtectedDescription": "Consenti a Roo di creare e scrivere nella directory .roo senza richiedere approvazione manuale",
-		"autoApproveRecommendation": "Per la migliore esperienza nella generazione di regole, raccomandiamo di abilitare l'approvazione automatica sia per le operazioni di lettura che di scrittura nelle impostazioni di Approvazione Automatica sopra.",
 		"selectApiConfig": "Seleziona configurazione API",
 		"includeCustomRules": "Includi le mie regole",
 		"includeCustomRulesDescription": "Aggiungi istruzioni personalizzate al prompt di generazione regole",

@@ -177,6 +177,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
 		followupAutoApproveTimeoutMs,
+		rulesSettings,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -702,6 +703,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							setExperimentEnabled={setExperimentEnabled}
 							experiments={experiments}
 							hasUnsavedChanges={isChangeDetected}
+							rulesSettings={rulesSettings}
+							setCachedStateField={setCachedStateField}
 						/>
 					)}
 

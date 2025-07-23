@@ -653,13 +653,14 @@
 		"addToGitignoreDescription": "Automatically add the generated rule files to .gitignore to prevent them from being committed to version control",
 		"autoApproveProtected": "Auto-approve protected file writes",
 		"autoApproveProtectedDescription": "Allow Roo to make and write to .roo directory without requiring manual approval",
-		"autoApproveRecommendation": "For the best experience generating rules, we recommend enabling auto-approve for both read and write operations in the Auto-Approve settings above.",
 		"selectApiConfig": "Select API configuration",
 		"includeCustomRules": "Include my own rules",
 		"includeCustomRulesDescription": "Add custom instructions to the rule generation prompt",
 		"customRulesPlaceholder": "Enter your custom rules or instructions here...",
 		"customRulesHint": "These will be included in the prompt when generating rules for your project",
-		"smallRepoWarning": "This repository contains only {{count}} files. With limited code examples, the generated rules may be overly specific to your current implementation. Consider regenerating rules as your project grows."
+		"smallRepoWarning": "This repository contains only {{count}} files. With limited code examples, the generated rules may be overly specific to your current implementation. Consider regenerating rules as your project grows.",
+		"commandTitle": "Initialize rules using the chat command:",
+		"commandDescription": "Type this command in the chat to generate AI rules based on your selected preferences below."
 	},
 	"promptCaching": {
 		"label": "Disable prompt caching",
