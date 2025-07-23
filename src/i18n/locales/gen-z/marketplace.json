@@ -1,0 +1,63 @@
+{
+	"type-group": {
+		"modes": "Modes",
+		"mcps": "MCP Servers",
+		"match": "match"
+	},
+	"item-card": {
+		"type-mode": "Mode",
+		"type-mcp": "MCP Server",
+		"type-other": "Other",
+		"by-author": "by {{author}}",
+		"authors-profile": "Author's Profile",
+		"remove-tag-filter": "Yeet tag filter: {{tag}}",
+		"filter-by-tag": "Filter by tag: {{tag}}",
+		"component-details": "Component Deets",
+		"view": "Peep this",
+		"source": "Source"
+	},
+	"filters": {
+		"search": {
+			"placeholder": "Search the marketplace bestie..."
+		},
+		"type": {
+			"label": "Type",
+			"all": "All Types",
+			"mode": "Mode",
+			"mcpServer": "MCP Server"
+		},
+		"sort": {
+			"label": "Sort By",
+			"name": "Name",
+			"lastUpdated": "Last Updated"
+		},
+		"tags": {
+			"label": "Tags",
+			"clear": "Clear tags",
+			"placeholder": "Search tags...",
+			"noResults": "No tags found. That's an L.",
+			"selected": "Showing items with these tags (we matching fr)"
+		},
+		"title": "Marketplace"
+	},
+	"done": "We done here",
+	"tabs": {
+		"installed": "Already Got",
+		"browse": "Browse",
+		"settings": "Settings"
+	},
+	"items": {
+		"empty": {
+			"noItems": "No marketplace items rn. Empty vibes.",
+			"emptyHint": "Try different filters or search terms bestie"
+		}
+	},
+	"installation": {
+		"installing": "Installing \"{{itemName}}\" rn...",
+		"installSuccess": "\"{{itemName}}\" installed! We eating good 🔥",
+		"installError": "\"{{itemName}}\" install caught an L: {{errorMessage}}",
+		"removing": "Yeeting \"{{itemName}}\"...",
+		"removeSuccess": "\"{{itemName}}\" is gone. Peace out ✌️",
+		"removeError": "Couldn't yeet \"{{itemName}}\": {{errorMessage}}"
+	}
+}

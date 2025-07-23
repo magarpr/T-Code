@@ -1,0 +1,56 @@
+{
+	"unknownError": "Unknown error (that's giving mystery vibes)",
+	"authenticationFailed": "Embeddings creation said nah: Auth failed. Check your API key bestie.",
+	"failedWithStatus": "Embeddings creation caught {{attempts}} L's: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "Embeddings creation flopped after {{attempts}} tries: {{errorMessage}}",
+	"failedMaxAttempts": "Embeddings creation is not it after {{attempts}} attempts",
+	"textExceedsTokenLimit": "Text at index {{index}} is too thicc for token limit ({{itemTokens}} > {{maxTokens}}). Skipping this chonker.",
+	"rateLimitRetry": "Rate limit hit different, waiting {{delayMs}}ms (attempt {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "Error body said \"you can't read me\" fr",
+		"requestFailed": "Ollama API caught lacking with status {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "Ollama API response is sus: \"embeddings\" array went ghost or ain't an array.",
+		"embeddingFailed": "Ollama embedding said bye: {{message}}",
+		"serviceNotRunning": "Ollama service is ghosting us at {{baseUrl}}",
+		"serviceUnavailable": "Ollama service is not vibing rn (status: {{status}})",
+		"modelNotFound": "Ollama model went MIA: {{modelId}}",
+		"modelNotEmbeddingCapable": "Ollama model {{modelId}} can't do embeddings. That's not its vibe.",
+		"hostNotFound": "Ollama host is playing hide and seek: {{baseUrl}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "Unknown error processing {{filePath}} (spooky vibes)",
+		"unknownErrorDeletingPoints": "Unknown error yeeting points for {{filePath}}",
+		"failedToProcessBatchWithError": "Batch processing caught {{maxRetries}} L's: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "Qdrant vector database said \"new phone who dis\". Make sure Qdrant is running at {{qdrantUrl}}. Error: {{errorMessage}}",
+		"vectorDimensionMismatch": "Vector index update for new model is not matching the vibe. Try yeeting the index and starting fresh. Deets: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Auth failed. Your API key failed the vibe check bestie.",
+		"connectionFailed": "Connection to embedder service said nope. Check your settings and make sure it's not ghosting.",
+		"modelNotAvailable": "That model is not available rn. It's giving \"404 model not found\" energy.",
+		"configurationError": "Embedder config is sus. Time to check those settings.",
+		"serviceUnavailable": "Embedder service dipped. Make sure it's running and not being antisocial.",
+		"invalidEndpoint": "API endpoint is not valid. That URL needs work fr.",
+		"invalidEmbedderConfig": "Embedder config failed the vibe check. Fix those settings.",
+		"invalidApiKey": "API key is not it. Check that key bestie.",
+		"invalidBaseUrl": "Base URL is giving error vibes. Fix that URL.",
+		"invalidModel": "Model selection is sus. Pick a different one.",
+		"invalidResponse": "Embedder service response is not passing the vibe check. Config might be off.",
+		"apiKeyRequired": "This embedder needs an API key. No key, no embeddings.",
+		"baseUrlRequired": "This embedder needs a base URL. Can't work without it chief."
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "OpenAI config went ghost for embedder creation",
+		"ollamaConfigMissing": "Ollama config is MIA for embedder creation",
+		"openAiCompatibleConfigMissing": "OpenAI Compatible config said bye for embedder creation",
+		"geminiConfigMissing": "Gemini config is not showing up for embedder creation",
+		"mistralConfigMissing": "Mistral config dipped for embedder creation",
+		"invalidEmbedderType": "Embedder type {{embedderProvider}} is not valid. That's sus.",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "Can't figure out vector dimension for model '{{modelId}}' with provider '{{provider}}'. Make sure 'Embedding Dimension' is set right in OpenAI-Compatible settings bestie.",
+		"vectorDimensionNotDetermined": "Vector dimension for model '{{modelId}}' with provider '{{provider}}' is being mysterious. Check those model profiles.",
+		"qdrantUrlMissing": "Qdrant URL went missing for vector store creation",
+		"codeIndexingNotConfigured": "Can't create services: Code indexing is not set up right. That's an L."
+	}
+}

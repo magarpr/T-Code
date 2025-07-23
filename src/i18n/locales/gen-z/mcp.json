@@ -1,0 +1,22 @@
+{
+	"errors": {
+		"invalid_settings_format": "MCP settings JSON format is not it. Make sure your JSON is valid bestie.",
+		"invalid_settings_syntax": "MCP settings JSON is giving syntax error vibes. Check your settings file fr.",
+		"invalid_settings_validation": "MCP settings format failed the vibe check: {{errorMessages}}",
+		"create_json": "Couldn't create or open .roo/mcp.json: {{error}} - that's tough",
+		"failed_update_project": "Project MCP servers update caught an L",
+		"invalidJsonArgument": "Roo tried to use {{toolName}} with sus JSON. We retrying tho..."
+	},
+	"info": {
+		"server_restarting": "Restarting {{serverName}} MCP server... hold up",
+		"server_connected": "{{serverName}} MCP server is online! Let's gooo 🚀",
+		"server_deleted": "Yeeted MCP server: {{serverName}} ✌️",
+		"server_not_found": "Server \"{{serverName}}\" went ghost in the config",
+		"global_servers_active": "Global MCP Servers that are up: {{mcpServers}}",
+		"project_servers_active": "Project MCP Servers vibing: {{mcpServers}}",
+		"already_refreshing": "MCP servers already refreshing. Chill bestie.",
+		"refreshing_all": "Refreshing all MCP servers... one sec",
+		"all_refreshed": "All MCP servers refreshed! We're so back 💯",
+		"project_config_deleted": "Project MCP config file got yeeted. All project MCP servers said bye."
+	}
+}

@@ -1,0 +1,166 @@
+{
+	"extension": {
+		"name": "Roo Code",
+		"description": "A whole squad of AI besties in your editor. No cap fr fr."
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"welcome": "Yooo {{name}}! You got {{count}} notifs waiting for you bestie.",
+	"items": {
+		"zero": "No items rn",
+		"one": "Just one item",
+		"other": "{{count}} items"
+	},
+	"confirmation": {
+		"reset_state": "Bruh are you sure you wanna yeet all the state and secret storage? This is giving permanent damage vibes, can't undo this one chief.",
+		"delete_config_profile": "You really bout to delete this config profile? That's lowkey sus ngl.",
+		"delete_custom_mode_with_rules": "Fr fr you wanna delete this {scope} mode? 💀\n\nThis gonna yeet the rules folder too:\n{rulesFolderPath}"
+	},
+	"errors": {
+		"invalid_data_uri": "That data URI format is not it bestie",
+		"error_copying_image": "Couldn't copy that image fam: {{errorMessage}}",
+		"error_opening_image": "Image said nah: {{error}}",
+		"error_saving_image": "Couldn't save that pic: {{errorMessage}}",
+		"could_not_open_file": "File said bye: {{errorMessage}}",
+		"could_not_open_file_generic": "File really said no ✋",
+		"checkpoint_timeout": "Checkpoint restoration took forever and gave up. That's an L.",
+		"checkpoint_failed": "Checkpoint restore caught lacking. Big oof.",
+		"git_not_installed": "Bestie you need Git for checkpoints. It's giving 'please install Git' energy.",
+		"no_workspace": "Open a project folder first bestie, can't work with nothing 💀",
+		"update_support_prompt": "Support prompt update said nope",
+		"reset_support_prompt": "Support prompt reset caught an L",
+		"enhance_prompt": "Prompt enhancement flopped fr",
+		"get_system_prompt": "System prompt retrieval said bye",
+		"search_commits": "Commit search is not vibing rn",
+		"save_api_config": "API config save caught lacking",
+		"create_api_config": "API config creation said nah",
+		"rename_api_config": "API config rename is not it",
+		"load_api_config": "API config load failed the vibe check",
+		"delete_api_config": "API config deletion caught an L",
+		"list_api_config": "API config list said peace out",
+		"update_server_timeout": "Server timeout update is being sus",
+		"hmr_not_running": "Local dev server is ghosting us, HMR won't work. Run 'npm run dev' before launching to get that hot reload drip.",
+		"retrieve_current_mode": "Error: current mode retrieval said sike.",
+		"failed_delete_repo": "Shadow repo/branch deletion caught lacking: {{error}}",
+		"failed_remove_directory": "Task directory removal said nah: {{error}}",
+		"custom_storage_path_unusable": "Custom storage path \"{{path}}\" is not giving what it's supposed to give, using default instead",
+		"cannot_access_path": "Path {{path}} is being gatekeepy: {{error}}",
+		"settings_import_failed": "Settings import flopped: {{error}}. That's tough.",
+		"mistake_limit_guidance": "This is giving 'model confusion' vibes. Maybe help it out with some guidance like \"Try breaking it down bestie\".",
+		"violated_organization_allowlist": "Task said nope: current profile ain't matching your org's vibe",
+		"condense_failed": "Context condensing caught an L",
+		"condense_not_enough_messages": "Not enough messages to condense, need more tea to spill",
+		"condensed_recently": "Just condensed context, not doing it again rn",
+		"condense_handler_invalid": "API handler for condensing is being sus",
+		"condense_context_grew": "Context got bigger during condensing?? That's backwards bestie",
+		"url_timeout": "Website took forever to load (timeout). Could be slow wifi, thicc website, or it's just not feeling it rn. Try again later or check that URL.",
+		"url_not_found": "That website address is giving 404 energy. Check the URL and try again bestie.",
+		"no_internet": "No internet? In this economy? Check your wifi and try again.",
+		"url_forbidden": "Website said \"you can't sit with us\" (403). Might be blocking bots or needs you to log in first.",
+		"url_page_not_found": "Page went ghost mode (404). Check that URL fr.",
+		"url_fetch_failed": "URL fetch caught lacking: {{error}}",
+		"url_fetch_error_with_url": "Error fetching {{url}}: {{error}} - that's not bussin",
+		"command_timeout": "Command said \"bye\" after {{seconds}} seconds",
+		"share_task_failed": "Task sharing flopped. Try again bestie.",
+		"share_no_active_task": "No task to share rn, start one first",
+		"share_auth_required": "Gotta sign in to share tasks. No cap.",
+		"share_not_enabled": "Task sharing ain't enabled for your org. That's an L.",
+		"share_task_not_found": "Task not found or you don't have the perms. Sus.",
+		"mode_import_failed": "Mode import said nah: {{error}}",
+		"delete_rules_folder_failed": "Rules folder deletion caught lacking: {{rulesFolderPath}}. Error: {{error}}",
+		"claudeCode": {
+			"processExited": "Claude Code dipped with code {{exitCode}}. RIP.",
+			"errorOutput": "Error output: {{output}}",
+			"processExitedWithError": "Claude Code left the chat with code {{exitCode}}. Error: {{output}}",
+			"stoppedWithReason": "Claude Code stopped cuz: {{reason}}",
+			"apiKeyModelPlanMismatch": "API keys and subscription plans are not matching each other's energy. Make sure your model is in your plan bestie."
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "No terminal content selected fam",
+		"missing_task_files": "This task's files went MIA. Wanna yeet it from the list?",
+		"auto_import_failed": "RooCode settings auto-import caught an L: {{error}}"
+	},
+	"info": {
+		"no_changes": "No changes found. It's giving 'nothing to see here' vibes.",
+		"clipboard_copy": "System prompt copied to clipboard! Get that paste ready 📋",
+		"history_cleanup": "Yeeted {{count}} task(s) with missing files. Clean vibes only.",
+		"custom_storage_path_set": "Custom storage path is set: {{path}} ✨",
+		"default_storage_path": "Back to default storage path. Classic move.",
+		"settings_imported": "Settings imported! We're so back 🔥",
+		"auto_import_success": "RooCode settings auto-imported from {{filename}}. That's what I'm talking about!",
+		"share_link_copied": "Share link secured in clipboard 📎",
+		"organization_share_link_copied": "Org share link in the clipboard! Share it with the squad 🔗",
+		"public_share_link_copied": "Public share link copied! Time to go viral 🌐",
+		"image_copied_to_clipboard": "Image data URI in clipboard. Ready to paste bestie 🖼️",
+		"image_saved": "Image saved to {{path}}. It's giving organized ✨",
+		"mode_exported": "Mode '{{mode}}' exported! Ship it 📦",
+		"mode_imported": "Mode imported successfully! New vibes unlocked 🔓"
+	},
+	"answers": {
+		"yes": "Yuh",
+		"no": "Nah",
+		"remove": "Yeet it",
+		"keep": "Keep it"
+	},
+	"buttons": {
+		"save": "Save it",
+		"edit": "Edit",
+		"learn_more": "Spill the tea"
+	},
+	"tasks": {
+		"canceled": "Task error: User said \"nah\" and canceled it.",
+		"deleted": "Task failure: User straight up deleted it. That's rough.",
+		"incomplete": "Task #{{taskNumber}} (Not done yet)",
+		"no_messages": "Task #{{taskNumber}} (No messages? That's sus)"
+	},
+	"storage": {
+		"prompt_custom_path": "Drop that custom convo history storage path, or leave it empty for default vibes",
+		"path_placeholder": "D:\\RooCodeStorage",
+		"enter_absolute_path": "Need an absolute path bestie (like D:\\RooCodeStorage or /home/user/storage)",
+		"enter_valid_path": "That path ain't valid chief"
+	},
+	"input": {
+		"task_prompt": "What's Roo gonna do for you today?",
+		"task_placeholder": "Spill what you need here"
+	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "YAML in .roomodes is not passing the vibe check at line {{line}}. Check for:\n• Proper indentation (spaces only, no tabs)\n• Matching quotes and brackets\n• Valid YAML syntax fr",
+			"schemaValidationError": "Custom modes format in .roomodes is sus:\n{{issues}}",
+			"invalidFormat": "Custom modes format is not it. Make sure your YAML is bussin.",
+			"updateFailed": "Custom mode update caught lacking: {{error}}",
+			"deleteFailed": "Custom mode deletion said nope: {{error}}",
+			"resetFailed": "Custom modes reset flopped: {{error}}",
+			"modeNotFound": "Write error: Mode went ghost",
+			"noWorkspaceForProject": "No workspace folder for project mode? That's not giving what it should"
+		},
+		"scope": {
+			"project": "project",
+			"global": "global"
+		}
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "Your org needs that Roo Code Cloud auth. Sign in to continue bestie.",
+			"organization_mismatch": "You gotta be logged into your org's Roo Code Cloud account. No cap.",
+			"verification_failed": "Org auth verification said bye. That's tough."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Delete Custom Mode",
+			"description": "You really bout to delete this {{scope}} mode? This gonna yeet the rules folder too: {{rulesFolderPath}}",
+			"descriptionNoRules": "Fr you wanna delete this custom mode?",
+			"confirm": "Delete it"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Won't let you complete tasks with unfinished todos. Gotta check those boxes first bestie ✅"
+		}
+	}
+}

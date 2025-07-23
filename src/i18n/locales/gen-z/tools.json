@@ -1,0 +1,16 @@
+{
+	"readFile": {
+		"linesRange": " (lines {{start}}-{{end}})",
+		"definitionsOnly": " (definitions only)",
+		"maxLines": " (max {{max}} lines)"
+	},
+	"toolRepetitionLimitReached": "Roo is stuck in a loop fr fr, keeps trying {{toolName}} over and over. That's giving NPC energy. Maybe rephrase the task or guide it different bestie.",
+	"codebaseSearch": {
+		"approval": "Searching for '{{query}}' in the codebase... one sec"
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "New task creation said nah due to policy restrictions. That's an L."
+		}
+	}
+}
