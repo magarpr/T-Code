@@ -19,6 +19,16 @@ vi.mock("vscode", () => ({
 		asRelativePath: vi.fn((path: string) => path.replace("/test/workspace/", "")),
 	},
 }))
+vi.mock("../../../i18n", () => ({
+	t: vi.fn((key: string) => {
+		const translations: Record<string, string> = {
+			"tools.codebaseSearch.errors.disabled": "Code Indexing is disabled in the settings.",
+			"tools.codebaseSearch.errors.notConfigured":
+				"Code Indexing is not configured (Missing OpenAI Key or Qdrant URL).",
+		}
+		return translations[key] || key
+	}),
+}))
 
 describe("codebaseSearchTool", () => {
 	let mockTask: Task
@@ -92,13 +102,11 @@ describe("codebaseSearchTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			expect(mockPushToolResult).toHaveBeenCalledWith(
-				expect.stringContaining("Semantic search is not available yet (currently Standby)"),
-			)
-			expect(mockPushToolResult).toHaveBeenCalledWith(
-				expect.stringContaining("Code indexing has not started yet"),
-			)
-			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Please use file reading tools"))
+			// Verify the complete message was pushed
+			const pushedMessage = mockPushToolResult.mock.calls[0][0]
+			expect(pushedMessage).toContain("Semantic search is not available yet (currently Standby)")
+			expect(pushedMessage).toContain("Code indexing has not started yet")
+			expect(pushedMessage).toContain("Please use file reading tools")
 			expect(mockCodeIndexManager.searchIndex).not.toHaveBeenCalled()
 		})
 
@@ -121,12 +129,10 @@ describe("codebaseSearchTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			expect(mockPushToolResult).toHaveBeenCalledWith(
-				expect.stringContaining("Semantic search is not available yet (currently Indexing)"),
-			)
-			expect(mockPushToolResult).toHaveBeenCalledWith(
-				expect.stringContaining("Code indexing is currently in progress"),
-			)
+			// Verify the complete message was pushed
+			const pushedMessage = mockPushToolResult.mock.calls[0][0]
+			expect(pushedMessage).toContain("Semantic search is not available yet (currently Indexing)")
+			expect(pushedMessage).toContain("Code indexing is currently in progress")
 			expect(mockCodeIndexManager.searchIndex).not.toHaveBeenCalled()
 		})
 
@@ -149,12 +155,10 @@ describe("codebaseSearchTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			expect(mockPushToolResult).toHaveBeenCalledWith(
-				expect.stringContaining("Semantic search is not available yet (currently Error)"),
-			)
-			expect(mockPushToolResult).toHaveBeenCalledWith(
-				expect.stringContaining("Code indexing encountered an error"),
-			)
+			// Verify the complete message was pushed
+			const pushedMessage = mockPushToolResult.mock.calls[0][0]
+			expect(pushedMessage).toContain("Semantic search is not available yet (currently Error)")
+			expect(pushedMessage).toContain("Code indexing encountered an error")
 			expect(mockCodeIndexManager.searchIndex).not.toHaveBeenCalled()
 		})
 
@@ -181,8 +185,9 @@ describe("codebaseSearchTool", () => {
 			// Check that say was called with the search results
 			expect(mockTask.say).toHaveBeenCalledWith("codebase_search_result", expect.stringContaining("test code"))
 			// Check that pushToolResult was called with the formatted output
-			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Query: test query"))
-			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("test code"))
+			const pushedResult = mockPushToolResult.mock.calls[0][0]
+			expect(pushedResult).toContain("Query: test query")
+			expect(pushedResult).toContain("test code")
 			expect(mockPushToolResult).not.toHaveBeenCalledWith(
 				expect.stringContaining("Semantic search is not available"),
 			)
@@ -212,7 +217,7 @@ describe("codebaseSearchTool", () => {
 			expect(mockHandleError).toHaveBeenCalledWith(
 				"codebase_search",
 				expect.objectContaining({
-					message: "Code Indexing is disabled in the settings.",
+					message: expect.stringContaining("Code Indexing is disabled"),
 				}),
 			)
 		})
@@ -239,7 +244,7 @@ describe("codebaseSearchTool", () => {
 			expect(mockHandleError).toHaveBeenCalledWith(
 				"codebase_search",
 				expect.objectContaining({
-					message: "Code Indexing is not configured (Missing OpenAI Key or Qdrant URL).",
+					message: expect.stringContaining("Code Indexing is not configured"),
 				}),
 			)
 		})

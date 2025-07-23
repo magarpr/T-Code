@@ -7,6 +7,7 @@ import { formatResponse } from "../prompts/responses"
 import { VectorStoreSearchResult } from "../../services/code-index/interfaces"
 import { AskApproval, HandleError, PushToolResult, RemoveClosingTag, ToolUse } from "../../shared/tools"
 import path from "path"
+import { t } from "../../i18n"
 
 export async function codebaseSearchTool(
 	cline: Task,
@@ -76,10 +77,10 @@ export async function codebaseSearchTool(
 		}
 
 		if (!manager.isFeatureEnabled) {
-			throw new Error("Code Indexing is disabled in the settings.")
+			throw new Error(t("tools.codebaseSearch.errors.disabled"))
 		}
 		if (!manager.isFeatureConfigured) {
-			throw new Error("Code Indexing is not configured (Missing OpenAI Key or Qdrant URL).")
+			throw new Error(t("tools.codebaseSearch.errors.notConfigured"))
 		}
 
 		// Check indexing state at runtime

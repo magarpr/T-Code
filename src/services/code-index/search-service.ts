@@ -36,10 +36,6 @@ export class CodeIndexSearchService {
 
 		// Note: State checking is now handled in the codebaseSearchTool
 		// This allows the tool to provide more user-friendly feedback
-		const currentState = this.stateManager.getCurrentStatus().systemStatus
-		if (currentState === "Error") {
-			throw new Error(`Code index is in error state. Please check your configuration.`)
-		}
 
 		try {
 			// Generate embedding for query

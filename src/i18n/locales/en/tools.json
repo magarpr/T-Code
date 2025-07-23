@@ -6,7 +6,11 @@
 	},
 	"toolRepetitionLimitReached": "Roo appears to be stuck in a loop, attempting the same action ({{toolName}}) repeatedly. This might indicate a problem with its current strategy. Consider rephrasing the task, providing more specific instructions, or guiding it towards a different approach.",
 	"codebaseSearch": {
-		"approval": "Searching for '{{query}}' in codebase..."
+		"approval": "Searching for '{{query}}' in codebase...",
+		"errors": {
+			"disabled": "Code Indexing is disabled in the settings.",
+			"notConfigured": "Code Indexing is not configured (Missing OpenAI Key or Qdrant URL)."
+		}
 	},
 	"newTask": {
 		"errors": {
