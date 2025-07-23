@@ -139,6 +139,119 @@ describe("useMcpToolTool", () => {
 			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("invalid JSON argument"))
 			expect(mockPushToolResult).toHaveBeenCalledWith("Tool error: Invalid args for test_server:test_tool")
 		})
+
+		it("should warn about large but valid JSON arguments", async () => {
+			// Create a large JSON string (over 3800 characters)
+			const largeData = { data: "x".repeat(3850) }
+			const largeJson = JSON.stringify(largeData)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "use_mcp_tool",
+				params: {
+					server_name: "test_server",
+					tool_name: "test_tool",
+					arguments: largeJson,
+				},
+				partial: false,
+			}
+
+			mockAskApproval.mockResolvedValue(true)
+			const mockToolResult = {
+				content: [{ type: "text", text: "Tool executed successfully" }],
+				isError: false,
+			}
+			mockProviderRef.deref.mockReturnValue({
+				getMcpHub: () => ({
+					callTool: vi.fn().mockResolvedValue(mockToolResult),
+				}),
+				postMessageToWebview: vi.fn(),
+			})
+
+			await useMcpToolTool(
+				mockTask as Task,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			// Should warn about large arguments
+			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("Warning:"))
+			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("very large"))
+			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("4000 characters"))
+
+			// But should still execute successfully
+			expect(mockTask.consecutiveMistakeCount).toBe(0)
+			expect(mockAskApproval).toHaveBeenCalled()
+			expect(mockPushToolResult).toHaveBeenCalledWith("Tool result: Tool executed successfully")
+		})
+
+		it("should detect truncated JSON arguments", async () => {
+			// Create a truncated JSON string that looks like it was cut off
+			const truncatedJson = '{"data": "' + "x".repeat(3950) // No closing quote or brace
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "use_mcp_tool",
+				params: {
+					server_name: "test_server",
+					tool_name: "test_tool",
+					arguments: truncatedJson,
+				},
+				partial: false,
+			}
+
+			await useMcpToolTool(
+				mockTask as Task,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(1)
+			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
+
+			// Should show truncation-specific error message
+			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("truncated"))
+			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("4000 characters"))
+			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("smaller chunks"))
+
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("truncated by the language model"))
+		})
+
+		it("should handle JSON ending with incomplete array", async () => {
+			// Create a JSON string that ends with an incomplete array
+			const truncatedJson = '{"nodes": [{"id": 1}, {"id": 2}, {"id"' + "x".repeat(3920)
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "use_mcp_tool",
+				params: {
+					server_name: "test_server",
+					tool_name: "test_tool",
+					arguments: truncatedJson,
+				},
+				partial: false,
+			}
+
+			await useMcpToolTool(
+				mockTask as Task,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(1)
+			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
+			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("truncated"))
+			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("truncated by the language model"))
+		})
 	})
 
 	describe("partial requests", () => {

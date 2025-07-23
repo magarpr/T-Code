@@ -57,19 +57,70 @@ async function validateParams(
 	let parsedArguments: Record<string, unknown> | undefined
 
 	if (params.arguments) {
-		try {
-			parsedArguments = JSON.parse(params.arguments)
-		} catch (error) {
-			cline.consecutiveMistakeCount++
-			cline.recordToolError("use_mcp_tool")
-			await cline.say("error", t("mcp:errors.invalidJsonArgument", { toolName: params.tool_name }))
+		// Check if arguments appear to be truncated (common around 4000 characters)
+		const argLength = params.arguments.length
+		const TRUNCATION_WARNING_THRESHOLD = 3800 // Warn when close to 4000 chars
+		const LIKELY_TRUNCATED_THRESHOLD = 3900 // Very likely truncated if over this
 
-			pushToolResult(
-				formatResponse.toolError(
-					formatResponse.invalidMcpToolArgumentError(params.server_name, params.tool_name),
-				),
-			)
-			return { isValid: false }
+		// Check for signs of truncation
+		const lastChar = params.arguments[params.arguments.length - 1]
+		const endsWithIncompleteJSON =
+			argLength > LIKELY_TRUNCATED_THRESHOLD && lastChar !== "}" && lastChar !== "]" && lastChar !== '"'
+
+		if (endsWithIncompleteJSON || argLength > TRUNCATION_WARNING_THRESHOLD) {
+			// Try to parse anyway to see if it's valid JSON
+			try {
+				parsedArguments = JSON.parse(params.arguments)
+
+				// Valid JSON but very large - warn the user
+				if (argLength > TRUNCATION_WARNING_THRESHOLD) {
+					await cline.say(
+						"error",
+						`⚠️ Warning: The MCP tool arguments are very large (${argLength} characters). ` +
+							`Some language models may truncate tool calls around 4000 characters. ` +
+							`Consider breaking this into smaller operations if the tool fails.`,
+					)
+				}
+			} catch (error) {
+				// Invalid JSON and likely truncated
+				cline.consecutiveMistakeCount++
+				cline.recordToolError("use_mcp_tool")
+
+				const errorMessage =
+					argLength > LIKELY_TRUNCATED_THRESHOLD
+						? `The MCP tool arguments appear to be truncated (${argLength} characters). ` +
+							`The JSON is incomplete and cannot be parsed. ` +
+							`This is a known limitation where some language models truncate tool calls around 4000 characters. ` +
+							`Please try breaking this operation into smaller chunks or reducing the data size.`
+						: t("mcp:errors.invalidJsonArgument", { toolName: params.tool_name })
+
+				await cline.say("error", errorMessage)
+
+				pushToolResult(
+					formatResponse.toolError(
+						argLength > LIKELY_TRUNCATED_THRESHOLD
+							? `Tool arguments were truncated by the language model. The JSON is incomplete (${argLength} characters). Please use smaller data chunks.`
+							: formatResponse.invalidMcpToolArgumentError(params.server_name, params.tool_name),
+					),
+				)
+				return { isValid: false }
+			}
+		} else {
+			// Normal JSON parsing for smaller arguments
+			try {
+				parsedArguments = JSON.parse(params.arguments)
+			} catch (error) {
+				cline.consecutiveMistakeCount++
+				cline.recordToolError("use_mcp_tool")
+				await cline.say("error", t("mcp:errors.invalidJsonArgument", { toolName: params.tool_name }))
+
+				pushToolResult(
+					formatResponse.toolError(
+						formatResponse.invalidMcpToolArgumentError(params.server_name, params.tool_name),
+					),
+				)
+				return { isValid: false }
+			}
 		}
 	}
 
