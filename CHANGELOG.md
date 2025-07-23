@@ -1,5 +1,27 @@
 # Roo Code Changelog
 
+## [3.23.17] - 2025-07-23
+
+- Add Qwen/Qwen3-235B-A22B-Instruct-2507 model to Chutes AI provider
+- Add llama-4-maverick model to Vertex AI provider (thanks @5808!)
+- Add moonshot provider
+- Add Mistral embedding provider (thanks @5932!)
+- Add configurable timeout for evals (5-10 min)
+- Auto-omit MCP content when no servers are configured
+- Enhance release engineer mode to include issue numbers and reporters in changelog
+- Mark non-English translation files as linguist-generated
+- Fix: add case sensitivity mention to suggested fixes in apply_diff error message
+- Fix: add bedrock to ANTHROPIC_STYLE_PROVIDERS and restore vertex Claude model checking
+- Fix: sort symlinked rules files by symlink names, not target names
+- Fix: properly distinguish between user cancellations and API failures
+- Fix: resolve global mode export not including rules files (thanks @5834!)
+- Fix: add run parameter to vitest command in rules
+- Fix: move context condensing prompt to Prompts section (thanks @4924!)
+- Fix: enable export, share, and copy buttons during API operations (thanks @5324!)
+- Fix: add character limit to prevent terminal output context explosion
+- Fix evals broken by previous changes
+- Docs: clarify when to use update_todo_list tool
+
 ## [3.23.16] - 2025-07-19
 
 - Add global rate limiting for OpenAI-compatible embeddings (thanks @daniel-lxs!)
