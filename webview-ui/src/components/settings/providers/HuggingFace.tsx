@@ -44,7 +44,9 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 	const { t } = useAppTranslation()
 	const [models, setModels] = useState<HuggingFaceModel[]>([])
 	const [loading, setLoading] = useState(false)
-	const [selectedProvider, setSelectedProvider] = useState<string>("")
+	const [selectedProvider, setSelectedProvider] = useState<string>(
+		apiConfiguration?.huggingFaceInferenceProvider || "auto",
+	)
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -87,23 +89,39 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 	// Set default provider when model changes
 	useEffect(() => {
 		if (currentModel && availableProviders.length > 0) {
-			const currentProvider = availableProviders.find((p) => p.provider === selectedProvider)
-			if (!currentProvider) {
-				// Set to first available provider or "auto"
-				setSelectedProvider("auto")
+			const savedProvider = apiConfiguration?.huggingFaceInferenceProvider
+			if (savedProvider) {
+				// Use saved provider if it exists
+				setSelectedProvider(savedProvider)
+			} else {
+				const currentProvider = availableProviders.find((p) => p.provider === selectedProvider)
+				if (!currentProvider) {
+					// Set to "auto" as default
+					const defaultProvider = "auto"
+					setSelectedProvider(defaultProvider)
+					setApiConfigurationField("huggingFaceInferenceProvider", defaultProvider)
+				}
 			}
 		}
-	}, [currentModel, availableProviders, selectedProvider])
+	}, [
+		currentModel,
+		availableProviders,
+		selectedProvider,
+		apiConfiguration?.huggingFaceInferenceProvider,
+		setApiConfigurationField,
+	])
 
 	const handleModelSelect = (modelId: string) => {
 		setApiConfigurationField("huggingFaceModelId", modelId)
 		// Reset provider selection when model changes
-		setSelectedProvider("auto")
+		const defaultProvider = "auto"
+		setSelectedProvider(defaultProvider)
+		setApiConfigurationField("huggingFaceInferenceProvider", defaultProvider)
 	}
 
 	const handleProviderSelect = (provider: string) => {
 		setSelectedProvider(provider)
-		// You could store this in a separate field if needed
+		setApiConfigurationField("huggingFaceInferenceProvider", provider)
 	}
 
 	// Format provider name for display

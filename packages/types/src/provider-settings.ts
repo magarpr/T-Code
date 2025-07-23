@@ -223,6 +223,7 @@ const groqSchema = apiModelIdProviderModelSchema.extend({
 const huggingFaceSchema = baseProviderSettingsSchema.extend({
 	huggingFaceApiKey: z.string().optional(),
 	huggingFaceModelId: z.string().optional(),
+	huggingFaceInferenceProvider: z.string().optional(),
 })
 
 const chutesSchema = apiModelIdProviderModelSchema.extend({
