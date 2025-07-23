@@ -47,9 +47,6 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 	const [isExpanded, setIsExpanded] = useState(terminalShellIntegrationDisabled)
 	const [streamingOutput, setStreamingOutput] = useState("")
 	const [status, setStatus] = useState<CommandExecutionStatus | null>(null)
-	// Show suggestions when user has command restrictions enabled (has denied commands)
-	// This provides a better UX by only showing the pattern selector when it's relevant
-	const showCommandSuggestions = deniedCommands.length > 0 || allowedCommands.length > 0
 
 	// The command's output can either come from the text associated with the
 	// task message (this is the case for completed commands) or from the
@@ -206,7 +203,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 					)}
 					<OutputContainer isExpanded={isExpanded} output={output} />
 				</div>
-				{showCommandSuggestions && commandPatterns.length > 0 && (
+				{commandPatterns.length > 0 && (
 					<CommandPatternSelector
 						patterns={commandPatterns}
 						allowedCommands={allowedCommands}

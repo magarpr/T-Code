@@ -253,35 +253,6 @@ Suggested patterns: npm, npm install, npm run`
 		expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
 	})
 
-	it("should not show pattern selector when no command restrictions are configured", () => {
-		const noRestrictionsState = {
-			...mockExtensionState,
-			allowedCommands: [],
-			deniedCommands: [],
-		}
-
-		render(
-			<ExtensionStateContext.Provider value={noRestrictionsState as any}>
-				<CommandExecution executionId="test-no-restrictions" text="npm install" />
-			</ExtensionStateContext.Provider>,
-		)
-
-		// Should not show pattern selector when no restrictions are configured
-		expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
-	})
-
-	it("should show pattern selector when command restrictions are configured", () => {
-		// Default mockExtensionState has allowedCommands: ["npm"] and deniedCommands: ["rm"]
-		render(
-			<ExtensionStateWrapper>
-				<CommandExecution executionId="test-with-restrictions" text="npm install" />
-			</ExtensionStateWrapper>,
-		)
-
-		// Should show pattern selector when restrictions are configured
-		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-	})
-
 	it("should expand output when terminal shell integration is disabled", () => {
 		const disabledState = {
 			...mockExtensionState,
@@ -317,8 +288,8 @@ Output here`
 			</ExtensionStateContext.Provider>,
 		)
 
-		// When both are undefined (which defaults to empty arrays), pattern selector should not show
-		expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
+		// Should show pattern selector when patterns are available
+		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
 	})
 
 	it("should handle pattern change when moving from denied to allowed", () => {
