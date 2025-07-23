@@ -266,7 +266,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 
 	mcpEnabled: false,
 
-	mode: "architect",
+	mode: "code", // "architect",
 
 	customModes: [],
 }
