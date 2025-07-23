@@ -1,6 +1,6 @@
 import { useCallback, useState, memo, useMemo } from "react"
 import { useEvent } from "react-use"
-import { ChevronDown, Skull } from "lucide-react"
+import { ChevronDown, Skull, AlertTriangle } from "lucide-react"
 
 import { CommandExecutionStatus, commandExecutionStatusSchema } from "@roo-code/types"
 
@@ -18,6 +18,7 @@ import {
 	getPatternDescription,
 	parseCommandAndOutput,
 	CommandPattern,
+	detectSecurityIssues,
 } from "../../utils/commandPatterns"
 
 interface CommandExecutionProps {
@@ -46,8 +47,9 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 	const [isExpanded, setIsExpanded] = useState(terminalShellIntegrationDisabled)
 	const [streamingOutput, setStreamingOutput] = useState("")
 	const [status, setStatus] = useState<CommandExecutionStatus | null>(null)
-	// Show suggestions is always enabled for command pattern management
-	const SHOW_SUGGESTIONS = true
+	// Show suggestions when user has command restrictions enabled (has denied commands)
+	// This provides a better UX by only showing the pattern selector when it's relevant
+	const showCommandSuggestions = deniedCommands.length > 0 || allowedCommands.length > 0
 
 	// The command's output can either come from the text associated with the
 	// task message (this is the case for completed commands) or from the
@@ -70,6 +72,11 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		})
 
 		return patterns
+	}, [command])
+
+	// Detect security issues in the command
+	const securityWarnings = useMemo(() => {
+		return detectSecurityIssues(command)
 	}, [command])
 
 	// Handle pattern changes
@@ -182,9 +189,24 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 			<div className="w-full bg-vscode-editor-background border border-vscode-border rounded-xs">
 				<div className="p-2">
 					<CodeBlock source={command} language="shell" />
+					{securityWarnings.length > 0 && (
+						<div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xs">
+							<div className="flex items-start gap-2">
+								<AlertTriangle className="size-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+								<div className="text-sm">
+									<div className="font-medium text-yellow-500 mb-1">Security Warning</div>
+									{securityWarnings.map((warning, index) => (
+										<div key={index} className="text-vscode-descriptionForeground">
+											{warning.message}
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+					)}
 					<OutputContainer isExpanded={isExpanded} output={output} />
 				</div>
-				{SHOW_SUGGESTIONS && commandPatterns.length > 0 && (
+				{showCommandSuggestions && commandPatterns.length > 0 && (
 					<CommandPatternSelector
 						patterns={commandPatterns}
 						allowedCommands={allowedCommands}

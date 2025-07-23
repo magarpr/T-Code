@@ -253,6 +253,35 @@ Suggested patterns: npm, npm install, npm run`
 		expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
 	})
 
+	it("should not show pattern selector when no command restrictions are configured", () => {
+		const noRestrictionsState = {
+			...mockExtensionState,
+			allowedCommands: [],
+			deniedCommands: [],
+		}
+
+		render(
+			<ExtensionStateContext.Provider value={noRestrictionsState as any}>
+				<CommandExecution executionId="test-no-restrictions" text="npm install" />
+			</ExtensionStateContext.Provider>,
+		)
+
+		// Should not show pattern selector when no restrictions are configured
+		expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
+	})
+
+	it("should show pattern selector when command restrictions are configured", () => {
+		// Default mockExtensionState has allowedCommands: ["npm"] and deniedCommands: ["rm"]
+		render(
+			<ExtensionStateWrapper>
+				<CommandExecution executionId="test-with-restrictions" text="npm install" />
+			</ExtensionStateWrapper>,
+		)
+
+		// Should show pattern selector when restrictions are configured
+		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
+	})
+
 	it("should expand output when terminal shell integration is disabled", () => {
 		const disabledState = {
 			...mockExtensionState,
@@ -288,7 +317,8 @@ Output here`
 			</ExtensionStateContext.Provider>,
 		)
 
-		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
+		// When both are undefined (which defaults to empty arrays), pattern selector should not show
+		expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
 	})
 
 	it("should handle pattern change when moving from denied to allowed", () => {
@@ -362,6 +392,18 @@ Other output here`
 			expect(screen.getByText("git status")).toBeInTheDocument()
 			// Should not include subshell content
 			expect(screen.queryByText("whoami")).not.toBeInTheDocument()
+		})
+
+		it("should display security warning for commands with subshells", () => {
+			render(
+				<ExtensionStateWrapper>
+					<CommandExecution executionId="test-security" text="echo $(malicious)" />
+				</ExtensionStateWrapper>,
+			)
+
+			// Should show security warning
+			expect(screen.getByText("Security Warning")).toBeInTheDocument()
+			expect(screen.getByText(/subshell execution/)).toBeInTheDocument()
 		})
 
 		it("should handle commands with backtick subshells", () => {

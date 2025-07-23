@@ -1,88 +1,19 @@
-import { parse } from "shell-quote"
+import { extractPatternsFromCommand, detectCommandSecurityIssues, SecurityWarning } from "./command-parser"
 
 export interface CommandPattern {
 	pattern: string
 	description?: string
 }
 
-export interface SecurityWarning {
-	type: "subshell" | "injection"
-	message: string
-}
-
-function processCommand(cmd: string[], patterns: Set<string>): void {
-	if (!cmd.length || typeof cmd[0] !== "string") return
-
-	const mainCmd = cmd[0]
-
-	// Skip if it's just a number (like "0" from "0 total")
-	if (/^\d+$/.test(mainCmd)) return
-
-	// Skip common output patterns that aren't commands
-	const skipWords = ["total", "error", "warning", "failed", "success", "done"]
-	if (skipWords.includes(mainCmd.toLowerCase())) return
-
-	patterns.add(mainCmd)
-
-	const breakingExps = [/^-/, /[\\/.~]/]
-
-	for (let i = 1; i < cmd.length; i++) {
-		const arg = cmd[i]
-
-		if (typeof arg !== "string" || breakingExps.some((re) => re.test(arg))) break
-
-		const pattern = cmd.slice(0, i + 1).join(" ")
-		patterns.add(pattern)
-	}
-}
-
-function extractPatterns(cmdStr: string): Set<string> {
-	const patterns = new Set<string>()
-
-	const parsed = parse(cmdStr)
-
-	const commandSeparators = new Set(["|", "&&", "||", ";"])
-	let current: string[] = []
-	for (const token of parsed) {
-		if (typeof token === "object" && "op" in token && commandSeparators.has(token.op)) {
-			if (current.length) processCommand(current, patterns)
-			current = []
-		} else {
-			current.push(String(token))
-		}
-	}
-
-	if (current.length) processCommand(current, patterns)
-
-	return patterns
-}
+// Re-export SecurityWarning type from command-parser
+export type { SecurityWarning }
 
 export function extractCommandPatterns(command: string): string[] {
-	if (!command?.trim()) return []
-
-	// First, check if the command contains subshells and remove them
-	// This is important for security - we don't want to extract patterns from subshell contents
-	const cleanedCommand = command
-		.replace(/\$\([^)]*\)/g, "") // Remove $() subshells
-		.replace(/`[^`]*`/g, "") // Remove backtick subshells
-
-	const patterns = extractPatterns(cleanedCommand)
-
-	return Array.from(patterns).sort()
+	return extractPatternsFromCommand(command)
 }
 
 export function detectSecurityIssues(command: string): SecurityWarning[] {
-	const warnings: SecurityWarning[] = []
-
-	// Check for subshell execution attempts
-	if (command.includes("$(") || command.includes("`")) {
-		warnings.push({
-			type: "subshell",
-			message: "Command contains subshell execution which could bypass restrictions",
-		})
-	}
-
-	return warnings
+	return detectCommandSecurityIssues(command)
 }
 
 /**

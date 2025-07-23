@@ -1,0 +1,56 @@
+{
+	"prNumber": "5798",
+	"repository": "RooCodeInc/Roo-Code",
+	"reviewStartTime": "2025-01-23T17:13:13.085Z",
+	"calledByMode": null,
+	"prMetadata": {
+		"title": "feat: Add terminal command permissions UI to chat interface (#5480)",
+		"author": "hannesrudolph",
+		"state": "OPEN",
+		"baseRefName": "main",
+		"headRefName": "feat/issue-5480-command-permissions-ui",
+		"additions": 2015,
+		"deletions": 24,
+		"changedFiles": 24
+	},
+	"linkedIssue": {
+		"number": 5480
+	},
+	"existingComments": [],
+	"existingReviews": [],
+	"filesChanged": [
+		"webview-ui/src/components/chat/CommandExecution.tsx",
+		"webview-ui/src/components/chat/CommandPatternSelector.tsx",
+		"webview-ui/src/components/chat/__tests__/CommandExecution.spec.tsx",
+		"webview-ui/src/components/chat/__tests__/CommandPatternSelector.spec.tsx",
+		"webview-ui/src/i18n/locales/ca/chat.json",
+		"webview-ui/src/i18n/locales/de/chat.json",
+		"webview-ui/src/i18n/locales/en/chat.json",
+		"webview-ui/src/i18n/locales/es/chat.json",
+		"webview-ui/src/i18n/locales/fr/chat.json",
+		"webview-ui/src/i18n/locales/hi/chat.json",
+		"webview-ui/src/i18n/locales/id/chat.json",
+		"webview-ui/src/i18n/locales/it/chat.json",
+		"webview-ui/src/i18n/locales/ja/chat.json",
+		"webview-ui/src/i18n/locales/ko/chat.json",
+		"webview-ui/src/i18n/locales/nl/chat.json",
+		"webview-ui/src/i18n/locales/pl/chat.json",
+		"webview-ui/src/i18n/locales/pt-BR/chat.json",
+		"webview-ui/src/i18n/locales/ru/chat.json",
+		"webview-ui/src/i18n/locales/tr/chat.json",
+		"webview-ui/src/i18n/locales/vi/chat.json",
+		"webview-ui/src/i18n/locales/zh-CN/chat.json",
+		"webview-ui/src/i18n/locales/zh-TW/chat.json",
+		"webview-ui/src/utils/__tests__/commandPatterns.spec.ts",
+		"webview-ui/src/utils/commandPatterns.ts"
+	],
+	"delegatedTasks": [],
+	"findings": {
+		"critical": [],
+		"patterns": [],
+		"redundancy": [],
+		"architecture": [],
+		"tests": []
+	},
+	"reviewStatus": "analyzing"
+}

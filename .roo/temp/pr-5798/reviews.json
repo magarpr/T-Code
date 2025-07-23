@@ -1,0 +1,79 @@
+[
+	{
+		"author": { "login": "copilot-pull-request-reviewer" },
+		"authorAssociation": "NONE",
+		"body": "## Pull Request Overview\n\nThis PR adds an interactive terminal command permissions UI to the chat interface, allowing users to view, allow, or deny specific command patterns directly from the chat.\n\n- Introduces `commandPatterns.ts` for extracting command patterns, generating descriptions, and parsing command/output text.\n- Adds a `CommandPatternSelector` component and integrates it into `CommandExecution` to toggle allowed/denied patterns with state synchronization.\n- Updates translation JSON files across all locales to include new `commandExecution` keys.\n\n### Reviewed Changes\n\nCopilot reviewed 24 out of 24 changed files in this pull request and generated 2 comments.\n\n\u003cdetails\u003e\n\u003csummary\u003eShow a summary per file\u003c/summary\u003e\n\n| File                                              | Description                                                                                  |\r\n| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |\r\n| webview-ui/src/utils/commandPatterns.ts           | Adds utilities for command pattern extraction, description lookup, and parsing command/output |\r\n| webview-ui/src/utils/__tests__/commandPatterns.spec.ts | Adds unit tests covering pattern extraction, descriptions, and parsing logic                |\r\n| webview-ui/src/components/chat/CommandPatternSelector.tsx | Implements the UI component for toggling command permission patterns                         |\r\n| webview-ui/src/components/chat/__tests__/CommandPatternSelector.spec.tsx | Adds interaction and accessibility tests for `CommandPatternSelector`                        |\r\n| webview-ui/src/components/chat/CommandExecution.tsx         | Integrates the selector into command blocks and syncs state with the extension               |\r\n| webview-ui/src/components/chat/__tests__/CommandExecution.spec.tsx | Adds tests for command execution rendering and permission changes                            |\r\n| webview-ui/src/i18n/locales/*/chat.json            | Updates all locale files with new translation keys for `commandExecution` UI                 |\n\u003c/details\u003e\n\n\n\n\u003cdetails\u003e\n\u003csummary\u003eComments suppressed due to low confidence (3)\u003c/summary\u003e\n\n**webview-ui/src/components/chat/CommandExecution.tsx:61**\n* [nitpick] The state variable `showSuggestions` never changes. Consider renaming it to reflect that it’s a constant flag or removing the useState hook entirely if it isn’t meant to update.\n```\n\tconst [showSuggestions] = useState(true)\n```\n**webview-ui/src/components/chat/CommandExecution.tsx:48**\n* The fallback path where `enhanced.command === text` isn’t covered by any tests. Add a unit test to verify the fallback parser branch behaves as expected.\n```\n\t\tif (enhanced.command \u0026\u0026 enhanced.command !== text) {\n```\n**webview-ui/src/components/chat/CommandExecution.tsx:52**\n* parseCommandAndOutput is not imported in this file, so the fallback call will be undefined. Either import it properly or replace this call with parseCommandAndOutputUtil.\n```\n\t\tconst original = parseCommandAndOutput(text)\n```\n\u003c/details\u003e\n\n",
+		"commit": { "oid": "c4a9670e9733ab32fb5d17c1036a9cd649770233" },
+		"id": "PRR_kwDONIq5lM60cWiN",
+		"includesCreatedEdit": false,
+		"reactionGroups": [],
+		"state": "COMMENTED",
+		"submittedAt": "2025-07-17T00:30:45Z"
+	},
+	{
+		"author": { "login": "ellipsis-dev" },
+		"authorAssociation": "NONE",
+		"body": "",
+		"commit": { "oid": "c4a9670e9733ab32fb5d17c1036a9cd649770233" },
+		"id": "PRR_kwDONIq5lM60cWrH",
+		"includesCreatedEdit": false,
+		"reactionGroups": [],
+		"state": "COMMENTED",
+		"submittedAt": "2025-07-17T00:31:06Z"
+	},
+	{
+		"author": { "login": "copilot-pull-request-reviewer" },
+		"authorAssociation": "NONE",
+		"body": "## Pull Request Overview\n\nThis PR adds a command permissions UI to the chat interface that allows users to manage terminal command permissions directly when viewing command execution results. The implementation includes pattern extraction capabilities for complex shell commands and integrates seamlessly with the existing VSCode extension state.\n\n- Enhanced command execution interface with collapsible permission management section\n- Pattern extraction utility that handles complex shell syntax including pipes, chains, and subshells\n- Comprehensive translation support for 17 languages\n\n### Reviewed Changes\n\nCopilot reviewed 24 out of 24 changed files in this pull request and generated 4 comments.\n\n\u003cdetails\u003e\n\u003csummary\u003eShow a summary per file\u003c/summary\u003e\n\n| File | Description |\r\n| ---- | ----------- |\r\n| `webview-ui/src/utils/commandPatterns.ts` | Core pattern extraction logic with shell parsing and security validation |\r\n| `webview-ui/src/components/chat/CommandPatternSelector.tsx` | UI component for managing command permissions with toggle buttons |\r\n| `webview-ui/src/components/chat/CommandExecution.tsx` | Integration of pattern selector into existing command execution component |\r\n| Translation files | Added command execution UI strings across 17 supported languages |\r\n| Test files | Comprehensive test coverage for pattern extraction and UI components |\n\u003c/details\u003e\n\n\n\n\u003cdetails\u003e\n\u003csummary\u003eComments suppressed due to low confidence (1)\u003c/summary\u003e\n\n**webview-ui/src/utils/commandPatterns.ts:54**\n* [nitpick] The variable name 'breakingExps' is ambiguous. Consider renaming to 'stopPatterns' or 'terminatingPatterns' to better describe its purpose.\n```\n\t// Patterns that indicate we should stop looking for subcommands\n```\n\u003c/details\u003e\n\n",
+		"commit": { "oid": "6463e8f7c70df56cff3f25e836b084c895b6312f" },
+		"id": "PRR_kwDONIq5lM60o8Sj",
+		"includesCreatedEdit": false,
+		"reactionGroups": [],
+		"state": "COMMENTED",
+		"submittedAt": "2025-07-17T18:47:03Z"
+	},
+	{
+		"author": { "login": "daniel-lxs" },
+		"authorAssociation": "COLLABORATOR",
+		"body": "@roomote-agent Use the switch_mode tool to switch to pr-fixer and address the reviews on this PR, commit the changes to this PR, do not create a new one",
+		"commit": { "oid": "94efb1a123b6f89e1ff9c6be25a3dc547b6c4ce9" },
+		"id": "PRR_kwDONIq5lM61IWGu",
+		"includesCreatedEdit": false,
+		"reactionGroups": [],
+		"state": "COMMENTED",
+		"submittedAt": "2025-07-21T16:37:50Z"
+	},
+	{
+		"author": { "login": "ellipsis-dev" },
+		"authorAssociation": "NONE",
+		"body": "",
+		"commit": { "oid": "586cc157daa49059e6880384343cd01167f8855d" },
+		"id": "PRR_kwDONIq5lM61ge8E",
+		"includesCreatedEdit": false,
+		"reactionGroups": [],
+		"state": "COMMENTED",
+		"submittedAt": "2025-07-23T00:07:42Z"
+	},
+	{
+		"author": { "login": "daniel-lxs" },
+		"authorAssociation": "COLLABORATOR",
+		"body": "I am seeing this on certain commands \n\n\u003cimg width=\"425\" height=\"408\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/47c39e19-f410-46e7-b889-e7dcafdac3ce\" /\u003e\n\nNot sure if this is intended but I imagine for longer commands this list might become too large",
+		"commit": { "oid": "586cc157daa49059e6880384343cd01167f8855d" },
+		"id": "PRR_kwDONIq5lM61p9QB",
+		"includesCreatedEdit": false,
+		"reactionGroups": [],
+		"state": "COMMENTED",
+		"submittedAt": "2025-07-23T14:28:42Z"
+	},
+	{
+		"author": { "login": "ellipsis-dev" },
+		"authorAssociation": "NONE",
+		"body": "",
+		"commit": { "oid": "b358c958bff8d817e4f848bc1683a2adff45c283" },
+		"id": "PRR_kwDONIq5lM61qdnL",
+		"includesCreatedEdit": false,
+		"reactionGroups": [],
+		"state": "COMMENTED",
+		"submittedAt": "2025-07-23T14:49:38Z"
+	}
+]

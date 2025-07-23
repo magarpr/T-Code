@@ -1,0 +1,2314 @@
+diff --git a/webview-ui/src/components/chat/CommandExecution.tsx b/webview-ui/src/components/chat/CommandExecution.tsx
+index 8c92ec7e7b6..4ffbd32d881 100644
+--- a/webview-ui/src/components/chat/CommandExecution.tsx
++++ b/webview-ui/src/components/chat/CommandExecution.tsx
+@@ -6,13 +6,19 @@ import { CommandExecutionStatus, commandExecutionStatusSchema } from "@roo-code/
+ 
+ import { ExtensionMessage } from "@roo/ExtensionMessage"
+ import { safeJsonParse } from "@roo/safeJsonParse"
+-import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
+ 
+ import { vscode } from "@src/utils/vscode"
+ import { useExtensionState } from "@src/context/ExtensionStateContext"
+ import { cn } from "@src/lib/utils"
+ import { Button } from "@src/components/ui"
+ import CodeBlock from "../common/CodeBlock"
++import { CommandPatternSelector } from "./CommandPatternSelector"
++import {
++	extractCommandPatterns,
++	getPatternDescription,
++	parseCommandAndOutput,
++	CommandPattern,
++} from "../../utils/commandPatterns"
+ 
+ interface CommandExecutionProps {
+ 	executionId: string
+@@ -22,21 +28,73 @@ interface CommandExecutionProps {
+ }
+ 
+ export const CommandExecution = ({ executionId, text, icon, title }: CommandExecutionProps) => {
+-	const { terminalShellIntegrationDisabled = false } = useExtensionState()
+-
+-	const { command, output: parsedOutput } = useMemo(() => parseCommandAndOutput(text), [text])
++	const {
++		terminalShellIntegrationDisabled = false,
++		allowedCommands = [],
++		deniedCommands = [],
++		setAllowedCommands,
++		setDeniedCommands,
++	} = useExtensionState()
++
++	const { command, output: parsedOutput } = useMemo(() => {
++		// Use the enhanced parser from commandPatterns
++		return parseCommandAndOutput(text || "")
++	}, [text])
+ 
+ 	// If we aren't opening the VSCode terminal for this command then we default
+ 	// to expanding the command execution output.
+ 	const [isExpanded, setIsExpanded] = useState(terminalShellIntegrationDisabled)
+ 	const [streamingOutput, setStreamingOutput] = useState("")
+ 	const [status, setStatus] = useState<CommandExecutionStatus | null>(null)
++	// Show suggestions is always enabled for command pattern management
++	const SHOW_SUGGESTIONS = true
+ 
+ 	// The command's output can either come from the text associated with the
+ 	// task message (this is the case for completed commands) or from the
+ 	// streaming output (this is the case for running commands).
+ 	const output = streamingOutput || parsedOutput
+ 
++	// Extract command patterns from the actual command that was executed
++	const commandPatterns = useMemo<CommandPattern[]>(() => {
++		const patterns: CommandPattern[] = []
++
++		// Always extract patterns from the actual command that was executed
++		// We don't use AI suggestions because the patterns should reflect
++		// what was actually executed, not what the AI thinks might be useful
++		const extractedPatterns = extractCommandPatterns(command)
++		extractedPatterns.forEach((pattern) => {
++			patterns.push({
++				pattern,
++				description: getPatternDescription(pattern),
++			})
++		})
++
++		return patterns
++	}, [command])
++
++	// Handle pattern changes
++	const handleAllowPatternChange = (pattern: string) => {
++		const isAllowed = allowedCommands.includes(pattern)
++		const newAllowed = isAllowed ? allowedCommands.filter((p) => p !== pattern) : [...allowedCommands, pattern]
++		const newDenied = deniedCommands.filter((p) => p !== pattern)
++
++		setAllowedCommands(newAllowed)
++		setDeniedCommands(newDenied)
++		vscode.postMessage({ type: "allowedCommands", commands: newAllowed })
++		vscode.postMessage({ type: "deniedCommands", commands: newDenied })
++	}
++
++	const handleDenyPatternChange = (pattern: string) => {
++		const isDenied = deniedCommands.includes(pattern)
++		const newDenied = isDenied ? deniedCommands.filter((p) => p !== pattern) : [...deniedCommands, pattern]
++		const newAllowed = allowedCommands.filter((p) => p !== pattern)
++
++		setAllowedCommands(newAllowed)
++		setDeniedCommands(newDenied)
++		vscode.postMessage({ type: "allowedCommands", commands: newAllowed })
++		vscode.postMessage({ type: "deniedCommands", commands: newDenied })
++	}
++
+ 	const onMessage = useCallback(
+ 		(event: MessageEvent) => {
+ 			const message: ExtensionMessage = event.data
+@@ -121,9 +179,20 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
+ 				</div>
+ 			</div>
+ 
+-			<div className="w-full bg-vscode-editor-background border border-vscode-border rounded-xs p-2">
+-				<CodeBlock source={command} language="shell" />
+-				<OutputContainer isExpanded={isExpanded} output={output} />
++			<div className="w-full bg-vscode-editor-background border border-vscode-border rounded-xs">
++				<div className="p-2">
++					<CodeBlock source={command} language="shell" />
++					<OutputContainer isExpanded={isExpanded} output={output} />
++				</div>
++				{SHOW_SUGGESTIONS && commandPatterns.length > 0 && (
++					<CommandPatternSelector
++						patterns={commandPatterns}
++						allowedCommands={allowedCommands}
++						deniedCommands={deniedCommands}
++						onAllowPatternChange={handleAllowPatternChange}
++						onDenyPatternChange={handleDenyPatternChange}
++					/>
++				)}
+ 			</div>
+ 		</>
+ 	)
+@@ -142,20 +211,3 @@ const OutputContainerInternal = ({ isExpanded, output }: { isExpanded: boolean;
+ )
+ 
+ const OutputContainer = memo(OutputContainerInternal)
+-
+-const parseCommandAndOutput = (text: string | undefined) => {
+-	if (!text) {
+-		return { command: "", output: "" }
+-	}
+-
+-	const index = text.indexOf(COMMAND_OUTPUT_STRING)
+-
+-	if (index === -1) {
+-		return { command: text, output: "" }
+-	}
+-
+-	return {
+-		command: text.slice(0, index),
+-		output: text.slice(index + COMMAND_OUTPUT_STRING.length),
+-	}
+-}
+diff --git a/webview-ui/src/components/chat/CommandPatternSelector.tsx b/webview-ui/src/components/chat/CommandPatternSelector.tsx
+new file mode 100644
+index 00000000000..17799a8aecc
+--- /dev/null
++++ b/webview-ui/src/components/chat/CommandPatternSelector.tsx
+@@ -0,0 +1,130 @@
++import React, { useState } from "react"
++import { Check, ChevronDown, Info, X } from "lucide-react"
++import { cn } from "../../lib/utils"
++import { useTranslation, Trans } from "react-i18next"
++import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
++import { CommandPattern } from "../../utils/commandPatterns"
++import { StandardTooltip } from "../ui/standard-tooltip"
++
++interface CommandPatternSelectorProps {
++	patterns: CommandPattern[]
++	allowedCommands: string[]
++	deniedCommands: string[]
++	onAllowPatternChange: (pattern: string) => void
++	onDenyPatternChange: (pattern: string) => void
++}
++
++export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
++	patterns,
++	allowedCommands,
++	deniedCommands,
++	onAllowPatternChange,
++	onDenyPatternChange,
++}) => {
++	const { t } = useTranslation()
++	const [isExpanded, setIsExpanded] = useState(false)
++
++	const getPatternStatus = (pattern: string): "allowed" | "denied" | "none" => {
++		if (allowedCommands.includes(pattern)) return "allowed"
++		if (deniedCommands.includes(pattern)) return "denied"
++		return "none"
++	}
++
++	return (
++		<div className="border-t border-vscode-panel-border bg-vscode-sideBar-background/30">
++			<button
++				onClick={() => setIsExpanded(!isExpanded)}
++				className="flex items-center gap-2 w-full px-3 py-2 text-xs text-vscode-descriptionForeground hover:text-vscode-foreground hover:bg-vscode-list-hoverBackground transition-all"
++				aria-expanded={isExpanded}
++				aria-label={t(
++					isExpanded ? "chat:commandExecution.collapseManagement" : "chat:commandExecution.expandManagement",
++				)}>
++				<ChevronDown
++					className={cn("size-3 transition-transform duration-200", {
++						"rotate-0": isExpanded,
++						"-rotate-90": !isExpanded,
++					})}
++				/>
++				<span className="font-medium">{t("chat:commandExecution.manageCommands")}</span>
++				<StandardTooltip
++					content={
++						<Trans
++							i18nKey="chat:commandExecution.commandManagementDescription"
++							components={{
++								settingsLink: (
++									<VSCodeLink
++										href="#"
++										onClick={(e) => {
++											e.preventDefault()
++											window.postMessage(
++												{
++													type: "action",
++													action: "settingsButtonClicked",
++													values: { section: "autoApprove" },
++												},
++												"*",
++											)
++										}}
++										className="inline"
++									/>
++								),
++							}}
++						/>
++					}>
++					<Info className="size-3 ml-1" />
++				</StandardTooltip>
++			</button>
++
++			{isExpanded && (
++				<div className="px-3 pb-3 space-y-2">
++					{patterns.map((item, index) => {
++						const status = getPatternStatus(item.pattern)
++						return (
++							<div key={`${item.pattern}-${index}`} className="ml-5 flex items-center gap-2">
++								<div className="flex-1">
++									<span className="font-mono text-xs text-vscode-foreground">{item.pattern}</span>
++									{item.description && (
++										<span className="text-xs text-vscode-descriptionForeground ml-2">
++											- {item.description}
++										</span>
++									)}
++								</div>
++								<div className="flex items-center gap-1">
++									<button
++										className={cn("p-1 rounded transition-all", {
++											"bg-green-500/20 text-green-500 hover:bg-green-500/30":
++												status === "allowed",
++											"text-vscode-descriptionForeground hover:text-green-500 hover:bg-green-500/10":
++												status !== "allowed",
++										})}
++										onClick={() => onAllowPatternChange(item.pattern)}
++										aria-label={t(
++											status === "allowed"
++												? "chat:commandExecution.removeFromAllowed"
++												: "chat:commandExecution.addToAllowed",
++										)}>
++										<Check className="size-3.5" />
++									</button>
++									<button
++										className={cn("p-1 rounded transition-all", {
++											"bg-red-500/20 text-red-500 hover:bg-red-500/30": status === "denied",
++											"text-vscode-descriptionForeground hover:text-red-500 hover:bg-red-500/10":
++												status !== "denied",
++										})}
++										onClick={() => onDenyPatternChange(item.pattern)}
++										aria-label={t(
++											status === "denied"
++												? "chat:commandExecution.removeFromDenied"
++												: "chat:commandExecution.addToDenied",
++										)}>
++										<X className="size-3.5" />
++									</button>
++								</div>
++							</div>
++						)
++					})}
++				</div>
++			)}
++		</div>
++	)
++}
+diff --git a/webview-ui/src/components/chat/__tests__/CommandExecution.spec.tsx b/webview-ui/src/components/chat/__tests__/CommandExecution.spec.tsx
+new file mode 100644
+index 00000000000..162ccd007cd
+--- /dev/null
++++ b/webview-ui/src/components/chat/__tests__/CommandExecution.spec.tsx
+@@ -0,0 +1,591 @@
++import React from "react"
++import { render, screen, fireEvent } from "@testing-library/react"
++import { describe, it, expect, vi, beforeEach } from "vitest"
++import { CommandExecution } from "../CommandExecution"
++import { ExtensionStateContext } from "../../../context/ExtensionStateContext"
++
++// Mock dependencies
++vi.mock("react-use", () => ({
++	useEvent: vi.fn(),
++}))
++
++import { vscode } from "../../../utils/vscode"
++
++vi.mock("../../../utils/vscode", () => ({
++	vscode: {
++		postMessage: vi.fn(),
++	},
++}))
++
++vi.mock("../../common/CodeBlock", () => ({
++	default: ({ source }: { source: string }) => <div data-testid="code-block">{source}</div>,
++}))
++
++// Mock the commandPatterns module but use the actual implementation
++vi.mock("../../../utils/commandPatterns", async () => {
++	const actual = await vi.importActual<typeof import("../../../utils/commandPatterns")>(
++		"../../../utils/commandPatterns",
++	)
++	return {
++		...actual,
++		parseCommandAndOutput: actual.parseCommandAndOutput,
++		extractCommandPatterns: actual.extractCommandPatterns,
++		getPatternDescription: actual.getPatternDescription,
++	}
++})
++
++vi.mock("../CommandPatternSelector", () => ({
++	CommandPatternSelector: ({ patterns, onAllowPatternChange, onDenyPatternChange }: any) => (
++		<div data-testid="command-pattern-selector">
++			{patterns.map((p: any, i: number) => (
++				<div key={i}>
++					<span>{p.pattern}</span>
++					<button onClick={() => onAllowPatternChange(p.pattern)}>Allow {p.pattern}</button>
++					<button onClick={() => onDenyPatternChange(p.pattern)}>Deny {p.pattern}</button>
++				</div>
++			))}
++		</div>
++	),
++}))
++
++// Mock ExtensionStateContext
++const mockExtensionState = {
++	terminalShellIntegrationDisabled: false,
++	allowedCommands: ["npm"],
++	deniedCommands: ["rm"],
++	setAllowedCommands: vi.fn(),
++	setDeniedCommands: vi.fn(),
++}
++
++const ExtensionStateWrapper = ({ children }: { children: React.ReactNode }) => (
++	<ExtensionStateContext.Provider value={mockExtensionState as any}>{children}</ExtensionStateContext.Provider>
++)
++
++describe("CommandExecution", () => {
++	beforeEach(() => {
++		vi.clearAllMocks()
++	})
++
++	it("should render command without output", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="npm install" />
++			</ExtensionStateWrapper>,
++		)
++
++		expect(screen.getByTestId("code-block")).toHaveTextContent("npm install")
++	})
++
++	it("should render command with output", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="npm install\nOutput:\nInstalling packages..." />
++			</ExtensionStateWrapper>,
++		)
++
++		const codeBlocks = screen.getAllByTestId("code-block")
++		expect(codeBlocks[0]).toHaveTextContent("npm install")
++	})
++
++	it("should render with custom icon and title", () => {
++		const icon = <span data-testid="custom-icon">📦</span>
++		const title = <span data-testid="custom-title">Installing Dependencies</span>
++
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="npm install" icon={icon} title={title} />
++			</ExtensionStateWrapper>,
++		)
++
++		expect(screen.getByTestId("custom-icon")).toBeInTheDocument()
++		expect(screen.getByTestId("custom-title")).toBeInTheDocument()
++	})
++
++	it("should show command pattern selector for simple commands", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="npm install express" />
++			</ExtensionStateWrapper>,
++		)
++
++		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
++		expect(screen.getByText("npm")).toBeInTheDocument()
++		expect(screen.getByText("npm install")).toBeInTheDocument()
++	})
++
++	it("should handle allow pattern change", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="git push" />
++			</ExtensionStateWrapper>,
++		)
++
++		const allowButton = screen.getByText("Allow git")
++		fireEvent.click(allowButton)
++
++		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm", "git"])
++		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm"])
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "git"] })
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm"] })
++	})
++
++	it("should handle deny pattern change", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="docker run" />
++			</ExtensionStateWrapper>,
++		)
++
++		const denyButton = screen.getByText("Deny docker")
++		fireEvent.click(denyButton)
++
++		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm"])
++		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm", "docker"])
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm"] })
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm", "docker"] })
++	})
++
++	it("should toggle allowed pattern", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="npm test" />
++			</ExtensionStateWrapper>,
++		)
++
++		const allowButton = screen.getByText("Allow npm")
++		fireEvent.click(allowButton)
++
++		// npm is already in allowedCommands, so it should be removed
++		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith([])
++		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm"])
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: [] })
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm"] })
++	})
++
++	it("should toggle denied pattern", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="rm -rf" />
++			</ExtensionStateWrapper>,
++		)
++
++		const denyButton = screen.getByText("Deny rm")
++		fireEvent.click(denyButton)
++
++		// rm is already in deniedCommands, so it should be removed
++		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm"])
++		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith([])
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm"] })
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: [] })
++	})
++
++	it("should parse command with Output: separator", () => {
++		const commandText = `npm install
++Output:
++Installing...`
++
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text={commandText} />
++			</ExtensionStateWrapper>,
++		)
++
++		const codeBlocks = screen.getAllByTestId("code-block")
++		expect(codeBlocks[0]).toHaveTextContent("npm install")
++	})
++
++	it("should parse command with AI suggestions", () => {
++		const commandText = `npm install
++Output:
++Suggested patterns: npm, npm install, npm run`
++
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text={commandText} />
++			</ExtensionStateWrapper>,
++		)
++
++		// First check that the command was parsed correctly
++		const codeBlocks = screen.getAllByTestId("code-block")
++		expect(codeBlocks[0]).toHaveTextContent("npm install")
++		expect(codeBlocks[1]).toHaveTextContent("Suggested patterns: npm, npm install, npm run")
++
++		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
++		// Check that only patterns from the actual command are extracted, not from AI suggestions
++		expect(screen.getByText("npm")).toBeInTheDocument()
++		expect(screen.getAllByText("npm install").length).toBeGreaterThan(0)
++		// "npm run" should NOT be in the patterns since it's only in the AI suggestions, not the actual command
++		expect(screen.queryByText("npm run")).not.toBeInTheDocument()
++	})
++
++	it("should handle commands with pipes", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="ls -la | grep test" />
++			</ExtensionStateWrapper>,
++		)
++
++		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
++		expect(screen.getByText("ls")).toBeInTheDocument()
++		expect(screen.getByText("grep")).toBeInTheDocument()
++	})
++
++	it("should handle commands with && operator", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="npm install && npm test" />
++			</ExtensionStateWrapper>,
++		)
++
++		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
++		expect(screen.getByText("npm")).toBeInTheDocument()
++		expect(screen.getByText("npm install")).toBeInTheDocument()
++		expect(screen.getByText("npm test")).toBeInTheDocument()
++	})
++
++	it("should not show pattern selector for empty commands", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="" />
++			</ExtensionStateWrapper>,
++		)
++
++		expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
++	})
++
++	it("should expand output when terminal shell integration is disabled", () => {
++		const disabledState = {
++			...mockExtensionState,
++			terminalShellIntegrationDisabled: true,
++		}
++
++		const commandText = `npm install
++Output:
++Output here`
++
++		render(
++			<ExtensionStateContext.Provider value={disabledState as any}>
++				<CommandExecution executionId="test-1" text={commandText} />
++			</ExtensionStateContext.Provider>,
++		)
++
++		// Output should be visible when shell integration is disabled
++		const codeBlocks = screen.getAllByTestId("code-block")
++		expect(codeBlocks).toHaveLength(2) // Command and output blocks
++		expect(codeBlocks[1]).toHaveTextContent("Output here")
++	})
++
++	it("should handle undefined allowedCommands and deniedCommands", () => {
++		const stateWithUndefined = {
++			...mockExtensionState,
++			allowedCommands: undefined,
++			deniedCommands: undefined,
++		}
++
++		render(
++			<ExtensionStateContext.Provider value={stateWithUndefined as any}>
++				<CommandExecution executionId="test-1" text="npm install" />
++			</ExtensionStateContext.Provider>,
++		)
++
++		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
++	})
++
++	it("should handle pattern change when moving from denied to allowed", () => {
++		render(
++			<ExtensionStateWrapper>
++				<CommandExecution executionId="test-1" text="rm file.txt" />
++			</ExtensionStateWrapper>,
++		)
++
++		const allowButton = screen.getByText("Allow rm")
++		fireEvent.click(allowButton)
++
++		// rm should be removed from denied and added to allowed
++		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm", "rm"])
++		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith([])
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "rm"] })
++		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: [] })
++	})
++
++	describe("integration with CommandPatternSelector", () => {
++		it("should extract patterns from complex commands with multiple operators", () => {
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-6" text="npm install && npm test || echo 'failed'" />
++				</ExtensionStateWrapper>,
++			)
++
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++			expect(screen.getByText("npm")).toBeInTheDocument()
++			expect(screen.getByText("npm install")).toBeInTheDocument()
++			expect(screen.getByText("npm test")).toBeInTheDocument()
++			expect(screen.getByText("echo")).toBeInTheDocument()
++		})
++
++		it("should handle commands with malformed suggestions gracefully", () => {
++			const commandWithMalformedSuggestions = `npm install
++Output:
++Suggested patterns: npm, , npm install,
++Other output here`
++
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution
++						executionId="test-6"
++						text={commandWithMalformedSuggestions}
++						icon={<span>icon</span>}
++						title={<span>Run Command</span>}
++					/>
++				</ExtensionStateWrapper>,
++			)
++
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++			// Should still show valid patterns
++			expect(screen.getAllByText("npm")[0]).toBeInTheDocument()
++			expect(screen.getAllByText("npm install")[0]).toBeInTheDocument()
++		})
++
++		it("should handle commands with subshells by not including them in patterns", () => {
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-7" text="echo $(whoami) && git status" />
++				</ExtensionStateWrapper>,
++			)
++
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++			expect(screen.getByText("echo")).toBeInTheDocument()
++			expect(screen.getByText("git")).toBeInTheDocument()
++			expect(screen.getByText("git status")).toBeInTheDocument()
++			// Should not include subshell content
++			expect(screen.queryByText("whoami")).not.toBeInTheDocument()
++		})
++
++		it("should handle commands with backtick subshells", () => {
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-8" text="git commit -m `date`" />
++				</ExtensionStateWrapper>,
++			)
++
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++			expect(screen.getByText("git")).toBeInTheDocument()
++			expect(screen.getByText("git commit")).toBeInTheDocument()
++			// Should not include subshell content
++			expect(screen.queryByText("date")).not.toBeInTheDocument()
++		})
++
++		it("should handle pattern changes for commands with special characters", () => {
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-9" text="cd ~/projects && npm start" />
++				</ExtensionStateWrapper>,
++			)
++
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++			expect(screen.getByText("cd")).toBeInTheDocument()
++			expect(screen.getByText("npm")).toBeInTheDocument()
++			expect(screen.getByText("npm start")).toBeInTheDocument()
++		})
++
++		it("should handle commands with mixed content including output and suggestions", () => {
++			const commandWithMixedContent = `npm test
++Output:
++Running tests...
++✓ Test 1 passed
++✓ Test 2 passed
++
++Suggested patterns: npm, npm test, npm run
++- npm
++- npm test
++- npm run test`
++
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution
++						executionId="test-10"
++						text={commandWithMixedContent}
++						icon={<span>icon</span>}
++						title={<span>Run Command</span>}
++					/>
++				</ExtensionStateWrapper>,
++			)
++
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++			// Should show patterns only from the actual command, not from AI suggestions
++			expect(screen.getAllByText("npm")[0]).toBeInTheDocument()
++			expect(screen.getAllByText("npm test")[0]).toBeInTheDocument()
++			// "npm run" should NOT be in the patterns since it's only in the AI suggestions
++			expect(screen.queryByText("npm run")).not.toBeInTheDocument()
++		})
++
++		it("should update both allowed and denied lists when patterns conflict", () => {
++			const conflictState = {
++				...mockExtensionState,
++				allowedCommands: ["git"],
++				deniedCommands: ["git push"],
++			}
++
++			render(
++				<ExtensionStateContext.Provider value={conflictState as any}>
++					<CommandExecution executionId="test-11" text="git push origin main" />
++				</ExtensionStateContext.Provider>,
++			)
++
++			// Click to allow "git push"
++			const allowButton = screen.getByText("Allow git push")
++			fireEvent.click(allowButton)
++
++			// Should add to allowed and remove from denied
++			expect(conflictState.setAllowedCommands).toHaveBeenCalledWith(["git", "git push"])
++			expect(conflictState.setDeniedCommands).toHaveBeenCalledWith([])
++		})
++
++		it("should handle commands that cannot be parsed and fallback gracefully", () => {
++			// Test with a command that might cause parsing issues
++			const unparsableCommand = "echo 'test with unclosed quote"
++
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-12" text={unparsableCommand} />
++				</ExtensionStateWrapper>,
++			)
++
++			// Should still render the command
++			expect(screen.getByTestId("code-block")).toHaveTextContent("echo 'test with unclosed quote")
++
++			// Should show pattern selector with at least the main command
++			expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
++			expect(screen.getByText("echo")).toBeInTheDocument()
++		})
++
++		it("should handle empty or whitespace-only commands", () => {
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-13" text="   " />
++				</ExtensionStateWrapper>,
++			)
++
++			// Should render without errors
++			expect(screen.getByTestId("code-block")).toBeInTheDocument()
++
++			// Should not show pattern selector for empty commands
++			expect(screen.queryByTestId("command-pattern-selector")).not.toBeInTheDocument()
++		})
++
++		it("should handle commands with only output and no command prefix", () => {
++			const outputOnly = `Some output without a command
++Multiple lines of output
++Without any command prefix`
++
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-14" text={outputOnly} />
++				</ExtensionStateWrapper>,
++			)
++
++			// Should treat the entire text as command when no prefix is found
++			const codeBlock = screen.getByTestId("code-block")
++			// The mock CodeBlock component renders text content without preserving newlines
++			expect(codeBlock.textContent).toContain("Some output without a command")
++			expect(codeBlock.textContent).toContain("Multiple lines of output")
++			expect(codeBlock.textContent).toContain("Without any command prefix")
++		})
++
++		it("should handle fallback case where parsed command equals original text", () => {
++			// This tests the case where parseCommandAndOutput returns command === text
++			// which happens when there's no output separator or command prefix
++			const plainCommand = "docker build ."
++
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-15" text={plainCommand} />
++				</ExtensionStateWrapper>,
++			)
++
++			// Should render the command
++			expect(screen.getByTestId("code-block")).toHaveTextContent("docker build .")
++
++			// Should show pattern selector with extracted patterns
++			expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
++			expect(screen.getByText("docker")).toBeInTheDocument()
++			expect(screen.getByText("docker build")).toBeInTheDocument()
++
++			// Verify no output is shown (since command === text means no output)
++			const codeBlocks = screen.getAllByTestId("code-block")
++			expect(codeBlocks).toHaveLength(1) // Only the command block, no output block
++		})
++
++		it("should not extract patterns from command output numbers", () => {
++			// This tests the specific bug where "0 total" from wc output was being extracted as a command
++			const commandWithNumericOutput = `wc -l *.go *.java
++Output:
++			   10 file1.go
++			   20 file2.go
++			   15 Main.java
++			   45 total`
++
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-16" text={commandWithNumericOutput} />
++				</ExtensionStateWrapper>,
++			)
++
++			// Should render the command and output
++			const codeBlocks = screen.getAllByTestId("code-block")
++			expect(codeBlocks[0]).toHaveTextContent("wc -l *.go *.java")
++
++			// Should show pattern selector
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++
++			// Should only extract "wc" from the actual command
++			expect(screen.getByText("wc")).toBeInTheDocument()
++
++			// Should NOT extract numeric patterns from output like "45 total"
++			expect(screen.queryByText("45")).not.toBeInTheDocument()
++			expect(screen.queryByText("total")).not.toBeInTheDocument()
++			expect(screen.queryByText("45 total")).not.toBeInTheDocument()
++		})
++
++		it("should handle the edge case of 0 total in output", () => {
++			// This is the exact case from the bug report
++			const commandWithZeroTotal = `wc -l *.go *.java
++Output:
++		     0 total`
++
++			render(
++				<ExtensionStateWrapper>
++					<CommandExecution executionId="test-17" text={commandWithZeroTotal} />
++				</ExtensionStateWrapper>,
++			)
++
++			// Should show pattern selector
++			const selector = screen.getByTestId("command-pattern-selector")
++			expect(selector).toBeInTheDocument()
++
++			// Should only extract "wc" from the actual command
++			// Check within the pattern selector specifically
++			const patternTexts = Array.from(selector.querySelectorAll("span")).map((el) => el.textContent)
++
++			// Should have "wc" as a pattern
++			expect(patternTexts).toContain("wc")
++
++			// Should NOT have "0", "total", or "0 total" as patterns
++			expect(patternTexts).not.toContain("0")
++			expect(patternTexts).not.toContain("total")
++			expect(patternTexts).not.toContain("0 total")
++
++			// The output should still be displayed in the code block
++			const codeBlocks = screen.getAllByTestId("code-block")
++			expect(codeBlocks.length).toBeGreaterThan(1)
++			expect(codeBlocks[1]).toHaveTextContent("0 total")
++		})
++	})
++})
+diff --git a/webview-ui/src/components/chat/__tests__/CommandPatternSelector.spec.tsx b/webview-ui/src/components/chat/__tests__/CommandPatternSelector.spec.tsx
+new file mode 100644
+index 00000000000..4dd69e3969a
+--- /dev/null
++++ b/webview-ui/src/components/chat/__tests__/CommandPatternSelector.spec.tsx
+@@ -0,0 +1,252 @@
++import React from "react"
++import { render, screen, fireEvent } from "@testing-library/react"
++import { describe, it, expect, vi, beforeEach } from "vitest"
++import { CommandPatternSelector } from "../CommandPatternSelector"
++import { CommandPattern } from "../../../utils/commandPatterns"
++
++// Mock react-i18next
++vi.mock("react-i18next", () => ({
++	useTranslation: () => ({
++		t: (key: string) => key,
++	}),
++	Trans: ({ i18nKey, components }: any) => {
++		if (i18nKey === "chat:commandExecution.commandManagementDescription") {
++			return (
++				<span>
++					Manage command permissions: Click ✓ to allow auto-execution, ✗ to deny execution. Patterns can be
++					toggled on/off or removed from lists. {components.settingsLink}
++				</span>
++			)
++		}
++		return <span>{i18nKey}</span>
++	},
++}))
++
++// Mock VSCodeLink
++vi.mock("@vscode/webview-ui-toolkit/react", () => ({
++	VSCodeLink: ({ children, onClick }: any) => (
++		<a href="#" onClick={onClick}>
++			{children || "View all settings"}
++		</a>
++	),
++}))
++
++// Mock StandardTooltip
++vi.mock("../../ui/standard-tooltip", () => ({
++	StandardTooltip: ({ children, content }: any) => (
++		<div title={typeof content === "string" ? content : "tooltip"}>
++			{children}
++			{/* Render the content to make it testable */}
++			<div style={{ display: "none" }}>{content}</div>
++		</div>
++	),
++}))
++
++// Mock window.postMessage
++const mockPostMessage = vi.fn()
++window.postMessage = mockPostMessage
++
++describe("CommandPatternSelector", () => {
++	const mockPatterns: CommandPattern[] = [
++		{ pattern: "npm", description: "npm commands" },
++		{ pattern: "npm install", description: "npm install commands" },
++		{ pattern: "git", description: "git commands" },
++	]
++
++	const defaultProps = {
++		patterns: mockPatterns,
++		allowedCommands: ["npm"],
++		deniedCommands: ["git"],
++		onAllowPatternChange: vi.fn(),
++		onDenyPatternChange: vi.fn(),
++	}
++
++	beforeEach(() => {
++		vi.clearAllMocks()
++	})
++
++	it("should render collapsed by default", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		expect(screen.getByText("chat:commandExecution.manageCommands")).toBeInTheDocument()
++		expect(screen.queryByText("npm commands")).not.toBeInTheDocument()
++	})
++
++	it("should expand when clicked", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// Check for the patterns themselves
++		expect(screen.getByText("npm")).toBeInTheDocument()
++		expect(screen.getByText("npm install")).toBeInTheDocument()
++		expect(screen.getByText("git")).toBeInTheDocument()
++
++		// Check for the descriptions
++		expect(screen.getByText("- npm commands")).toBeInTheDocument()
++		expect(screen.getByText("- npm install commands")).toBeInTheDocument()
++		expect(screen.getByText("- git commands")).toBeInTheDocument()
++	})
++
++	it("should collapse when clicked again", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		const collapseButton = screen.getByRole("button", { name: "chat:commandExecution.collapseManagement" })
++		fireEvent.click(collapseButton)
++
++		expect(screen.queryByText("npm commands")).not.toBeInTheDocument()
++	})
++
++	it("should show correct status for patterns", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// Check that npm has allowed styling (green)
++		const npmAllowButton = screen.getAllByRole("button", { name: "chat:commandExecution.removeFromAllowed" })[0]
++		expect(npmAllowButton).toHaveClass("bg-green-500/20")
++
++		// Check that git has denied styling (red)
++		const gitDenyButton = screen.getAllByRole("button", { name: "chat:commandExecution.removeFromDenied" })[0]
++		expect(gitDenyButton).toHaveClass("bg-red-500/20")
++	})
++
++	it("should call onAllowPatternChange when allow button is clicked", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// Find all allow buttons with the "add to allowed" label
++		const allowButtons = screen.getAllByRole("button", { name: "chat:commandExecution.addToAllowed" })
++
++		// The second one should be for npm install (first is npm which is already allowed)
++		fireEvent.click(allowButtons[0])
++
++		expect(defaultProps.onAllowPatternChange).toHaveBeenCalledWith("npm install")
++	})
++
++	it("should call onDenyPatternChange when deny button is clicked", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// Find all deny buttons with the "add to denied" label
++		const denyButtons = screen.getAllByRole("button", { name: "chat:commandExecution.addToDenied" })
++
++		// The second one should be for npm install (first is npm, third is git which is already denied)
++		fireEvent.click(denyButtons[1])
++
++		expect(defaultProps.onDenyPatternChange).toHaveBeenCalledWith("npm install")
++	})
++
++	it("should toggle allowed pattern when clicked", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// Find the allow button for npm (which is already allowed)
++		const npmAllowButton = screen.getAllByRole("button", { name: "chat:commandExecution.removeFromAllowed" })[0]
++		fireEvent.click(npmAllowButton)
++
++		expect(defaultProps.onAllowPatternChange).toHaveBeenCalledWith("npm")
++	})
++
++	it("should toggle denied pattern when clicked", () => {
++		render(<CommandPatternSelector {...defaultProps} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// Find the deny button for git (which is already denied)
++		const gitDenyButton = screen.getAllByRole("button", { name: "chat:commandExecution.removeFromDenied" })[0]
++		fireEvent.click(gitDenyButton)
++
++		expect(defaultProps.onDenyPatternChange).toHaveBeenCalledWith("git")
++	})
++
++	it("should have tooltip with settings link", () => {
++		const { container } = render(<CommandPatternSelector {...defaultProps} />)
++
++		// The info icon should have a tooltip
++		const tooltipWrapper = container.querySelector('[title="tooltip"]')
++		expect(tooltipWrapper).toBeTruthy()
++
++		// The tooltip content includes a settings link (mocked as VSCodeLink)
++		// It's rendered in a hidden div for testing purposes
++		const settingsLink = container.querySelector('a[href="#"]')
++		expect(settingsLink).toBeTruthy()
++		expect(settingsLink?.textContent).toBe("View all settings")
++
++		// Test that clicking the link posts the correct message
++		if (settingsLink) {
++			fireEvent.click(settingsLink)
++
++			expect(mockPostMessage).toHaveBeenCalledWith(
++				{
++					type: "action",
++					action: "settingsButtonClicked",
++					values: { section: "autoApprove" },
++				},
++				"*",
++			)
++		}
++	})
++
++	it("should render with empty patterns", () => {
++		render(<CommandPatternSelector {...defaultProps} patterns={[]} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// The expanded view should exist but be empty since there are no patterns
++		const expandedContent = screen
++			.getByRole("button", { name: "chat:commandExecution.collapseManagement" })
++			.parentElement?.querySelector(".px-3.pb-3")
++		expect(expandedContent).toBeInTheDocument()
++		expect(expandedContent?.children.length).toBe(0)
++	})
++
++	it("should render patterns without descriptions", () => {
++		const patternsWithoutDesc: CommandPattern[] = [{ pattern: "custom-command" }]
++
++		render(<CommandPatternSelector {...defaultProps} patterns={patternsWithoutDesc} />)
++
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		expect(screen.getByText("custom-command")).toBeInTheDocument()
++	})
++
++	it("should always show info icon with tooltip", () => {
++		const { container } = render(<CommandPatternSelector {...defaultProps} />)
++
++		// Info icon should always be visible (not just when expanded)
++		// Look for the Info icon which is wrapped in StandardTooltip
++		const infoIcon = container.querySelector(".ml-1")
++		expect(infoIcon).toBeTruthy()
++	})
++
++	it("should apply correct classes for chevron rotation", () => {
++		const { container } = render(<CommandPatternSelector {...defaultProps} />)
++
++		// Initially collapsed - chevron should be rotated
++		let chevron = container.querySelector(".size-3.transition-transform")
++		expect(chevron).toHaveClass("-rotate-90")
++
++		// Click to expand
++		const expandButton = screen.getByRole("button", { name: "chat:commandExecution.expandManagement" })
++		fireEvent.click(expandButton)
++
++		// When expanded - chevron should not be rotated
++		chevron = container.querySelector(".size-3.transition-transform")
++		expect(chevron).toHaveClass("rotate-0")
++	})
++})
+diff --git a/webview-ui/src/i18n/locales/ca/chat.json b/webview-ui/src/i18n/locales/ca/chat.json
+index 4c24d69f087..8f1b7dc34c7 100644
+--- a/webview-ui/src/i18n/locales/ca/chat.json
++++ b/webview-ui/src/i18n/locales/ca/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo ha vist noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball):"
+ 	},
+ 	"commandOutput": "Sortida de l'ordre",
++	"commandExecution": {
++		"running": "Executant",
++		"pid": "PID: {{pid}}",
++		"exited": "Finalitzat ({{exitCode}})",
++		"manageCommands": "Gestiona els permisos de les ordres",
++		"commandManagementDescription": "Gestiona els permisos de les ordres: Fes clic a ✓ per permetre l'execució automàtica, ✗ per denegar l'execució. Els patrons es poden activar/desactivar o eliminar de les llistes. <settingsLink>Mostra tots els paràmetres</settingsLink>",
++		"addToAllowed": "Afegeix a la llista de permesos",
++		"removeFromAllowed": "Elimina de la llista de permesos",
++		"addToDenied": "Afegeix a la llista de denegats",
++		"removeFromDenied": "Elimina de la llista de denegats",
++		"abortCommand": "Interromp l'execució de l'ordre",
++		"expandOutput": "Amplia la sortida",
++		"collapseOutput": "Redueix la sortida",
++		"expandManagement": "Amplia la secció de gestió d'ordres",
++		"collapseManagement": "Redueix la secció de gestió d'ordres"
++	},
+ 	"response": "Resposta",
+ 	"arguments": "Arguments",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/de/chat.json b/webview-ui/src/i18n/locales/de/chat.json
+index 8f09fab831b..87f40edf2b8 100644
+--- a/webview-ui/src/i18n/locales/de/chat.json
++++ b/webview-ui/src/i18n/locales/de/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo hat Quellcode-Definitionsnamen in diesem Verzeichnis (außerhalb des Arbeitsbereichs) angezeigt:"
+ 	},
+ 	"commandOutput": "Befehlsausgabe",
++	"commandExecution": {
++		"running": "Wird ausgeführt",
++		"pid": "PID: {{pid}}",
++		"exited": "Beendet ({{exitCode}})",
++		"manageCommands": "Befehlsberechtigungen verwalten",
++		"commandManagementDescription": "Befehlsberechtigungen verwalten: Klicke auf ✓, um die automatische Ausführung zu erlauben, ✗, um die Ausführung zu verweigern. Muster können ein-/ausgeschaltet oder aus Listen entfernt werden. <settingsLink>Alle Einstellungen anzeigen</settingsLink>",
++		"addToAllowed": "Zur Liste der erlaubten Befehle hinzufügen",
++		"removeFromAllowed": "Von der Liste der erlaubten Befehle entfernen",
++		"addToDenied": "Zur Liste der verweigerten Befehle hinzufügen",
++		"removeFromDenied": "Von der Liste der verweigerten Befehle entfernen",
++		"abortCommand": "Befehlsausführung abbrechen",
++		"expandOutput": "Ausgabe erweitern",
++		"collapseOutput": "Ausgabe einklappen",
++		"expandManagement": "Befehlsverwaltungsbereich erweitern",
++		"collapseManagement": "Befehlsverwaltungsbereich einklappen"
++	},
+ 	"response": "Antwort",
+ 	"arguments": "Argumente",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/en/chat.json b/webview-ui/src/i18n/locales/en/chat.json
+index 53e529d4e45..c1ead772ea1 100644
+--- a/webview-ui/src/i18n/locales/en/chat.json
++++ b/webview-ui/src/i18n/locales/en/chat.json
+@@ -208,6 +208,22 @@
+ 		"resultTooltip": "Similarity score: {{score}} (click to open file)"
+ 	},
+ 	"commandOutput": "Command Output",
++	"commandExecution": {
++		"running": "Running",
++		"pid": "PID: {{pid}}",
++		"exited": "Exited ({{exitCode}})",
++		"manageCommands": "Manage Command Permissions",
++		"commandManagementDescription": "Manage command permissions: Click ✓ to allow auto-execution, ✗ to deny execution. Patterns can be toggled on/off or removed from lists. <settingsLink>View all settings</settingsLink>",
++		"addToAllowed": "Add to allowed list",
++		"removeFromAllowed": "Remove from allowed list",
++		"addToDenied": "Add to denied list",
++		"removeFromDenied": "Remove from denied list",
++		"abortCommand": "Abort command execution",
++		"expandOutput": "Expand output",
++		"collapseOutput": "Collapse output",
++		"expandManagement": "Expand command management section",
++		"collapseManagement": "Collapse command management section"
++	},
+ 	"response": "Response",
+ 	"arguments": "Arguments",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/es/chat.json b/webview-ui/src/i18n/locales/es/chat.json
+index bb84baa555a..5a749085201 100644
+--- a/webview-ui/src/i18n/locales/es/chat.json
++++ b/webview-ui/src/i18n/locales/es/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo vio nombres de definiciones de código fuente utilizados en este directorio (fuera del espacio de trabajo):"
+ 	},
+ 	"commandOutput": "Salida del comando",
++	"commandExecution": {
++		"running": "Ejecutando",
++		"pid": "PID: {{pid}}",
++		"exited": "Finalizado ({{exitCode}})",
++		"manageCommands": "Gestionar permisos de comandos",
++		"commandManagementDescription": "Gestionar permisos de comandos: Haz clic en ✓ para permitir la ejecución automática, ✗ para denegar la ejecución. Los patrones se pueden activar/desactivar o eliminar de las listas. <settingsLink>Ver todos los ajustes</settingsLink>",
++		"addToAllowed": "Añadir a la lista de permitidos",
++		"removeFromAllowed": "Eliminar de la lista de permitidos",
++		"addToDenied": "Añadir a la lista de denegados",
++		"removeFromDenied": "Eliminar de la lista de denegados",
++		"abortCommand": "Abortar ejecución del comando",
++		"expandOutput": "Expandir salida",
++		"collapseOutput": "Contraer salida",
++		"expandManagement": "Expandir sección de gestión de comandos",
++		"collapseManagement": "Contraer sección de gestión de comandos"
++	},
+ 	"response": "Respuesta",
+ 	"arguments": "Argumentos",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/fr/chat.json b/webview-ui/src/i18n/locales/fr/chat.json
+index 70bd6011dd7..e81f1a9606f 100644
+--- a/webview-ui/src/i18n/locales/fr/chat.json
++++ b/webview-ui/src/i18n/locales/fr/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo a vu les noms de définitions de code source utilisés dans ce répertoire (hors espace de travail) :"
+ 	},
+ 	"commandOutput": "Sortie de commande",
++	"commandExecution": {
++		"running": "En cours d'exécution",
++		"pid": "PID : {{pid}}",
++		"exited": "Terminé ({{exitCode}})",
++		"manageCommands": "Gérer les autorisations de commande",
++		"commandManagementDescription": "Gérer les autorisations de commande : Cliquez sur ✓ pour autoriser l'exécution automatique, ✗ pour refuser l'exécution. Les modèles peuvent être activés/désactivés ou supprimés des listes. <settingsLink>Voir tous les paramètres</settingsLink>",
++		"addToAllowed": "Ajouter à la liste autorisée",
++		"removeFromAllowed": "Retirer de la liste autorisée",
++		"addToDenied": "Ajouter à la liste refusée",
++		"removeFromDenied": "Retirer de la liste refusée",
++		"abortCommand": "Abandonner l'exécution de la commande",
++		"expandOutput": "Développer la sortie",
++		"collapseOutput": "Réduire la sortie",
++		"expandManagement": "Développer la section de gestion des commandes",
++		"collapseManagement": "Réduire la section de gestion des commandes"
++	},
+ 	"response": "Réponse",
+ 	"arguments": "Arguments",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/hi/chat.json b/webview-ui/src/i18n/locales/hi/chat.json
+index 0fa95c27089..2ea44c4fbce 100644
+--- a/webview-ui/src/i18n/locales/hi/chat.json
++++ b/webview-ui/src/i18n/locales/hi/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo ने इस निर्देशिका (कार्यक्षेत्र के बाहर) में उपयोग किए गए सोर्स कोड परिभाषा नामों को देखा:"
+ 	},
+ 	"commandOutput": "कमांड आउटपुट",
++	"commandExecution": {
++		"running": "चलाया जा रहा है",
++		"pid": "पीआईडी: {{pid}}",
++		"exited": "बाहर निकल गया ({{exitCode}})",
++		"manageCommands": "कमांड अनुमतियाँ प्रबंधित करें",
++		"commandManagementDescription": "कमांड अनुमतियों का प्रबंधन करें: स्वतः-निष्पादन की अनुमति देने के लिए ✓ पर क्लिक करें, निष्पादन से इनकार करने के लिए ✗ पर क्लिक करें। पैटर्न को चालू/बंद किया जा सकता है या सूचियों से हटाया जा सकता है। <settingsLink>सभी सेटिंग्स देखें</settingsLink>",
++		"addToAllowed": "अनुमत सूची में जोड़ें",
++		"removeFromAllowed": "अनुमत सूची से हटाएं",
++		"addToDenied": "अस्वीकृत सूची में जोड़ें",
++		"removeFromDenied": "अस्वीकृत सूची से हटाएं",
++		"abortCommand": "कमांड निष्पादन रद्द करें",
++		"expandOutput": "आउटपुट का विस्तार करें",
++		"collapseOutput": "आउटपुट संक्षिप्त करें",
++		"expandManagement": "कमांड प्रबंधन अनुभाग का विस्तार करें",
++		"collapseManagement": "कमांड प्रबंधन अनुभाग संक्षिप्त करें"
++	},
+ 	"response": "प्रतिक्रिया",
+ 	"arguments": "आर्ग्युमेंट्स",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/id/chat.json b/webview-ui/src/i18n/locales/id/chat.json
+index f8e2a5cb0ec..994d8a9e56f 100644
+--- a/webview-ui/src/i18n/locales/id/chat.json
++++ b/webview-ui/src/i18n/locales/id/chat.json
+@@ -214,6 +214,22 @@
+ 		"resultTooltip": "Skor kemiripan: {{score}} (klik untuk membuka file)"
+ 	},
+ 	"commandOutput": "Output Perintah",
++	"commandExecution": {
++		"running": "Menjalankan",
++		"pid": "PID: {{pid}}",
++		"exited": "Keluar ({{exitCode}})",
++		"manageCommands": "Kelola Izin Perintah",
++		"commandManagementDescription": "Kelola izin perintah: Klik ✓ untuk mengizinkan eksekusi otomatis, ✗ untuk menolak eksekusi. Pola dapat diaktifkan/dinonaktifkan atau dihapus dari daftar. <settingsLink>Lihat semua pengaturan</settingsLink>",
++		"addToAllowed": "Tambahkan ke daftar yang diizinkan",
++		"removeFromAllowed": "Hapus dari daftar yang diizinkan",
++		"addToDenied": "Tambahkan ke daftar yang ditolak",
++		"removeFromDenied": "Hapus dari daftar yang ditolak",
++		"abortCommand": "Batalkan eksekusi perintah",
++		"expandOutput": "Perluas output",
++		"collapseOutput": "Ciutkan output",
++		"expandManagement": "Perluas bagian manajemen perintah",
++		"collapseManagement": "Ciutkan bagian manajemen perintah"
++	},
+ 	"response": "Respons",
+ 	"arguments": "Argumen",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/it/chat.json b/webview-ui/src/i18n/locales/it/chat.json
+index bea63c047a6..5b6c7d43bdf 100644
+--- a/webview-ui/src/i18n/locales/it/chat.json
++++ b/webview-ui/src/i18n/locales/it/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo ha visualizzato i nomi delle definizioni di codice sorgente utilizzate in questa directory (fuori dall'area di lavoro):"
+ 	},
+ 	"commandOutput": "Output del comando",
++	"commandExecution": {
++		"running": "In esecuzione",
++		"pid": "PID: {{pid}}",
++		"exited": "Terminato ({{exitCode}})",
++		"manageCommands": "Gestisci autorizzazioni comandi",
++		"commandManagementDescription": "Gestisci le autorizzazioni dei comandi: fai clic su ✓ per consentire l'esecuzione automatica, ✗ per negare l'esecuzione. I pattern possono essere attivati/disattivati o rimossi dagli elenchi. <settingsLink>Visualizza tutte le impostazioni</settingsLink>",
++		"addToAllowed": "Aggiungi all'elenco consentiti",
++		"removeFromAllowed": "Rimuovi dall'elenco consentiti",
++		"addToDenied": "Aggiungi all'elenco negati",
++		"removeFromDenied": "Rimuovi dall'elenco negati",
++		"abortCommand": "Interrompi esecuzione comando",
++		"expandOutput": "Espandi output",
++		"collapseOutput": "Comprimi output",
++		"expandManagement": "Espandi la sezione di gestione dei comandi",
++		"collapseManagement": "Comprimi la sezione di gestione dei comandi"
++	},
+ 	"response": "Risposta",
+ 	"arguments": "Argomenti",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/ja/chat.json b/webview-ui/src/i18n/locales/ja/chat.json
+index ca6443b3d81..77f4148a11d 100644
+--- a/webview-ui/src/i18n/locales/ja/chat.json
++++ b/webview-ui/src/i18n/locales/ja/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Rooはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示しました:"
+ 	},
+ 	"commandOutput": "コマンド出力",
++	"commandExecution": {
++		"running": "実行中",
++		"pid": "PID: {{pid}}",
++		"exited": "終了しました ({{exitCode}})",
++		"manageCommands": "コマンド権限の管理",
++		"commandManagementDescription": "コマンドの権限を管理します：✓ をクリックして自動実行を許可し、✗ をクリックして実行を拒否します。パターンはオン/オフの切り替えやリストからの削除が可能です。<settingsLink>すべての設定を表示</settingsLink>",
++		"addToAllowed": "許可リストに追加",
++		"removeFromAllowed": "許可リストから削除",
++		"addToDenied": "拒否リストに追加",
++		"removeFromDenied": "拒否リストから削除",
++		"abortCommand": "コマンドの実行を中止",
++		"expandOutput": "出力を展開",
++		"collapseOutput": "出力を折りたたむ",
++		"expandManagement": "コマンド管理セクションを展開",
++		"collapseManagement": "コマンド管理セクションを折りたたむ"
++	},
+ 	"response": "応答",
+ 	"arguments": "引数",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/ko/chat.json b/webview-ui/src/i18n/locales/ko/chat.json
+index 7e2c4467cd6..7cae0e469b8 100644
+--- a/webview-ui/src/i18n/locales/ko/chat.json
++++ b/webview-ui/src/i18n/locales/ko/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo가 이 디렉토리(워크스페이스 외부)에서 사용된 소스 코드 정의 이름을 보았습니다:"
+ 	},
+ 	"commandOutput": "명령 출력",
++	"commandExecution": {
++		"running": "실행 중",
++		"pid": "PID: {{pid}}",
++		"exited": "종료됨 ({{exitCode}})",
++		"manageCommands": "명령 권한 관리",
++		"commandManagementDescription": "명령 권한 관리: 자동 실행을 허용하려면 ✓를 클릭하고 실행을 거부하려면 ✗를 클릭하십시오. 패턴은 켜거나 끄거나 목록에서 제거할 수 있습니다. <settingsLink>모든 설정 보기</settingsLink>",
++		"addToAllowed": "허용 목록에 추가",
++		"removeFromAllowed": "허용 목록에서 제거",
++		"addToDenied": "거부 목록에 추가",
++		"removeFromDenied": "거부 목록에서 제거",
++		"abortCommand": "명령 실행 중단",
++		"expandOutput": "출력 확장",
++		"collapseOutput": "출력 축소",
++		"expandManagement": "명령 관리 섹션 확장",
++		"collapseManagement": "명령 관리 섹션 축소"
++	},
+ 	"response": "응답",
+ 	"arguments": "인수",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/nl/chat.json b/webview-ui/src/i18n/locales/nl/chat.json
+index e123b5e8f2a..e263b8800ee 100644
+--- a/webview-ui/src/i18n/locales/nl/chat.json
++++ b/webview-ui/src/i18n/locales/nl/chat.json
+@@ -187,6 +187,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt:"
+ 	},
+ 	"commandOutput": "Commando-uitvoer",
++	"commandExecution": {
++		"running": "Lopend",
++		"pid": "PID: {{pid}}",
++		"exited": "Afgesloten ({{exitCode}})",
++		"manageCommands": "Beheer Commando Toestemmingen",
++		"commandManagementDescription": "Beheer commando toestemmingen: Klik op ✓ om automatische uitvoering toe te staan, ✗ om uitvoering te weigeren. Patronen kunnen worden in- of uitgeschakeld of uit lijsten worden verwijderd. <settingsLink>Bekijk alle instellingen</settingsLink>",
++		"addToAllowed": "Toevoegen aan toegestane lijst",
++		"removeFromAllowed": "Verwijderen van toegestane lijst",
++		"addToDenied": "Toevoegen aan geweigerde lijst",
++		"removeFromDenied": "Verwijderen van geweigerde lijst",
++		"abortCommand": "Commando-uitvoering afbreken",
++		"expandOutput": "Uitvoer uitvouwen",
++		"collapseOutput": "Uitvoer samenvouwen",
++		"expandManagement": "Beheersectie voor commando's uitvouwen",
++		"collapseManagement": "Beheersectie voor commando's samenvouwen"
++	},
+ 	"response": "Antwoord",
+ 	"arguments": "Argumenten",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/pl/chat.json b/webview-ui/src/i18n/locales/pl/chat.json
+index f772256b102..a80f5351392 100644
+--- a/webview-ui/src/i18n/locales/pl/chat.json
++++ b/webview-ui/src/i18n/locales/pl/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo zobaczył nazwy definicji kodu źródłowego używane w tym katalogu (poza obszarem roboczym):"
+ 	},
+ 	"commandOutput": "Wyjście polecenia",
++	"commandExecution": {
++		"running": "Wykonywanie",
++		"pid": "PID: {{pid}}",
++		"exited": "Zakończono ({{exitCode}})",
++		"manageCommands": "Zarządzaj uprawnieniami poleceń",
++		"commandManagementDescription": "Zarządzaj uprawnieniami poleceń: Kliknij ✓, aby zezwolić na automatyczne wykonanie, ✗, aby odmówić wykonania. Wzorce można włączać/wyłączać lub usuwać z listy. <settingsLink>Zobacz wszystkie ustawienia</settingsLink>",
++		"addToAllowed": "Dodaj do listy dozwolonych",
++		"removeFromAllowed": "Usuń z listy dozwolonych",
++		"addToDenied": "Dodaj do listy odrzuconych",
++		"removeFromDenied": "Usuń z listy odrzuconych",
++		"abortCommand": "Przerwij wykonywanie polecenia",
++		"expandOutput": "Rozwiń wyjście",
++		"collapseOutput": "Zwiń wyjście",
++		"expandManagement": "Rozwiń sekcję zarządzania poleceniami",
++		"collapseManagement": "Zwiń sekcję zarządzania poleceniami"
++	},
+ 	"response": "Odpowiedź",
+ 	"arguments": "Argumenty",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/pt-BR/chat.json b/webview-ui/src/i18n/locales/pt-BR/chat.json
+index 08eb496d0a9..e1473e101d2 100644
+--- a/webview-ui/src/i18n/locales/pt-BR/chat.json
++++ b/webview-ui/src/i18n/locales/pt-BR/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo visualizou nomes de definição de código-fonte usados neste diretório (fora do espaço de trabalho):"
+ 	},
+ 	"commandOutput": "Saída do comando",
++	"commandExecution": {
++		"running": "Executando",
++		"pid": "PID: {{pid}}",
++		"exited": "Encerrado ({{exitCode}})",
++		"manageCommands": "Gerenciar Permissões de Comando",
++		"commandManagementDescription": "Gerencie as permissões de comando: Clique em ✓ para permitir a execução automática, ✗ para negar a execução. Os padrões podem ser ativados/desativados ou removidos das listas. <settingsLink>Ver todas as configurações</settingsLink>",
++		"addToAllowed": "Adicionar à lista de permitidos",
++		"removeFromAllowed": "Remover da lista de permitidos",
++		"addToDenied": "Adicionar à lista de negados",
++		"removeFromDenied": "Remover da lista de negados",
++		"abortCommand": "Abortar execução do comando",
++		"expandOutput": "Expandir saída",
++		"collapseOutput": "Recolher saída",
++		"expandManagement": "Expandir seção de gerenciamento de comandos",
++		"collapseManagement": "Recolher seção de gerenciamento de comandos"
++	},
+ 	"response": "Resposta",
+ 	"arguments": "Argumentos",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/ru/chat.json b/webview-ui/src/i18n/locales/ru/chat.json
+index 07e05015051..7e68295101f 100644
+--- a/webview-ui/src/i18n/locales/ru/chat.json
++++ b/webview-ui/src/i18n/locales/ru/chat.json
+@@ -187,6 +187,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo просмотрел имена определений исходного кода в этой директории (вне рабочего пространства):"
+ 	},
+ 	"commandOutput": "Вывод команды",
++	"commandExecution": {
++		"running": "Выполняется",
++		"pid": "PID: {{pid}}",
++		"exited": "Завершено ({{exitCode}})",
++		"manageCommands": "Управление разрешениями команд",
++		"commandManagementDescription": "Управляйте разрешениями команд: Нажмите ✓, чтобы разрешить автоматическое выполнение, ✗, чтобы запретить выполнение. Шаблоны можно включать/выключать или удалять из списков. <settingsLink>Просмотреть все настройки</settingsLink>",
++		"addToAllowed": "Добавить в список разрешенных",
++		"removeFromAllowed": "Удалить из списка разрешенных",
++		"addToDenied": "Добавить в список запрещенных",
++		"removeFromDenied": "Удалить из списка запрещенных",
++		"abortCommand": "Прервать выполнение команды",
++		"expandOutput": "Развернуть вывод",
++		"collapseOutput": "Свернуть вывод",
++		"expandManagement": "Развернуть раздел управления командами",
++		"collapseManagement": "Свернуть раздел управления командами"
++	},
+ 	"response": "Ответ",
+ 	"arguments": "Аргументы",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/tr/chat.json b/webview-ui/src/i18n/locales/tr/chat.json
+index ee16f56f72b..c797287b717 100644
+--- a/webview-ui/src/i18n/locales/tr/chat.json
++++ b/webview-ui/src/i18n/locales/tr/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüledi:"
+ 	},
+ 	"commandOutput": "Komut Çıktısı",
++	"commandExecution": {
++		"running": "Çalışıyor",
++		"pid": "PID: {{pid}}",
++		"exited": "Çıkıldı ({{exitCode}})",
++		"manageCommands": "Komut İzinlerini Yönet",
++		"commandManagementDescription": "Komut izinlerini yönetin: Otomatik yürütmeye izin vermek için ✓'e, yürütmeyi reddetmek için ✗'e tıklayın. Desenler açılıp kapatılabilir veya listelerden kaldırılabilir. <settingsLink>Tüm ayarları görüntüle</settingsLink>",
++		"addToAllowed": "İzin verilenler listesine ekle",
++		"removeFromAllowed": "İzin verilenler listesinden kaldır",
++		"addToDenied": "Reddedilenler listesine ekle",
++		"removeFromDenied": "Reddedilenler listesinden kaldır",
++		"abortCommand": "Komut yürütmeyi iptal et",
++		"expandOutput": "Çıktıyı genişlet",
++		"collapseOutput": "Çıktıyı daralt",
++		"expandManagement": "Komut yönetimi bölümünü genişlet",
++		"collapseManagement": "Komut yönetimi bölümünü daralt"
++	},
+ 	"response": "Yanıt",
+ 	"arguments": "Argümanlar",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/vi/chat.json b/webview-ui/src/i18n/locales/vi/chat.json
+index e56f63a91e2..3e08f0d6ffa 100644
+--- a/webview-ui/src/i18n/locales/vi/chat.json
++++ b/webview-ui/src/i18n/locales/vi/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo đã xem tên định nghĩa mã nguồn được sử dụng trong thư mục này (ngoài không gian làm việc):"
+ 	},
+ 	"commandOutput": "Kết quả lệnh",
++	"commandExecution": {
++		"running": "Đang chạy",
++		"pid": "PID: {{pid}}",
++		"exited": "Đã thoát ({{exitCode}})",
++		"manageCommands": "Quản lý quyền lệnh",
++		"commandManagementDescription": "Quản lý quyền lệnh: Nhấp vào ✓ để cho phép tự động thực thi, ✗ để từ chối thực thi. Các mẫu có thể được bật/tắt hoặc xóa khỏi danh sách. <settingsLink>Xem tất cả cài đặt</settingsLink>",
++		"addToAllowed": "Thêm vào danh sách cho phép",
++		"removeFromAllowed": "Xóa khỏi danh sách cho phép",
++		"addToDenied": "Thêm vào danh sách từ chối",
++		"removeFromDenied": "Xóa khỏi danh sách từ chối",
++		"abortCommand": "Hủy bỏ thực thi lệnh",
++		"expandOutput": "Mở rộng kết quả",
++		"collapseOutput": "Thu gọn kết quả",
++		"expandManagement": "Mở rộng phần quản lý lệnh",
++		"collapseManagement": "Thu gọn phần quản lý lệnh"
++	},
+ 	"response": "Phản hồi",
+ 	"arguments": "Tham số",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/zh-CN/chat.json b/webview-ui/src/i18n/locales/zh-CN/chat.json
+index d98dbe6f051..280a2844055 100644
+--- a/webview-ui/src/i18n/locales/zh-CN/chat.json
++++ b/webview-ui/src/i18n/locales/zh-CN/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo已查看此目录中使用的源代码定义名称（工作区外）:"
+ 	},
+ 	"commandOutput": "命令输出",
++	"commandExecution": {
++		"running": "正在运行",
++		"pid": "PID: {{pid}}",
++		"exited": "已退出 ({{exitCode}})",
++		"manageCommands": "管理命令权限",
++		"commandManagementDescription": "管理命令权限：点击 ✓ 允许自动执行，点击 ✗ 拒绝执行。可以打开/关闭模式或从列表中删除。<settingsLink>查看所有设置</settingsLink>",
++		"addToAllowed": "添加到允许列表",
++		"removeFromAllowed": "从允许列表中删除",
++		"addToDenied": "添加到拒绝列表",
++		"removeFromDenied": "从拒绝列表中删除",
++		"abortCommand": "中止命令执行",
++		"expandOutput": "展开输出",
++		"collapseOutput": "折叠输出",
++		"expandManagement": "展开命令管理部分",
++		"collapseManagement": "折叠命令管理部分"
++	},
+ 	"response": "响应",
+ 	"arguments": "参数",
+ 	"mcp": {
+diff --git a/webview-ui/src/i18n/locales/zh-TW/chat.json b/webview-ui/src/i18n/locales/zh-TW/chat.json
+index e5dcd13a428..658acc5cd0c 100644
+--- a/webview-ui/src/i18n/locales/zh-TW/chat.json
++++ b/webview-ui/src/i18n/locales/zh-TW/chat.json
+@@ -192,6 +192,22 @@
+ 		"didViewDefinitionsOutsideWorkspace": "Roo 已檢視此目錄（工作區外）中使用的原始碼定義名稱："
+ 	},
+ 	"commandOutput": "命令輸出",
++	"commandExecution": {
++		"running": "正在執行",
++		"pid": "PID: {{pid}}",
++		"exited": "已退出 ({{exitCode}})",
++		"manageCommands": "管理命令權限",
++		"commandManagementDescription": "管理命令權限：點擊 ✓ 允許自動執行，點擊 ✗ 拒絕執行。可以開啟/關閉模式或從清單中刪除。<settingsLink>檢視所有設定</settingsLink>",
++		"addToAllowed": "新增至允許清單",
++		"removeFromAllowed": "從允許清單中移除",
++		"addToDenied": "新增至拒絕清單",
++		"removeFromDenied": "從拒絕清單中移除",
++		"abortCommand": "中止命令執行",
++		"expandOutput": "展開輸出",
++		"collapseOutput": "折疊輸出",
++		"expandManagement": "展開命令管理部分",
++		"collapseManagement": "折疊命令管理部分"
++	},
+ 	"response": "回應",
+ 	"arguments": "參數",
+ 	"mcp": {
+diff --git a/webview-ui/src/utils/__tests__/commandPatterns.spec.ts b/webview-ui/src/utils/__tests__/commandPatterns.spec.ts
+new file mode 100644
+index 00000000000..92feda0412f
+--- /dev/null
++++ b/webview-ui/src/utils/__tests__/commandPatterns.spec.ts
+@@ -0,0 +1,501 @@
++import { describe, it, expect } from "vitest"
++import {
++	extractCommandPatterns,
++	getPatternDescription,
++	parseCommandAndOutput,
++	detectSecurityIssues,
++} from "../commandPatterns"
++
++describe("extractCommandPatterns", () => {
++	it("should extract simple command", () => {
++		const patterns = extractCommandPatterns("ls")
++		expect(patterns).toEqual(["ls"])
++	})
++
++	it("should extract command with arguments", () => {
++		const patterns = extractCommandPatterns("npm install express")
++		expect(patterns).toEqual(["npm", "npm install", "npm install express"])
++	})
++
++	it("should handle piped commands", () => {
++		const patterns = extractCommandPatterns("ls -la | grep test")
++		expect(patterns).toContain("ls")
++		expect(patterns).toContain("grep")
++		expect(patterns).toContain("grep test")
++	})
++
++	it("should handle chained commands with &&", () => {
++		const patterns = extractCommandPatterns("npm install && npm run build")
++		expect(patterns).toContain("npm")
++		expect(patterns).toContain("npm install")
++		expect(patterns).toContain("npm run")
++		expect(patterns).toContain("npm run build")
++	})
++
++	it("should handle chained commands with ||", () => {
++		const patterns = extractCommandPatterns("npm test || npm run test:ci")
++		expect(patterns).toContain("npm")
++		expect(patterns).toContain("npm test")
++		expect(patterns).toContain("npm run")
++		expect(patterns).toContain("npm run test:ci")
++	})
++
++	it("should handle semicolon separated commands", () => {
++		const patterns = extractCommandPatterns("cd src; npm install")
++		expect(patterns).toContain("cd")
++		expect(patterns).toContain("cd src")
++		expect(patterns).toContain("npm")
++		expect(patterns).toContain("npm install")
++	})
++
++	it("should stop at flags", () => {
++		const patterns = extractCommandPatterns('git commit -m "test message"')
++		expect(patterns).toContain("git")
++		expect(patterns).toContain("git commit")
++		expect(patterns).not.toContain("git commit -m")
++	})
++
++	it("should stop at paths with slashes", () => {
++		const patterns = extractCommandPatterns("cd /usr/local/bin")
++		expect(patterns).toContain("cd")
++		expect(patterns).not.toContain("cd /usr/local/bin")
++	})
++
++	it("should handle empty or null input", () => {
++		expect(extractCommandPatterns("")).toEqual([])
++		expect(extractCommandPatterns("   ")).toEqual([])
++		expect(extractCommandPatterns(null as any)).toEqual([])
++		expect(extractCommandPatterns(undefined as any)).toEqual([])
++	})
++
++	it("should handle complex command with multiple operators", () => {
++		const patterns = extractCommandPatterns('npm install && npm test | grep success || echo "failed"')
++		expect(patterns).toContain("npm")
++		expect(patterns).toContain("npm install")
++		expect(patterns).toContain("npm test")
++		expect(patterns).toContain("grep")
++		expect(patterns).toContain("grep success")
++		expect(patterns).toContain("echo")
++	})
++
++	it("should handle malformed commands gracefully", () => {
++		const patterns = extractCommandPatterns("npm install && ")
++		expect(patterns).toContain("npm")
++		expect(patterns).toContain("npm install")
++	})
++
++	it("should extract main command even if parsing fails", () => {
++		// Create a command that might cause parsing issues
++		const patterns = extractCommandPatterns('echo "unclosed quote')
++		expect(patterns).toContain("echo")
++	})
++
++	it("should handle commands with special characters in arguments", () => {
++		const patterns = extractCommandPatterns("git add .")
++		expect(patterns).toContain("git")
++		expect(patterns).toContain("git add")
++		expect(patterns).not.toContain("git add .")
++	})
++
++	it("should return sorted patterns", () => {
++		const patterns = extractCommandPatterns("npm run build && git push")
++		expect(patterns).toEqual([...patterns].sort())
++	})
++
++	it("should handle numeric input like '0 total'", () => {
++		const patterns = extractCommandPatterns("0 total")
++		// Should return empty array since "0" is not a valid command
++		expect(patterns).toEqual([])
++	})
++
++	it("should handle pure numeric commands", () => {
++		const patterns = extractCommandPatterns("0")
++		// Should return empty array since pure numbers are not valid commands
++		expect(patterns).toEqual([])
++	})
++})
++
++describe("getPatternDescription", () => {
++	it("should return pattern followed by commands", () => {
++		expect(getPatternDescription("cd")).toBe("cd commands")
++		expect(getPatternDescription("npm")).toBe("npm commands")
++		expect(getPatternDescription("npm install")).toBe("npm install commands")
++		expect(getPatternDescription("git")).toBe("git commands")
++		expect(getPatternDescription("git push")).toBe("git push commands")
++		expect(getPatternDescription("python")).toBe("python commands")
++	})
++
++	it("should handle any command pattern", () => {
++		expect(getPatternDescription("unknowncommand")).toBe("unknowncommand commands")
++		expect(getPatternDescription("custom-tool")).toBe("custom-tool commands")
++	})
++
++	it("should handle package managers", () => {
++		expect(getPatternDescription("yarn")).toBe("yarn commands")
++		expect(getPatternDescription("pnpm")).toBe("pnpm commands")
++		expect(getPatternDescription("bun")).toBe("bun commands")
++	})
++
++	it("should handle build tools", () => {
++		expect(getPatternDescription("make")).toBe("make commands")
++		expect(getPatternDescription("cmake")).toBe("cmake commands")
++		expect(getPatternDescription("cargo")).toBe("cargo commands")
++		expect(getPatternDescription("go build")).toBe("go build commands")
++	})
++})
++
++describe("parseCommandAndOutput", () => {
++	it("should handle command with $ prefix without Output: separator", () => {
++		const text = "$ npm install\nInstalling packages..."
++		const result = parseCommandAndOutput(text)
++		// Without Output: separator, the entire text is treated as command
++		expect(result.command).toBe("$ npm install\nInstalling packages...")
++		expect(result.output).toBe("")
++	})
++
++	it("should handle command with ❯ prefix without Output: separator", () => {
++		const text = "❯ git status\nOn branch main"
++		const result = parseCommandAndOutput(text)
++		// Without Output: separator, the entire text is treated as command
++		expect(result.command).toBe("❯ git status\nOn branch main")
++		expect(result.output).toBe("")
++	})
++
++	it("should handle command with > prefix without Output: separator", () => {
++		const text = "> echo hello\nhello"
++		const result = parseCommandAndOutput(text)
++		// Without Output: separator, the entire text is treated as command
++		expect(result.command).toBe("> echo hello\nhello")
++		expect(result.output).toBe("")
++	})
++
++	it("should return original text if no command prefix found", () => {
++		const text = "npm install"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("npm install")
++		expect(result.output).toBe("")
++	})
++
++	it("should extract AI suggestions from output with Output: separator", () => {
++		const text = "npm install\nOutput:\nSuggested patterns: npm, npm install, npm run"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("npm install")
++		expect(result.suggestions).toEqual(["npm", "npm install", "npm run"])
++	})
++
++	it("should extract suggestions with different formats", () => {
++		const text = "git push\nOutput:\nCommand patterns: git, git push"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("git push")
++		expect(result.suggestions).toEqual(["git", "git push"])
++	})
++
++	it('should extract suggestions from "you can allow" format', () => {
++		const text = "docker run\nOutput:\nYou can allow: docker, docker run"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("docker run")
++		expect(result.suggestions).toEqual(["docker", "docker run"])
++	})
++
++	it("should extract suggestions from bullet points", () => {
++		const text = `npm test
++Output:
++Output here...
++- npm
++- npm test
++- npm run`
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("npm test")
++		expect(result.suggestions).toContain("npm")
++		expect(result.suggestions).toContain("npm test")
++		expect(result.suggestions).toContain("npm run")
++	})
++
++	it("should extract suggestions from various bullet formats", () => {
++		const text = `command
++Output:
++• npm
++* git
++- docker
++▪ python`
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("command")
++		expect(result.suggestions).toContain("npm")
++		expect(result.suggestions).toContain("git")
++		expect(result.suggestions).toContain("docker")
++		expect(result.suggestions).toContain("python")
++	})
++
++	it("should extract suggestions with backticks", () => {
++		const text = "npm install\nOutput:\n- `npm`\n- `npm install`"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("npm install")
++		expect(result.suggestions).toContain("npm")
++		expect(result.suggestions).toContain("npm install")
++	})
++
++	it("should handle empty text", () => {
++		const result = parseCommandAndOutput("")
++		expect(result.command).toBe("")
++		expect(result.output).toBe("")
++		expect(result.suggestions).toEqual([])
++	})
++
++	it("should handle multiline commands without Output: separator", () => {
++		const text = `$ npm install \\
++	 express \\
++	 mongoose
++Installing...`
++		const result = parseCommandAndOutput(text)
++		// Without Output: separator, entire text is treated as command
++		expect(result.command).toBe(text)
++		expect(result.output).toBe("")
++	})
++
++	it("should include all suggestions from comma-separated list with Output: separator", () => {
++		const text = "test\nOutput:\nSuggested patterns: npm, npm install, npm run"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("test")
++		expect(result.suggestions).toEqual(["npm", "npm install", "npm run"])
++	})
++
++	it("should handle case variations in suggestion patterns", () => {
++		const text = "test\nOutput:\nSuggested Patterns: npm, git\nCommand Patterns: docker"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("test")
++		// Now it should accumulate all suggestions
++		expect(result.suggestions).toContain("npm")
++		expect(result.suggestions).toContain("git")
++		expect(result.suggestions).toContain("docker")
++	})
++
++	it("should handle text already split by Output:", () => {
++		const text = "npm install && cd backend\nOutput:\ngithub-pr-contributors-tracker@1.0.0 prepare"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("npm install && cd backend")
++		expect(result.output).toBe("github-pr-contributors-tracker@1.0.0 prepare")
++	})
++
++	it("should preserve original command when Output: separator is present", () => {
++		const text = "npm install\nOutput:\n$ npm install\nInstalling packages..."
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("npm install")
++		expect(result.output).toBe("$ npm install\nInstalling packages...")
++	})
++
++	it("should handle Output: separator with no output", () => {
++		const text = "ls -la\nOutput:"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("ls -la")
++		expect(result.output).toBe("")
++	})
++
++	it("should handle Output: separator with whitespace", () => {
++		const text = "git status\nOutput:  \n  On branch main  "
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("git status")
++		expect(result.output).toBe("On branch main")
++	})
++
++	it("should only use first Output: occurrence as separator", () => {
++		const text = 'echo "test"\nOutput:\nFirst output\nOutput: Second output'
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe('echo "test"')
++		expect(result.output).toBe("First output\nOutput: Second output")
++	})
++
++	it("should handle output with numbers at the start of lines", () => {
++		const text = `wc -l *.go *.java
++Output:
++25 hello_world.go
++316 HelloWorld.java
++341 total`
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("wc -l *.go *.java")
++		expect(result.output).toBe("25 hello_world.go\n316 HelloWorld.java\n341 total")
++		expect(result.suggestions).toEqual([])
++	})
++
++	it("should handle edge case where text starts with Output:", () => {
++		const text = "Output:\nSome output without a command"
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("")
++		expect(result.output).toBe("Some output without a command")
++	})
++
++	it("should not be confused by Output: appearing in the middle of output", () => {
++		const text = `echo "Output: test"
++Output:
++Output: test`
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe('echo "Output: test"')
++		expect(result.output).toBe("Output: test")
++	})
++
++	it("should handle commands without shell prompt when Output: separator is present", () => {
++		const text = `npm install
++Output:
++Installing packages...`
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("npm install")
++		expect(result.output).toBe("Installing packages...")
++	})
++
++	it("should not parse shell prompts from output when Output: separator exists", () => {
++		const text = `ls -la
++Output:
++$ total 341
++drwxr-xr-x  10 user  staff   320 Jan 22 12:00 .
++drwxr-xr-x  20 user  staff   640 Jan 22 11:00 ..`
++		const result = parseCommandAndOutput(text)
++		expect(result.command).toBe("ls -la")
++		expect(result.output).toContain("$ total 341")
++		expect(result.output).toContain("drwxr-xr-x")
++	})
++})
++
++describe("detectSecurityIssues", () => {
++	it("should detect subshell execution with $()", () => {
++		const warnings = detectSecurityIssues("echo $(malicious)")
++		expect(warnings).toHaveLength(1)
++		expect(warnings[0].type).toBe("subshell")
++		expect(warnings[0].message).toContain("subshell execution")
++	})
++
++	it("should detect subshell execution with backticks", () => {
++		const warnings = detectSecurityIssues("echo `malicious`")
++		expect(warnings).toHaveLength(1)
++		expect(warnings[0].type).toBe("subshell")
++		expect(warnings[0].message).toContain("subshell execution")
++	})
++
++	it("should detect nested subshells", () => {
++		const warnings = detectSecurityIssues("echo $(echo $(date))")
++		expect(warnings).toHaveLength(1)
++		expect(warnings[0].type).toBe("subshell")
++	})
++
++	it("should detect subshells in complex commands", () => {
++		const warnings = detectSecurityIssues("npm install && echo $(whoami) || git push")
++		expect(warnings).toHaveLength(1)
++		expect(warnings[0].type).toBe("subshell")
++	})
++
++	it("should not detect issues in safe commands", () => {
++		const warnings = detectSecurityIssues("npm install express")
++		expect(warnings).toHaveLength(0)
++	})
++
++	it("should handle empty commands", () => {
++		const warnings = detectSecurityIssues("")
++		expect(warnings).toHaveLength(0)
++	})
++
++	it("should detect multiple subshell patterns", () => {
++		const warnings = detectSecurityIssues("echo $(date) && echo `whoami`")
++		expect(warnings).toHaveLength(1) // Should still be 1 warning for subshell presence
++		expect(warnings[0].type).toBe("subshell")
++	})
++
++	it("should detect subshells in quoted strings", () => {
++		const warnings = detectSecurityIssues('echo "Current user: $(whoami)"')
++		expect(warnings).toHaveLength(1)
++		expect(warnings[0].type).toBe("subshell")
++	})
++})
++
++describe("security integration with extractCommandPatterns", () => {
++	it("should not include subshell content in patterns", () => {
++		const patterns = extractCommandPatterns("echo $(malicious)")
++		expect(patterns).toContain("echo")
++		expect(patterns).not.toContain("$(malicious)")
++		expect(patterns).not.toContain("malicious")
++	})
++
++	it("should handle commands with subshells properly", () => {
++		const patterns = extractCommandPatterns("npm install && echo $(whoami)")
++		expect(patterns).toContain("npm")
++		expect(patterns).toContain("npm install")
++		expect(patterns).toContain("echo")
++		expect(patterns).not.toContain("whoami")
++	})
++
++	it("should extract patterns from commands with backtick subshells", () => {
++		const patterns = extractCommandPatterns("git commit -m `date`")
++		expect(patterns).toContain("git")
++		expect(patterns).toContain("git commit")
++		expect(patterns).not.toContain("date")
++	})
++})
++
++describe("integration: parseCommandAndOutput with extractCommandPatterns", () => {
++	it("should not extract patterns from output text", () => {
++		const text = `wc -l *.go *.java
++Output:
++wc: *.go: open: No such file or directory
++wc: *.java: open: No such file or directory
++0 total`
++		const { command } = parseCommandAndOutput(text)
++		const patterns = extractCommandPatterns(command)
++
++		// Should only extract patterns from the command, not the output
++		expect(patterns).toContain("wc")
++		expect(patterns).not.toContain("0")
++		expect(patterns).not.toContain("total")
++		expect(patterns).not.toContain("0 total")
++	})
++
++	it("should handle the specific wc command case", () => {
++		const text = `wc -l *.go *.java
++Output:
++25 hello_world.go
++316 HelloWorld.java
++341 total`
++		const { command } = parseCommandAndOutput(text)
++		const patterns = extractCommandPatterns(command)
++
++		// Should only extract "wc" from the command
++		expect(patterns).toEqual(["wc"])
++		expect(patterns).not.toContain("341")
++		expect(patterns).not.toContain("total")
++		expect(patterns).not.toContain("341 total")
++	})
++
++	it("should handle wc command with error output", () => {
++		const text = `wc -l *.go *.java
++Output:
++wc: *.go: open: No such file or directory
++wc: *.java: open: No such file or directory
++0 total`
++		const { command, output } = parseCommandAndOutput(text)
++		const patterns = extractCommandPatterns(command)
++
++		// Should only extract "wc" from the command
++		expect(command).toBe("wc -l *.go *.java")
++		expect(output).toContain("0 total")
++		expect(patterns).toEqual(["wc"])
++		expect(patterns).not.toContain("0")
++		expect(patterns).not.toContain("total")
++		expect(patterns).not.toContain("0 total")
++	})
++
++	it("should handle case where only output line is provided", () => {
++		// This simulates if somehow only "0 total" is passed as the text
++		const text = "0 total"
++		const { command } = parseCommandAndOutput(text)
++		const patterns = extractCommandPatterns(command)
++
++		// In this case, the entire text is treated as command
++		expect(command).toBe("0 total")
++		// But "0 total" is not a valid command pattern (starts with number)
++		expect(patterns).toEqual([])
++	})
++
++	it("should handle commands without output separator", () => {
++		const text = "npm install"
++		const { command } = parseCommandAndOutput(text)
++		const patterns = extractCommandPatterns(command)
++
++		expect(patterns).toEqual(["npm", "npm install"])
++	})
++})
+diff --git a/webview-ui/src/utils/commandPatterns.ts b/webview-ui/src/utils/commandPatterns.ts
+new file mode 100644
+index 00000000000..0265ad61bb5
+--- /dev/null
++++ b/webview-ui/src/utils/commandPatterns.ts
+@@ -0,0 +1,177 @@
++import { parse } from "shell-quote"
++
++export interface CommandPattern {
++	pattern: string
++	description?: string
++}
++
++export interface SecurityWarning {
++	type: "subshell" | "injection"
++	message: string
++}
++
++function processCommand(cmd: string[], patterns: Set<string>): void {
++	if (!cmd.length || typeof cmd[0] !== "string") return
++
++	const mainCmd = cmd[0]
++
++	// Skip if it's just a number (like "0" from "0 total")
++	if (/^\d+$/.test(mainCmd)) return
++
++	// Skip common output patterns that aren't commands
++	const skipWords = ["total", "error", "warning", "failed", "success", "done"]
++	if (skipWords.includes(mainCmd.toLowerCase())) return
++
++	patterns.add(mainCmd)
++
++	const breakingExps = [/^-/, /[\\/.~]/]
++
++	for (let i = 1; i < cmd.length; i++) {
++		const arg = cmd[i]
++
++		if (typeof arg !== "string" || breakingExps.some((re) => re.test(arg))) break
++
++		const pattern = cmd.slice(0, i + 1).join(" ")
++		patterns.add(pattern)
++	}
++}
++
++function extractPatterns(cmdStr: string): Set<string> {
++	const patterns = new Set<string>()
++
++	const parsed = parse(cmdStr)
++
++	const commandSeparators = new Set(["|", "&&", "||", ";"])
++	let current: string[] = []
++	for (const token of parsed) {
++		if (typeof token === "object" && "op" in token && commandSeparators.has(token.op)) {
++			if (current.length) processCommand(current, patterns)
++			current = []
++		} else {
++			current.push(String(token))
++		}
++	}
++
++	if (current.length) processCommand(current, patterns)
++
++	return patterns
++}
++
++export function extractCommandPatterns(command: string): string[] {
++	if (!command?.trim()) return []
++
++	// First, check if the command contains subshells and remove them
++	// This is important for security - we don't want to extract patterns from subshell contents
++	const cleanedCommand = command
++		.replace(/\$\([^)]*\)/g, "") // Remove $() subshells
++		.replace(/`[^`]*`/g, "") // Remove backtick subshells
++
++	const patterns = extractPatterns(cleanedCommand)
++
++	return Array.from(patterns).sort()
++}
++
++export function detectSecurityIssues(command: string): SecurityWarning[] {
++	const warnings: SecurityWarning[] = []
++
++	// Check for subshell execution attempts
++	if (command.includes("$(") || command.includes("`")) {
++		warnings.push({
++			type: "subshell",
++			message: "Command contains subshell execution which could bypass restrictions",
++		})
++	}
++
++	return warnings
++}
++
++/**
++ * Get a human-readable description for a command pattern.
++ * Simply returns the pattern followed by "commands".
++ */
++export function getPatternDescription(pattern: string): string {
++	return `${pattern} commands`
++}
++
++export function parseCommandAndOutput(text: string): {
++	command: string
++	output: string
++	suggestions: string[]
++} {
++	// Default result
++	const result = {
++		command: text,
++		output: "",
++		suggestions: [] as string[],
++	}
++
++	// First check if the text already has been split by COMMAND_OUTPUT_STRING
++	// This happens when the command has already been executed and we have the output
++	const outputSeparator = "Output:"
++	const outputIndex = text.indexOf(`\n${outputSeparator}`)
++
++	if (outputIndex !== -1) {
++		// Text is already split into command and output
++		// The command is everything before the output separator
++		result.command = text.slice(0, outputIndex).trim()
++		// The output is everything after the output separator
++		// We need to skip the newline and "Output:" text
++		const afterNewline = outputIndex + 1 // Skip the newline
++		const afterSeparator = afterNewline + outputSeparator.length // Skip "Output:"
++		// Check if there's a colon and potential space after it
++		let startOfOutput = afterSeparator
++		if (text[afterSeparator] === "\n") {
++			startOfOutput = afterSeparator + 1 // Skip additional newline after "Output:"
++		}
++		result.output = text.slice(startOfOutput).trim()
++	} else if (text.indexOf(outputSeparator) === 0) {
++		// Edge case: text starts with "Output:" (no command)
++		result.command = ""
++		result.output = text.slice(outputSeparator.length).trim()
++	} else {
++		// No output separator found, the entire text is the command
++		result.command = text.trim()
++		result.output = ""
++	}
++
++	// Look for AI suggestions in the output
++	// These might be in a format like:
++	// "Suggested patterns: npm, npm install, npm run"
++	// or as a list
++	const suggestionPatterns = [
++		/Suggested patterns?:\s*(.+?)(?:\n|$)/i,
++		/Command patterns?:\s*(.+?)(?:\n|$)/i,
++		/You (?:can|may|might) (?:want to )?(?:allow|add):\s*(.+?)(?:\n|$)/i,
++	]
++
++	for (const pattern of suggestionPatterns) {
++		const match = result.output.match(pattern)
++		if (match) {
++			// Split by common delimiters and clean up
++			const suggestions = match[1]
++				.split(/[,;]/)
++				.map((s) => s.trim())
++				.filter((s) => s) // Allow multi-word patterns like "npm install"
++
++			if (suggestions.length > 0) {
++				// Add to existing suggestions instead of replacing
++				result.suggestions.push(...suggestions)
++			}
++		}
++	}
++
++	// Remove duplicates
++	result.suggestions = Array.from(new Set(result.suggestions))
++
++	// Also look for bullet points or numbered lists
++	// const listPattern = /^[\s\-*•·▪▫◦‣⁃]\s*`?([a-zA-Z0-9_-]+(?:\s+[a-zA-Z0-9_-]+)?)`?$/gm
++	const lines = result.output.split("\n")
++	for (const line of lines) {
++		const match = line.match(/^[\s\-*•·▪▫◦‣⁃]\s*`?([a-zA-Z0-9_-]+(?:\s+[a-zA-Z0-9_-]+)?)`?$/)
++		if (match && match[1] && !result.suggestions.includes(match[1])) {
++			result.suggestions.push(match[1])
++		}
++	}
++
++	return result
++}
