@@ -34,10 +34,11 @@ export class CodeIndexSearchService {
 		const minScore = this.configManager.currentSearchMinScore
 		const maxResults = this.configManager.currentSearchMaxResults
 
+		// Note: State checking is now handled in the codebaseSearchTool
+		// This allows the tool to provide more user-friendly feedback
 		const currentState = this.stateManager.getCurrentStatus().systemStatus
-		if (currentState !== "Indexed" && currentState !== "Indexing") {
-			// Allow search during Indexing too
-			throw new Error(`Code index is not ready for search. Current state: ${currentState}`)
+		if (currentState === "Error") {
+			throw new Error(`Code index is in error state. Please check your configuration.`)
 		}
 
 		try {

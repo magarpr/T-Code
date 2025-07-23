@@ -82,6 +82,33 @@ export async function codebaseSearchTool(
 			throw new Error("Code Indexing is not configured (Missing OpenAI Key or Qdrant URL).")
 		}
 
+		// Check indexing state at runtime
+		const indexingState = manager.state
+		if (indexingState !== "Indexed") {
+			let stateMessage = ""
+			switch (indexingState) {
+				case "Standby":
+					stateMessage =
+						"Code indexing has not started yet. Please wait for the initial indexing to complete."
+					break
+				case "Indexing":
+					stateMessage =
+						"Code indexing is currently in progress. Semantic search will be available once indexing is complete."
+					break
+				case "Error":
+					stateMessage = "Code indexing encountered an error. Please check your configuration and try again."
+					break
+				default:
+					stateMessage = `Code indexing is in an unexpected state: ${indexingState}`
+			}
+
+			// Return informative message instead of throwing error
+			pushToolResult(
+				`Semantic search is not available yet (currently ${indexingState}).\n\n${stateMessage}\n\nPlease use file reading tools (read_file, search_files) for now.`,
+			)
+			return
+		}
+
 		const searchResults: VectorStoreSearchResult[] = await manager.searchIndex(query, directoryPrefix)
 
 		// 3. Format and push results
