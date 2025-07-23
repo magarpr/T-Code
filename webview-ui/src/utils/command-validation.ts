@@ -123,9 +123,10 @@ export function parseCommand(command: string): string[] {
 				currentCommand.push(token.op)
 			}
 		} else if (typeof token === "string") {
-			// Check if it's a subshell placeholder
+			// Check if this is a subshell placeholder
 			const subshellMatch = token.match(/__SUBSH_(\d+)__/)
 			if (subshellMatch) {
+				// Add the subshell command as a separate command
 				if (currentCommand.length > 0) {
 					commands.push(currentCommand.join(" "))
 					currentCommand = []
@@ -280,6 +281,40 @@ export function isAutoDeniedSingleCommand(
 }
 
 /**
+ * Check if a command contains subshell execution that should be blocked.
+ * Only blocks if there's a denylist configured and the command isn't just outputting text.
+ */
+function containsBlockableSubshell(command: string, deniedCommands?: string[]): boolean {
+	if (!deniedCommands?.length) return false
+
+	const trimmedCommand = command.trim()
+	const isTextOutputCommand =
+		/^(echo|printf|cat|print)\s+["']/.test(trimmedCommand) || /^(echo|printf|cat|print)\s+\\?"/.test(trimmedCommand)
+
+	if (isTextOutputCommand) return false
+
+	// Look for actual command substitution $()
+	const hasCommandSubstitution = /\$\([^)]+\)/.test(command)
+
+	// For backticks, be more careful - they could be in markdown
+	let hasBacktickSubstitution = false
+	if (command.includes("`")) {
+		// Simple heuristic: if the command has multi-line content or markdown-like
+		// patterns, the backticks are probably not for command substitution
+		const hasMarkdownIndicators =
+			command.includes("```") || command.includes("\n") || command.includes("##") || command.includes("**")
+
+		if (!hasMarkdownIndicators) {
+			// Check if backticks are likely command substitution
+			// Look for patterns like: cmd `subcmd` or var=`cmd`
+			hasBacktickSubstitution = /[^\\]`[^`\n]+`/.test(command)
+		}
+	}
+
+	return hasCommandSubstitution || hasBacktickSubstitution
+}
+
+/**
  * Check if a command string should be auto-approved.
  * Only blocks subshell attempts if there's a denylist configured.
  * Requires all sub-commands to be auto-approved.
@@ -288,7 +323,7 @@ export function isAutoApprovedCommand(command: string, allowedCommands: string[]
 	if (!command?.trim()) return true
 
 	// Only block subshell execution attempts if there's a denylist configured
-	if ((command.includes("$(") || command.includes("`")) && deniedCommands?.length) {
+	if (containsBlockableSubshell(command, deniedCommands)) {
 		return false
 	}
 
@@ -313,7 +348,7 @@ export function isAutoDeniedCommand(command: string, allowedCommands: string[], 
 	if (!command?.trim()) return false
 
 	// Only block subshell execution attempts if there's a denylist configured
-	if ((command.includes("$(") || command.includes("`")) && deniedCommands?.length) {
+	if (containsBlockableSubshell(command, deniedCommands)) {
 		return true
 	}
 
@@ -385,7 +420,7 @@ export function getCommandDecision(
 	if (!command?.trim()) return "auto_approve"
 
 	// Only block subshell execution attempts if there's a denylist configured
-	if ((command.includes("$(") || command.includes("`")) && deniedCommands?.length) {
+	if (containsBlockableSubshell(command, deniedCommands)) {
 		return "auto_deny"
 	}
 
