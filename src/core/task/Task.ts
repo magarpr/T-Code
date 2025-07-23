@@ -518,14 +518,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 		}
 
-		await pWaitFor(() => this.askResponse !== undefined || this.lastMessageTs !== askTs || this.abort, {
-			interval: 100,
-		})
-
-		if (this.abort) {
-			// Task was aborted, return a default response
-			return { response: "messageResponse", text: undefined, images: undefined }
-		}
+		await pWaitFor(() => this.askResponse !== undefined || this.lastMessageTs !== askTs, { interval: 100 })
 
 		if (this.lastMessageTs !== askTs) {
 			// Could happen if we send multiple asks in a row i.e. with
@@ -1087,13 +1080,6 @@ export class Task extends EventEmitter<ClineEvents> {
 		// Will stop any autonomously running promises.
 		if (isAbandoned) {
 			this.abandoned = true
-		}
-
-		// Resolve any pending ask operations to prevent "Current ask promise was ignored" errors
-		if (this.askResponse === undefined) {
-			this.askResponse = "messageResponse"
-			this.askResponseText = undefined
-			this.askResponseImages = undefined
 		}
 
 		this.abort = true
