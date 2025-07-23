@@ -177,13 +177,13 @@ export const ChatRowContent = ({
 		vscode.postMessage({ type: "selectImages", context: "edit", messageTs: message.ts })
 	}, [message.ts])
 
-	const [cost, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
+	const [cost, apiReqCancelReason, apiReqStreamingFailedMessage, errorDetails] = useMemo(() => {
 		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
 			const info = safeJsonParse<ClineApiReqInfo>(message.text)
-			return [info?.cost, info?.cancelReason, info?.streamingFailedMessage]
+			return [info?.cost, info?.cancelReason, info?.streamingFailedMessage, info?.errorDetails]
 		}
 
-		return [undefined, undefined, undefined]
+		return [undefined, undefined, undefined, undefined]
 	}, [message.text, message.say])
 
 	// When resuming task, last wont be api_req_failed but a resume_task
@@ -1041,8 +1041,13 @@ export const ChatRowContent = ({
 							{isExpanded && (
 								<div style={{ marginTop: "10px" }}>
 									<CodeAccordian
-										code={safeJsonParse<any>(message.text)?.request}
-										language="markdown"
+										code={
+											errorDetails ||
+											apiRequestFailedMessage ||
+											apiReqStreamingFailedMessage ||
+											safeJsonParse<any>(message.text)?.request
+										}
+										language={errorDetails ? "json" : "markdown"}
 										isExpanded={true}
 										onToggleExpand={handleToggleExpand}
 									/>

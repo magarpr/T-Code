@@ -1222,7 +1222,7 @@ export class Task extends EventEmitter<ClineEvents> {
 				request:
 					userContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n") + "\n\nLoading...",
 				apiProtocol,
-			}),
+			} satisfies ClineApiReqInfo),
 		)
 
 		const {
@@ -1279,7 +1279,11 @@ export class Task extends EventEmitter<ClineEvents> {
 			// anyways, so it remains solely for legacy purposes to keep track
 			// of prices in tasks from history (it's worth removing a few months
 			// from now).
-			const updateApiReqMsg = (cancelReason?: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
+			const updateApiReqMsg = (
+				cancelReason?: ClineApiReqCancelReason,
+				streamingFailedMessage?: string,
+				errorDetails?: string,
+			) => {
 				const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
 				this.clineMessages[lastApiReqIndex].text = JSON.stringify({
 					...existingData,
@@ -1298,10 +1302,15 @@ export class Task extends EventEmitter<ClineEvents> {
 						),
 					cancelReason,
 					streamingFailedMessage,
+					errorDetails,
 				} satisfies ClineApiReqInfo)
 			}
 
-			const abortStream = async (cancelReason: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
+			const abortStream = async (
+				cancelReason: ClineApiReqCancelReason,
+				streamingFailedMessage?: string,
+				errorDetails?: string,
+			) => {
 				if (this.diffViewProvider.isEditing) {
 					await this.diffViewProvider.revertChanges() // closes diff view
 				}
@@ -1336,7 +1345,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 				// Update `api_req_started` to have cancelled and cost, so that
 				// we can display the cost of the partial stream.
-				updateApiReqMsg(cancelReason, streamingFailedMessage)
+				updateApiReqMsg(cancelReason, streamingFailedMessage, errorDetails)
 				await this.saveClineMessages()
 
 				// Signals to provider that it can retrieve the saved messages
@@ -1460,7 +1469,9 @@ export class Task extends EventEmitter<ClineEvents> {
 					// Now call abortTask after determining the cancel reason
 					await this.abortTask()
 
-					await abortStream(cancelReason, streamingFailedMessage)
+					// Include full error details for display
+					const fullErrorDetails = JSON.stringify(serializeError(error), null, 2)
+					await abortStream(cancelReason, streamingFailedMessage, fullErrorDetails)
 
 					const history = await provider?.getTaskWithId(this.taskId)
 
@@ -1816,6 +1827,20 @@ export class Task extends EventEmitter<ClineEvents> {
 		} catch (error) {
 			this.isWaitingForFirstChunk = false
 			// note that this api_req_failed ask is unique in that we only present this option if the api hasn't streamed any content yet (ie it fails on the first chunk due), as it would allow them to hit a retry button. However if the api failed mid-stream, it could be in any arbitrary state where some tools may have executed, so that error is handled differently and requires cancelling the task entirely.
+
+			// Store the full error details in the api_req_started message
+			const fullErrorDetails = JSON.stringify(serializeError(error), null, 2)
+			const lastApiReqIndex = findLastIndex(this.clineMessages, (m) => m.say === "api_req_started")
+			if (lastApiReqIndex !== -1) {
+				const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
+				this.clineMessages[lastApiReqIndex].text = JSON.stringify({
+					...existingData,
+					errorDetails: fullErrorDetails,
+				} satisfies ClineApiReqInfo)
+				await this.saveClineMessages()
+				await this.providerRef.deref()?.postStateToWebview()
+			}
+
 			if (autoApprovalEnabled && alwaysApproveResubmit) {
 				let errorMsg
 
@@ -1873,10 +1898,8 @@ export class Task extends EventEmitter<ClineEvents> {
 
 				return
 			} else {
-				const { response } = await this.ask(
-					"api_req_failed",
-					error.message ?? JSON.stringify(serializeError(error), null, 2),
-				)
+				const errorMessage = error.message ?? JSON.stringify(serializeError(error), null, 2)
+				const { response } = await this.ask("api_req_failed", errorMessage)
 
 				if (response !== "yesButtonClicked") {
 					// This will never happen since if noButtonClicked, we will
