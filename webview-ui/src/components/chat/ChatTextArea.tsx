@@ -42,6 +42,7 @@ interface ChatTextAreaProps {
 	onSend: () => void
 	onSelectImages: () => void
 	shouldDisableImages: boolean
+	supportsVideo?: boolean
 	onHeightChange?: (height: number) => void
 	mode: Mode
 	setMode: (value: Mode) => void
@@ -64,6 +65,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			onSend,
 			onSelectImages,
 			shouldDisableImages,
+			supportsVideo = false,
 			onHeightChange,
 			mode,
 			setMode,
@@ -598,17 +600,21 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					return
 				}
 
-				const acceptedTypes = ["png", "jpeg", "webp"]
+				const acceptedImageTypes = ["png", "jpeg", "webp"]
+				const acceptedVideoTypes = supportsVideo ? ["mp4", "mov", "avi", "webm"] : []
 
-				const imageItems = Array.from(items).filter((item) => {
+				const mediaItems = Array.from(items).filter((item) => {
 					const [type, subtype] = item.type.split("/")
-					return type === "image" && acceptedTypes.includes(subtype)
+					return (
+						(type === "image" && acceptedImageTypes.includes(subtype)) ||
+						(type === "video" && acceptedVideoTypes.includes(subtype))
+					)
 				})
 
-				if (!shouldDisableImages && imageItems.length > 0) {
+				if (!shouldDisableImages && mediaItems.length > 0) {
 					e.preventDefault()
 
-					const imagePromises = imageItems.map((item) => {
+					const mediaPromises = mediaItems.map((item) => {
 						return new Promise<string | null>((resolve) => {
 							const blob = item.getAsFile()
 
@@ -633,8 +639,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						})
 					})
 
-					const imageDataArray = await Promise.all(imagePromises)
-					const dataUrls = imageDataArray.filter((dataUrl): dataUrl is string => dataUrl !== null)
+					const mediaDataArray = await Promise.all(mediaPromises)
+					const dataUrls = mediaDataArray.filter((dataUrl): dataUrl is string => dataUrl !== null)
 
 					if (dataUrls.length > 0) {
 						setSelectedImages((prevImages) => [...prevImages, ...dataUrls].slice(0, MAX_IMAGES_PER_MESSAGE))
@@ -643,7 +649,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					}
 				}
 			},
-			[shouldDisableImages, setSelectedImages, cursorPosition, setInputValue, inputValue, t],
+			[shouldDisableImages, setSelectedImages, cursorPosition, setInputValue, inputValue, t, supportsVideo],
 		)
 
 		const handleMenuMouseDown = useCallback(() => {
@@ -732,15 +738,19 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				const files = Array.from(e.dataTransfer.files)
 
 				if (files.length > 0) {
-					const acceptedTypes = ["png", "jpeg", "webp"]
+					const acceptedImageTypes = ["png", "jpeg", "webp"]
+					const acceptedVideoTypes = supportsVideo ? ["mp4", "mov", "avi", "webm"] : []
 
-					const imageFiles = files.filter((file) => {
+					const mediaFiles = files.filter((file) => {
 						const [type, subtype] = file.type.split("/")
-						return type === "image" && acceptedTypes.includes(subtype)
+						return (
+							(type === "image" && acceptedImageTypes.includes(subtype)) ||
+							(type === "video" && acceptedVideoTypes.includes(subtype))
+						)
 					})
 
-					if (!shouldDisableImages && imageFiles.length > 0) {
-						const imagePromises = imageFiles.map((file) => {
+					if (!shouldDisableImages && mediaFiles.length > 0) {
+						const mediaPromises = mediaFiles.map((file) => {
 							return new Promise<string | null>((resolve) => {
 								const reader = new FileReader()
 
@@ -758,8 +768,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							})
 						})
 
-						const imageDataArray = await Promise.all(imagePromises)
-						const dataUrls = imageDataArray.filter((dataUrl): dataUrl is string => dataUrl !== null)
+						const mediaDataArray = await Promise.all(mediaPromises)
+						const dataUrls = mediaDataArray.filter((dataUrl): dataUrl is string => dataUrl !== null)
 
 						if (dataUrls.length > 0) {
 							setSelectedImages((prevImages) =>
@@ -785,6 +795,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				shouldDisableImages,
 				setSelectedImages,
 				t,
+				supportsVideo,
 			],
 		)
 

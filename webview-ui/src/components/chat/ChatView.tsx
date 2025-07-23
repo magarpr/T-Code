@@ -1848,6 +1848,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				onSend={() => handleSendMessage(inputValue, selectedImages)}
 				onSelectImages={selectImages}
 				shouldDisableImages={shouldDisableImages}
+				supportsVideo={model?.supportsVideo || false}
 				onHeightChange={() => {
 					if (isAtBottom) {
 						scrollToBottomAuto()

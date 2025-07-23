@@ -52,6 +52,7 @@ export const geminiModels = {
 		maxTokens: 64_000,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsVideo: true,
 		supportsPromptCache: true,
 		inputPrice: 0.3,
 		outputPrice: 2.5,
@@ -64,6 +65,7 @@ export const geminiModels = {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsVideo: true,
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
@@ -72,6 +74,7 @@ export const geminiModels = {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsVideo: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
@@ -96,6 +99,7 @@ export const geminiModels = {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsVideo: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
@@ -120,6 +124,7 @@ export const geminiModels = {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsVideo: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
@@ -146,6 +151,7 @@ export const geminiModels = {
 		maxTokens: 64_000,
 		contextWindow: 1_048_576,
 		supportsImages: true,
+		supportsVideo: true,
 		supportsPromptCache: true,
 		inputPrice: 2.5, // This is the pricing for prompts above 200k tokens.
 		outputPrice: 15,
