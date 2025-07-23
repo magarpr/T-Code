@@ -102,18 +102,18 @@ export const webviewMessageHandler = async (
 	 * Handles message deletion operations with user confirmation
 	 */
 	const handleDeleteOperation = async (messageTs: number): Promise<void> => {
-		// Check if the message has a checkpoint
+		// Check if there's a checkpoint before this message
 		const currentCline = provider.getCurrentCline()
 		let hasCheckpoint = false
 		if (currentCline) {
 			const { messageIndex } = findMessageIndices(messageTs, currentCline)
 			if (messageIndex !== -1) {
-				const targetMessage = currentCline.clineMessages[messageIndex]
-				hasCheckpoint = !!(
-					targetMessage?.checkpoint &&
-					typeof targetMessage.checkpoint === "object" &&
-					"hash" in targetMessage.checkpoint
-				)
+				// Find the last checkpoint before this message
+				const checkpoints = currentCline.clineMessages
+					.filter((msg) => msg.say === "checkpoint_saved" && msg.ts < messageTs)
+					.sort((a, b) => b.ts - a.ts)
+
+				hasCheckpoint = checkpoints.length > 0
 			} else {
 				console.log("[webviewMessageHandler] Message not found! Looking for ts:", messageTs)
 			}
@@ -149,16 +149,29 @@ export const webviewMessageHandler = async (
 		try {
 			const targetMessage = currentCline.clineMessages[messageIndex]
 
-			// If checkpoint restoration is requested, restore to the checkpoint first
-			if (restoreCheckpoint && hasValidCheckpoint(targetMessage)) {
-				await handleCheckpointRestoreOperation({
-					provider,
-					currentCline,
-					messageTs: targetMessage.ts!,
-					messageIndex,
-					checkpoint: targetMessage.checkpoint as ValidCheckpoint,
-					operation: "delete",
-				})
+			// If checkpoint restoration is requested, find and restore to the last checkpoint before this message
+			if (restoreCheckpoint) {
+				// Find the last checkpoint before this message
+				const checkpoints = currentCline.clineMessages
+					.filter((msg) => msg.say === "checkpoint_saved" && msg.ts < messageTs)
+					.sort((a, b) => b.ts - a.ts)
+
+				const lastCheckpoint = checkpoints[0]
+
+				if (lastCheckpoint && lastCheckpoint.text) {
+					await handleCheckpointRestoreOperation({
+						provider,
+						currentCline,
+						messageTs: targetMessage.ts!,
+						messageIndex,
+						checkpoint: { hash: lastCheckpoint.text },
+						operation: "delete",
+					})
+				} else {
+					// No checkpoint found before this message
+					console.log("[handleDeleteMessageConfirm] No checkpoint found before message")
+					vscode.window.showWarningMessage("No checkpoint found before this message")
+				}
 			} else {
 				// For non-checkpoint deletes, preserve checkpoint associations for remaining messages
 				// Store checkpoints from messages that will be preserved
@@ -200,43 +213,33 @@ export const webviewMessageHandler = async (
 	 * Handles message editing operations with user confirmation
 	 */
 	const handleEditOperation = async (messageTs: number, editedContent: string, images?: string[]): Promise<void> => {
-		// Always check if the message has a checkpoint first
+		// Check if there's a checkpoint before this message
 		const currentCline = provider.getCurrentCline()
 		let hasCheckpoint = false
 		if (currentCline) {
 			const { messageIndex } = findMessageIndices(messageTs, currentCline)
 			if (messageIndex !== -1) {
-				const targetMessage = currentCline.clineMessages[messageIndex]
-				hasCheckpoint = !!(
-					targetMessage?.checkpoint &&
-					typeof targetMessage.checkpoint === "object" &&
-					"hash" in targetMessage.checkpoint
-				)
+				// Find the last checkpoint before this message
+				const checkpoints = currentCline.clineMessages
+					.filter((msg) => msg.say === "checkpoint_saved" && msg.ts < messageTs)
+					.sort((a, b) => b.ts - a.ts)
+
+				hasCheckpoint = checkpoints.length > 0
 			} else {
 				console.log("[webviewMessageHandler] Edit - Message not found in clineMessages!")
 			}
 		} else {
 			console.log("[webviewMessageHandler] Edit - No currentCline available!")
 		}
-		// If there's a checkpoint, show the checkpoint dialog even when skipping confirmation
-		if (hasCheckpoint) {
-			await provider.postMessageToWebview({
-				type: "showEditMessageDialog",
-				messageTs,
-				text: editedContent,
-				hasCheckpoint,
-				images,
-			})
-		} else {
-			// Send message to webview to show edit confirmation dialog
-			await provider.postMessageToWebview({
-				type: "showEditMessageDialog",
-				messageTs,
-				text: editedContent,
-				hasCheckpoint,
-				images,
-			})
-		}
+
+		// Send message to webview to show edit confirmation dialog
+		await provider.postMessageToWebview({
+			type: "showEditMessageDialog",
+			messageTs,
+			text: editedContent,
+			hasCheckpoint,
+			images,
+		})
 	}
 
 	/**
@@ -267,27 +270,38 @@ export const webviewMessageHandler = async (
 		try {
 			const targetMessage = currentCline.clineMessages[messageIndex]
 
-			// Preserve the original checkpoint data for the edited message
-			const originalCheckpoint = targetMessage?.checkpoint
+			// If checkpoint restoration is requested, find and restore to the last checkpoint before this message
+			if (restoreCheckpoint) {
+				// Find the last checkpoint before this message
+				const checkpoints = currentCline.clineMessages
+					.filter((msg) => msg.say === "checkpoint_saved" && msg.ts < messageTs)
+					.sort((a, b) => b.ts - a.ts)
 
-			// If checkpoint restoration is requested, restore to the checkpoint first
-			if (restoreCheckpoint && hasValidCheckpoint(targetMessage)) {
-				await handleCheckpointRestoreOperation({
-					provider,
-					currentCline,
-					messageTs: targetMessage.ts!,
-					messageIndex,
-					checkpoint: targetMessage.checkpoint as ValidCheckpoint,
-					operation: "edit",
-					editData: {
-						editedContent,
-						images,
-						apiConversationHistoryIndex,
-					},
-				})
-				// The task will be cancelled and reinitialized by checkpointRestore
-				// The pending edit will be processed in the reinitialized task
-				return
+				const lastCheckpoint = checkpoints[0]
+
+				if (lastCheckpoint && lastCheckpoint.text) {
+					await handleCheckpointRestoreOperation({
+						provider,
+						currentCline,
+						messageTs: targetMessage.ts!,
+						messageIndex,
+						checkpoint: { hash: lastCheckpoint.text },
+						operation: "edit",
+						editData: {
+							editedContent,
+							images,
+							apiConversationHistoryIndex,
+						},
+					})
+					// The task will be cancelled and reinitialized by checkpointRestore
+					// The pending edit will be processed in the reinitialized task
+					return
+				} else {
+					// No checkpoint found before this message
+					console.log("[handleEditMessageConfirm] No checkpoint found before message")
+					vscode.window.showWarningMessage("No checkpoint found before this message")
+					// Continue with non-checkpoint edit
+				}
 			}
 
 			// For non-checkpoint edits, preserve checkpoint associations for remaining messages
@@ -319,12 +333,6 @@ export const webviewMessageHandler = async (
 			})
 
 			// Process the edited message as a regular user message
-			// Preserve the original checkpoint for the new message
-			if (originalCheckpoint) {
-				// Store the checkpoint to be attached to the new message
-				currentCline.pendingUserMessageCheckpoint = originalCheckpoint
-			}
-
 			webviewMessageHandler(provider, {
 				type: "askResponse",
 				askResponse: "messageResponse",
@@ -495,25 +503,7 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		case "askResponse":
-			// Save checkpoint BEFORE processing the user message if checkpoints are enabled
-			const currentCline = provider.getCurrentCline()
-			if (currentCline && currentCline.enableCheckpoints && message.askResponse === "messageResponse") {
-				try {
-					const checkpointResult = await currentCline.checkpointSave(true) // Force checkpoint save
-					if (checkpointResult?.commit) {
-						// Store checkpoint data temporarily to be used when creating the user_feedback message
-						currentCline.pendingUserMessageCheckpoint = {
-							hash: checkpointResult.commit,
-							timestamp: Date.now(),
-							type: "user_message",
-						}
-					}
-				} catch (error) {
-					console.error("[webviewMessageHandler] Failed to save checkpoint before user message:", error)
-				}
-			}
-
-			currentCline?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
+			provider.getCurrentCline()?.handleWebviewAskResponse(message.askResponse!, message.text, message.images)
 			break
 		case "autoCondenseContext":
 			await updateGlobalState("autoCondenseContext", message.bool)

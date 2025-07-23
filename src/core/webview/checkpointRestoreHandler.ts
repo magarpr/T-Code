@@ -51,7 +51,6 @@ export async function handleCheckpointRestoreOperation(config: CheckpointRestore
 				images: editData.images,
 				messageIndex: config.messageIndex,
 				apiConversationHistoryIndex: editData.apiConversationHistoryIndex,
-				originalCheckpoint: checkpoint,
 			})
 		}
 

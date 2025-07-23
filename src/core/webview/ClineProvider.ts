@@ -87,7 +87,6 @@ interface PendingEditOperation {
 	images?: string[]
 	messageIndex: number
 	apiConversationHistoryIndex: number
-	originalCheckpoint: { hash: string }
 	timeoutId: NodeJS.Timeout
 	createdAt: number
 }
@@ -268,7 +267,6 @@ export class ClineProvider
 			images?: string[]
 			messageIndex: number
 			apiConversationHistoryIndex: number
-			originalCheckpoint: { hash: string }
 		},
 	): void {
 		// Clear any existing operation with the same ID
@@ -718,11 +716,6 @@ export class ClineProvider
 							await cline.overwriteApiConversationHistory(
 								cline.apiConversationHistory.slice(0, apiConversationHistoryIndex),
 							)
-						}
-
-						// If there was an original checkpoint, preserve it for the new message
-						if (pendingEdit.originalCheckpoint) {
-							cline.pendingUserMessageCheckpoint = pendingEdit.originalCheckpoint
 						}
 
 						// Process the edited message

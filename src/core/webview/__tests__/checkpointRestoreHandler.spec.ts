@@ -134,7 +134,6 @@ describe("checkpointRestoreHandler", () => {
 				images: ["image1.png"],
 				messageIndex: 2,
 				apiConversationHistoryIndex: 2,
-				originalCheckpoint: { hash: "abc123" },
 			})
 
 			// Verify checkpoint restore was called with edit operation

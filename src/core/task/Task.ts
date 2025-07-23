@@ -181,7 +181,6 @@ export class Task extends EventEmitter<ClineEvents> {
 	// LLM Messages & Chat Messages
 	apiConversationHistory: ApiMessage[] = []
 	clineMessages: ClineMessage[] = []
-	public pendingUserMessageCheckpoint?: Record<string, unknown>
 
 	// Ask
 	private askResponse?: ClineAskResponse
@@ -718,17 +717,13 @@ export class Task extends EventEmitter<ClineEvents> {
 			}
 
 			if (type === "user_feedback") {
-				// Automatically use and clear the pending checkpoint for user_feedback messages
-				const feedbackCheckpoint = checkpoint || this.pendingUserMessageCheckpoint
-				this.pendingUserMessageCheckpoint = undefined // Clear it after use
-
 				await this.addToClineMessages({
 					ts: sayTs,
 					type: "say",
 					say: type,
 					text,
 					images,
-					checkpoint: feedbackCheckpoint,
+					checkpoint,
 					contextCondense,
 				})
 			} else {

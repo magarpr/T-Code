@@ -27,21 +27,14 @@ describe("webviewMessageHandler - checkpoint operations", () => {
 			taskId: "test-task-123",
 			clineMessages: [
 				{ ts: 1, type: "user", say: "user", text: "First message" },
-				{ ts: 2, type: "assistant", say: "assistant", text: "Response" },
-				{
-					ts: 3,
-					type: "user",
-					say: "user",
-					text: "Checkpoint message",
-					checkpoint: { hash: "abc123" },
-				},
-				{ ts: 4, type: "assistant", say: "assistant", text: "After checkpoint" },
+				{ ts: 2, type: "assistant", say: "checkpoint_saved", text: "abc123" },
+				{ ts: 3, type: "user", say: "user", text: "Message to delete" },
+				{ ts: 4, type: "assistant", say: "assistant", text: "After message" },
 			],
 			apiConversationHistory: [
 				{ ts: 1, role: "user", content: [{ type: "text", text: "First message" }] },
-				{ ts: 2, role: "assistant", content: [{ type: "text", text: "Response" }] },
-				{ ts: 3, role: "user", content: [{ type: "text", text: "Checkpoint message" }] },
-				{ ts: 4, role: "assistant", content: [{ type: "text", text: "After checkpoint" }] },
+				{ ts: 3, role: "user", content: [{ type: "text", text: "Message to delete" }] },
+				{ ts: 4, role: "assistant", content: [{ type: "text", text: "After message" }] },
 			],
 			checkpointRestore: vi.fn(),
 			overwriteClineMessages: vi.fn(),
@@ -130,7 +123,7 @@ describe("webviewMessageHandler - checkpoint operations", () => {
 				editData: {
 					editedContent: "Edited checkpoint message",
 					images: undefined,
-					apiConversationHistoryIndex: 2,
+					apiConversationHistoryIndex: 1,
 				},
 			})
 		})
