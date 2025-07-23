@@ -1,8 +1,19 @@
-import React from "react"
-import { ChevronUp, Check } from "lucide-react"
+import React, { useState, useRef, useCallback } from "react"
+import { ChevronUp, Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRooPortal } from "@/components/ui/hooks/useRooPortal"
-import { Popover, PopoverContent, PopoverTrigger, StandardTooltip } from "@/components/ui"
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	StandardTooltip,
+	Command,
+	CommandInput,
+	CommandList,
+	CommandEmpty,
+	CommandItem,
+	CommandGroup,
+} from "@/components/ui"
 import { IconButton } from "./IconButton"
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -33,7 +44,9 @@ export const ModeSelector = ({
 	customModes,
 	customModePrompts,
 }: ModeSelectorProps) => {
-	const [open, setOpen] = React.useState(false)
+	const [open, setOpen] = useState(false)
+	const [searchValue, setSearchValue] = useState("")
+	const searchInputRef = useRef<HTMLInputElement>(null)
 	const portalContainer = useRooPortal("roo-portal")
 	const { hasOpenedModeSelector, setHasOpenedModeSelector } = useExtensionState()
 	const { t } = useAppTranslation()
@@ -60,6 +73,32 @@ export const ModeSelector = ({
 
 	// Find the selected mode
 	const selectedMode = React.useMemo(() => modes.find((mode) => mode.slug === value), [modes, value])
+
+	// Filter modes based on search
+	const filteredModes = React.useMemo(() => {
+		if (!searchValue) return modes
+		const searchLower = searchValue.toLowerCase()
+		return modes.filter(
+			(mode) => mode.name.toLowerCase().includes(searchLower) || mode.slug.toLowerCase().includes(searchLower),
+		)
+	}, [modes, searchValue])
+
+	// Handler for clearing search input
+	const onClearSearch = useCallback(() => {
+		setSearchValue("")
+		searchInputRef.current?.focus()
+	}, [])
+
+	// Handler for mode selection
+	const handleModeSelect = useCallback(
+		(modeSlug: string) => {
+			onChange(modeSlug as Mode)
+			setOpen(false)
+			// Clear search after selection
+			setTimeout(() => setSearchValue(""), 100)
+		},
+		[onChange],
+	)
 
 	const trigger = (
 		<PopoverTrigger
@@ -88,6 +127,10 @@ export const ModeSelector = ({
 			onOpenChange={(isOpen) => {
 				if (isOpen) trackModeSelectorOpened()
 				setOpen(isOpen)
+				// Clear search when closing
+				if (!isOpen) {
+					setTimeout(() => setSearchValue(""), 100)
+				}
 			}}
 			data-testid="mode-selector-root">
 			{title ? <StandardTooltip content={title}>{trigger}</StandardTooltip> : trigger}
@@ -97,81 +140,116 @@ export const ModeSelector = ({
 				sideOffset={4}
 				container={portalContainer}
 				className="p-0 overflow-hidden min-w-80 max-w-9/10">
-				<div className="flex flex-col w-full">
-					<div className="p-3 border-b border-vscode-dropdown-border cursor-default">
-						<div className="flex flex-row items-center gap-1 p-0 mt-0 mb-1 w-full">
-							<h4 className="m-0 pb-2 flex-1">{t("chat:modeSelector.title")}</h4>
-							<div className="flex flex-row gap-1 ml-auto mb-1">
-								<IconButton
-									iconClass="codicon-extensions"
-									title={t("chat:modeSelector.marketplace")}
-									onClick={() => {
-										window.postMessage(
-											{
-												type: "action",
-												action: "marketplaceButtonClicked",
-												values: { marketplaceTab: "mode" },
-											},
-											"*",
-										)
-
-										setOpen(false)
-									}}
-								/>
-								<IconButton
-									iconClass="codicon-settings-gear"
-									title={t("chat:modeSelector.settings")}
-									onClick={() => {
-										vscode.postMessage({
-											type: "switchTab",
-											tab: "modes",
-										})
-										setOpen(false)
-									}}
-								/>
-							</div>
+				<Command className="flex flex-col h-full">
+					{/* Header with title and info icon */}
+					<div className="p-3 border-b border-vscode-dropdown-border">
+						<div className="flex items-center justify-between mb-2">
+							<h4 className="m-0">{t("chat:modeSelector.title")}</h4>
+							<StandardTooltip
+								content={
+									<div>
+										{t("chat:modeSelector.description")}
+										<br />
+										{modeShortcutText}
+									</div>
+								}
+								side="left"
+								maxWidth={300}>
+								<span className="codicon codicon-info text-vscode-descriptionForeground cursor-help" />
+							</StandardTooltip>
 						</div>
-						<p className="my-0 pr-4 text-sm w-full">
-							{t("chat:modeSelector.description")}
-							<br />
-							{modeShortcutText}
-						</p>
+
+						{/* Search input */}
+						<div className="relative">
+							<CommandInput
+								ref={searchInputRef}
+								value={searchValue}
+								onValueChange={setSearchValue}
+								placeholder={t("chat:modeSelector.searchPlaceholder")}
+								className="h-9 pr-8"
+								data-testid="mode-search-input"
+							/>
+							{searchValue.length > 0 && (
+								<div className="absolute right-2 top-0 bottom-0 flex items-center justify-center">
+									<X
+										className="text-vscode-input-foreground opacity-50 hover:opacity-100 size-4 p-0.5 cursor-pointer"
+										onClick={onClearSearch}
+									/>
+								</div>
+							)}
+						</div>
 					</div>
 
 					{/* Mode List */}
-					<div className="max-h-[400px] overflow-y-auto py-0">
-						{modes.map((mode) => (
-							<div
-								className={cn(
-									"p-2 text-sm cursor-pointer flex flex-row gap-4 items-center",
-									"hover:bg-vscode-list-hoverBackground",
-									mode.slug === value
-										? "bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground"
-										: "",
-								)}
-								key={mode.slug}
-								onClick={() => {
-									onChange(mode.slug as Mode)
-									setOpen(false)
-								}}
-								data-testid="mode-selector-item">
-								<div className="flex-grow">
-									<p className="m-0 mb-0 font-bold">{mode.name}</p>
-									{mode.description && (
-										<p className="m-0 py-0 pl-4 h-4 flex-1 text-xs overflow-hidden">
-											{mode.description}
-										</p>
-									)}
+					<CommandList className="flex-1 overflow-y-auto">
+						<CommandEmpty>
+							{searchValue && (
+								<div className="py-4 px-3 text-sm text-vscode-descriptionForeground text-center">
+									{t("chat:modeSelector.noMatchFound")}
 								</div>
-								{mode.slug === value ? (
-									<Check className="m-0 size-4 p-0.5" />
-								) : (
-									<div className="size-4" />
-								)}
-							</div>
-						))}
+							)}
+						</CommandEmpty>
+						<CommandGroup>
+							{filteredModes.map((mode) => (
+								<CommandItem
+									key={mode.slug}
+									value={mode.slug}
+									onSelect={() => handleModeSelect(mode.slug)}
+									className={cn(
+										"p-2 cursor-pointer",
+										mode.slug === value && "bg-vscode-list-activeSelectionBackground",
+									)}
+									data-testid="mode-selector-item">
+									<div className="flex items-center gap-4 w-full">
+										<div className="flex-grow min-w-0">
+											<p className="m-0 font-bold">{mode.name}</p>
+											{mode.description && (
+												<p className="m-0 mt-0.5 text-xs text-vscode-descriptionForeground truncate">
+													{mode.description}
+												</p>
+											)}
+										</div>
+										{mode.slug === value ? (
+											<Check className="size-4 flex-shrink-0" />
+										) : (
+											<div className="size-4 flex-shrink-0" />
+										)}
+									</div>
+								</CommandItem>
+							))}
+						</CommandGroup>
+					</CommandList>
+
+					{/* Footer with marketplace and settings buttons */}
+					<div className="p-3 border-t border-vscode-dropdown-border flex justify-end gap-2">
+						<IconButton
+							iconClass="codicon-extensions"
+							title={t("chat:modeSelector.marketplace")}
+							onClick={() => {
+								window.postMessage(
+									{
+										type: "action",
+										action: "marketplaceButtonClicked",
+										values: { marketplaceTab: "mode" },
+									},
+									"*",
+								)
+								setOpen(false)
+							}}
+						/>
+						<IconButton
+							iconClass="codicon-settings-gear"
+							title={t("chat:modeSelector.settings")}
+							onClick={() => {
+								vscode.postMessage({
+									type: "switchTab",
+									tab: "modes",
+								})
+								setOpen(false)
+							}}
+						/>
 					</div>
-				</div>
+				</Command>
 			</PopoverContent>
 		</Popover>
 	)

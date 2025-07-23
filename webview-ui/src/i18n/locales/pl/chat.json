@@ -116,7 +116,9 @@
 		"title": "Tryby",
 		"marketplace": "Marketplace Trybów",
 		"settings": "Ustawienia Trybów",
-		"description": "Wyspecjalizowane persony, które dostosowują zachowanie Roo."
+		"description": "Wyspecjalizowane persony, które dostosowują zachowanie Roo.",
+		"searchPlaceholder": "Search modes...",
+		"noMatchFound": "No modes found"
 	},
 	"errorReadingFile": "Błąd odczytu pliku:",
 	"noValidImages": "Nie przetworzono żadnych prawidłowych obrazów",

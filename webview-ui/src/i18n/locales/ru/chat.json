@@ -108,7 +108,9 @@
 		"title": "Режимы",
 		"marketplace": "Маркетплейс режимов",
 		"settings": "Настройки режимов",
-		"description": "Специализированные персоны, которые настраивают поведение Roo."
+		"description": "Специализированные персоны, которые настраивают поведение Roo.",
+		"searchPlaceholder": "Search modes...",
+		"noMatchFound": "No modes found"
 	},
 	"addImages": "Добавить изображения к сообщению",
 	"sendMessage": "Отправить сообщение",
