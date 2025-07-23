@@ -363,6 +363,8 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 
 		// Accumulate the text and count at the end of the stream to reduce token counting overhead.
 		let accumulatedText: string = ""
+		let hasValidContent = false
+		let detectedModelIdAsResponse = false
 
 		try {
 			// Create the response stream with minimal required options
@@ -382,12 +384,39 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			// Consume the stream and handle both text and tool call chunks
 			for await (const chunk of response.stream) {
 				if (chunk instanceof vscode.LanguageModelTextPart) {
+					// Debug logging for GitHub Copilot gpt-4.1 issue
+					if (client.id && (client.id.includes("gpt-4.1") || client.id.includes("copilot"))) {
+						console.debug("Roo Code <Language Model API>: Processing chunk for model:", client.id, {
+							chunkType: typeof chunk,
+							chunkValue: chunk.value,
+							chunkValueType: typeof chunk.value,
+							chunkValueLength: chunk.value?.length,
+							isModelId: chunk.value === client.id || chunk.value === `${client.vendor}/${client.family}`,
+						})
+					}
+
 					// Validate text part value
 					if (typeof chunk.value !== "string") {
 						console.warn("Roo Code <Language Model API>: Invalid text part value received:", chunk.value)
 						continue
 					}
 
+					// Check if the chunk value is just the model ID (GitHub Copilot gpt-4.1 bug)
+					const modelIdPattern = /^(copilot|github)\/gpt-4\.1$/i
+					const trimmedValue = chunk.value.trim()
+
+					if (modelIdPattern.test(trimmedValue) || trimmedValue === client.id) {
+						console.warn(
+							"Roo Code <Language Model API>: Detected model ID as response content, this appears to be a VS Code LM API bug:",
+							chunk.value,
+						)
+						detectedModelIdAsResponse = true
+						// Skip this chunk as it's not actual content
+						continue
+					}
+
+					// If we get here, we have valid content
+					hasValidContent = true
 					accumulatedText += chunk.value
 					yield {
 						type: "text",
@@ -442,6 +471,13 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 				} else {
 					console.warn("Roo Code <Language Model API>: Unknown chunk type received:", chunk)
 				}
+			}
+
+			// If we only received the model ID and no valid content, throw an error
+			if (detectedModelIdAsResponse && !hasValidContent) {
+				throw new Error(
+					`Roo Code <Language Model API>: The VS Code Language Model API returned only the model ID "${client.id}" instead of generating a response. This is a known issue with GitHub Copilot's gpt-4.1 model. Please try using a different model or wait for a fix from the VS Code/GitHub Copilot team.`,
+				)
 			}
 
 			// Count tokens in the accumulated text after stream completion
