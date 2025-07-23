@@ -103,6 +103,7 @@ export enum ContextMenuOptionType {
 	Terminal = "terminal",
 	URL = "url",
 	Git = "git",
+	Svn = "svn",
 	NoResults = "noResults",
 	Mode = "mode", // Add mode type
 }
@@ -165,6 +166,14 @@ export function getContextMenuOptions(
 		icon: "$(git-commit)",
 	}
 
+	const svnWorkingChanges: ContextMenuQueryItem = {
+		type: ContextMenuOptionType.Svn,
+		value: "svn-changes",
+		label: "SVN Working changes",
+		description: "Current uncommitted SVN changes",
+		icon: "$(git-commit)",
+	}
+
 	if (query === "") {
 		if (selectedType === ContextMenuOptionType.File) {
 			const files = queryItems
@@ -191,6 +200,11 @@ export function getContextMenuOptions(
 			return commits.length > 0 ? [workingChanges, ...commits] : [workingChanges]
 		}
 
+		if (selectedType === ContextMenuOptionType.Svn) {
+			const commits = queryItems.filter((item) => item.type === ContextMenuOptionType.Svn)
+			return commits.length > 0 ? [svnWorkingChanges, ...commits] : [svnWorkingChanges]
+		}
+
 		return [
 			{ type: ContextMenuOptionType.Problems },
 			{ type: ContextMenuOptionType.Terminal },
@@ -198,6 +212,7 @@ export function getContextMenuOptions(
 			{ type: ContextMenuOptionType.Folder },
 			{ type: ContextMenuOptionType.File },
 			{ type: ContextMenuOptionType.Git },
+			{ type: ContextMenuOptionType.Svn },
 		]
 	}
 
@@ -214,6 +229,16 @@ export function getContextMenuOptions(
 		})
 	} else if ("git-changes".startsWith(lowerQuery)) {
 		suggestions.push(workingChanges)
+	} else if ("svn-changes".startsWith(lowerQuery)) {
+		suggestions.push(svnWorkingChanges)
+	}
+	if ("svn".startsWith(lowerQuery)) {
+		suggestions.push({
+			type: ContextMenuOptionType.Svn,
+			label: "SVN Commits",
+			description: "Search SVN repository history",
+			icon: "$(git-commit)",
+		})
 	}
 	if ("problems".startsWith(lowerQuery)) {
 		suggestions.push({ type: ContextMenuOptionType.Problems })
@@ -244,6 +269,25 @@ export function getContextMenuOptions(
 		}
 	}
 
+	// Add exact SVN revision matches to suggestions
+	if (/^r?\d+$/i.test(lowerQuery)) {
+		const exactMatches = queryItems.filter(
+			(item) => item.type === ContextMenuOptionType.Svn && item.value?.toLowerCase() === lowerQuery,
+		)
+		if (exactMatches.length > 0) {
+			suggestions.push(...exactMatches)
+		} else {
+			// If no exact match but valid revision format, add as option
+			suggestions.push({
+				type: ContextMenuOptionType.Svn,
+				value: lowerQuery,
+				label: `Revision ${lowerQuery}`,
+				description: "SVN revision number",
+				icon: "$(git-commit)",
+			})
+		}
+	}
+
 	const searchableItems = queryItems.map((item) => ({
 		original: item,
 		searchStr: [item.value, item.label, item.description].filter(Boolean).join(" "),
@@ -261,6 +305,7 @@ export function getContextMenuOptions(
 	const openedFileMatches = matchingItems.filter((item) => item.type === ContextMenuOptionType.OpenedFile)
 
 	const gitMatches = matchingItems.filter((item) => item.type === ContextMenuOptionType.Git)
+	const svnMatches = matchingItems.filter((item) => item.type === ContextMenuOptionType.Svn)
 
 	// Convert search results to queryItems format
 	const searchResultItems = dynamicSearchResults.map((result) => {
@@ -282,7 +327,7 @@ export function getContextMenuOptions(
 		}
 	})
 
-	const allItems = [...suggestions, ...openedFileMatches, ...searchResultItems, ...gitMatches]
+	const allItems = [...suggestions, ...openedFileMatches, ...searchResultItems, ...gitMatches, ...svnMatches]
 
 	// Remove duplicates - normalize paths by ensuring all have leading slashes
 	const seen = new Set()

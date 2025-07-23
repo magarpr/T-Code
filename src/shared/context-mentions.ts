@@ -46,7 +46,8 @@ Mention regex:
 	- URLs that start with a protocol (like 'http://') followed by any non-whitespace characters (including query parameters).
 	- The exact word 'problems'.
 	- The exact word 'git-changes'.
-    - The exact word 'terminal'.
+	- The exact word 'svn-changes'.
+	   - The exact word 'terminal'.
   - It ensures that any trailing punctuation marks (such as ',', '.', '!', etc.) are not included in the matched mention, allowing the punctuation to follow the mention naturally in the text.
 
 - **Global Regex**:
@@ -54,11 +55,11 @@ Mention regex:
 
 */
 export const mentionRegex =
-	/(?<!\\)@((?:\/|\w+:\/\/)(?:[^\s\\]|\\ )+?|[a-f0-9]{7,40}\b|problems\b|git-changes\b|terminal\b)(?=[.,;:!?]?(?=[\s\r\n]|$))/
+	/(?<!\\)@((?:\/|\w+:\/\/)(?:[^\s\\]|\\ )+?|[a-f0-9]{7,40}\b|r?\d+\b|problems\b|git-changes\b|svn-changes\b|terminal\b)(?=[.,;:!?]?(?=[\s\r\n]|$))/
 export const mentionRegexGlobal = new RegExp(mentionRegex.source, "g")
 
 export interface MentionSuggestion {
-	type: "file" | "folder" | "git" | "problems"
+	type: "file" | "folder" | "git" | "svn" | "problems"
 	label: string
 	description?: string
 	value: string
@@ -92,6 +93,33 @@ export function formatGitSuggestion(commit: {
 		subject: commit.subject,
 		author: commit.author,
 		date: commit.date,
+	}
+}
+
+export interface SvnMentionSuggestion extends MentionSuggestion {
+	type: "svn"
+	revision: string
+	author: string
+	date: string
+	message: string
+}
+
+export function formatSvnSuggestion(commit: {
+	revision: string
+	author: string
+	date: string
+	message: string
+}): SvnMentionSuggestion {
+	return {
+		type: "svn",
+		label: commit.message,
+		description: `${commit.revision} by ${commit.author} on ${commit.date}`,
+		value: commit.revision,
+		icon: "$(git-commit)", // Using same icon as Git for consistency
+		revision: commit.revision,
+		author: commit.author,
+		date: commit.date,
+		message: commit.message,
 	}
 }
 

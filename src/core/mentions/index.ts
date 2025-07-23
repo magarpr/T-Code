@@ -7,6 +7,7 @@ import { isBinaryFile } from "isbinaryfile"
 import { mentionRegexGlobal, unescapeSpaces } from "../../shared/context-mentions"
 
 import { getCommitInfo, getWorkingState } from "../../utils/git"
+import { getSvnCommitInfo, getSvnWorkingState } from "../../utils/svn"
 import { getWorkspacePath } from "../../utils/path"
 
 import { openFile } from "../../integrations/misc/open-file"
@@ -95,8 +96,12 @@ export async function parseMentions(
 			return `Workspace Problems (see below for diagnostics)`
 		} else if (mention === "git-changes") {
 			return `Working directory changes (see below for details)`
+		} else if (mention === "svn-changes") {
+			return `SVN working directory changes (see below for details)`
 		} else if (/^[a-f0-9]{7,40}$/.test(mention)) {
 			return `Git commit '${mention}' (see below for commit info)`
+		} else if (/^r?\d+$/.test(mention)) {
+			return `SVN revision '${mention}' (see below for revision info)`
 		} else if (mention === "terminal") {
 			return `Terminal Output (see below for output)`
 		}
@@ -177,12 +182,26 @@ export async function parseMentions(
 			} catch (error) {
 				parsedText += `\n\n<git_working_state>\nError fetching working state: ${error.message}\n</git_working_state>`
 			}
+		} else if (mention === "svn-changes") {
+			try {
+				const workingState = await getSvnWorkingState(cwd)
+				parsedText += `\n\n<svn_working_state>\n${workingState}\n</svn_working_state>`
+			} catch (error) {
+				parsedText += `\n\n<svn_working_state>\nError fetching SVN working state: ${error.message}\n</svn_working_state>`
+			}
 		} else if (/^[a-f0-9]{7,40}$/.test(mention)) {
 			try {
 				const commitInfo = await getCommitInfo(mention, cwd)
 				parsedText += `\n\n<git_commit hash="${mention}">\n${commitInfo}\n</git_commit>`
 			} catch (error) {
 				parsedText += `\n\n<git_commit hash="${mention}">\nError fetching commit info: ${error.message}\n</git_commit>`
+			}
+		} else if (/^r?\d+$/.test(mention)) {
+			try {
+				const commitInfo = await getSvnCommitInfo(mention, cwd)
+				parsedText += `\n\n<svn_revision revision="${mention}">\n${commitInfo}\n</svn_revision>`
+			} catch (error) {
+				parsedText += `\n\n<svn_revision revision="${mention}">\nError fetching SVN revision info: ${error.message}\n</svn_revision>`
 			}
 		} else if (mention === "terminal") {
 			try {
