@@ -243,6 +243,37 @@ describe("codebaseSearchTool", () => {
 				}),
 			)
 		})
+
+		it("should be available when enabled and configured but not initialized", async () => {
+			// This test verifies that the tool is available even when indexing is not complete
+			// The tool itself will handle the state checking
+			mockCodeIndexManager.isFeatureEnabled = true
+			mockCodeIndexManager.isFeatureConfigured = true
+			mockCodeIndexManager.isInitialized = false
+			mockCodeIndexManager.state = "Standby"
+
+			const block: ToolUse = {
+				type: "tool_use",
+				name: "codebase_search",
+				params: { query: "test query" },
+				partial: false,
+			}
+
+			await codebaseSearchTool(
+				mockTask,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			// Should not throw an error, but should provide feedback about the state
+			expect(mockHandleError).not.toHaveBeenCalled()
+			expect(mockPushToolResult).toHaveBeenCalledWith(
+				expect.stringContaining("Semantic search is not available yet (currently Standby)"),
+			)
+		})
 	})
 
 	describe("parameter validation", () => {

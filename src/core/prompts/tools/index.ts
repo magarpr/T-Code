@@ -101,8 +101,11 @@ export function getToolDescriptionsForMode(
 	// Add always available tools
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
 
-	// Note: codebase_search is now always included in the tool list
-	// The tool itself will check the indexing state at runtime and provide appropriate feedback
+	// Conditionally exclude codebase_search if feature is disabled or not configured
+	// Note: We still show the tool when it's initialized but indexing is in progress
+	if (!codeIndexManager || !codeIndexManager.isFeatureEnabled || !codeIndexManager.isFeatureConfigured) {
+		tools.delete("codebase_search")
+	}
 
 	// Conditionally exclude update_todo_list if disabled in settings
 	if (settings?.todoListEnabled === false) {
