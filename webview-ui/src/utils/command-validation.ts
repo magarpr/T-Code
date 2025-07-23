@@ -307,7 +307,7 @@ function containsBlockableSubshell(command: string, deniedCommands?: string[]): 
 		if (!hasMarkdownIndicators) {
 			// Check if backticks are likely command substitution
 			// Look for patterns like: cmd `subcmd` or var=`cmd`
-			hasBacktickSubstitution = /[^\\]`[^`\n]+`/.test(command)
+			hasBacktickSubstitution = /(?:^|[^\\])`[^`\n]+`/.test(command)
 		}
 	}
 
