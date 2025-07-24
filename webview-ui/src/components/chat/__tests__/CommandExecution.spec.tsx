@@ -365,18 +365,6 @@ Other output here`
 			expect(screen.queryByText("whoami")).not.toBeInTheDocument()
 		})
 
-		it("should display security warning for commands with subshells", () => {
-			render(
-				<ExtensionStateWrapper>
-					<CommandExecution executionId="test-security" text="echo $(malicious)" />
-				</ExtensionStateWrapper>,
-			)
-
-			// Should show security warning
-			expect(screen.getByText("Security Warning")).toBeInTheDocument()
-			expect(screen.getByText(/subshell execution/)).toBeInTheDocument()
-		})
-
 		it("should handle commands with backtick subshells", () => {
 			render(
 				<ExtensionStateWrapper>

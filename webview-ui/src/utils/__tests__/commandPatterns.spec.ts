@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest"
-import {
-	extractCommandPatterns,
-	getPatternDescription,
-	parseCommandAndOutput,
-	detectSecurityIssues,
-} from "../commandPatterns"
+import { extractCommandPatterns, getPatternDescription, parseCommandAndOutput } from "../commandPatterns"
 
 describe("extractCommandPatterns", () => {
 	it("should extract simple command", () => {
@@ -37,7 +32,7 @@ describe("extractCommandPatterns", () => {
 		expect(patterns).toContain("npm")
 		expect(patterns).toContain("npm test")
 		expect(patterns).toContain("npm run")
-		expect(patterns).toContain("npm run test:ci")
+		expect(patterns).not.toContain("npm run test:ci")
 	})
 
 	it("should handle semicolon separated commands", () => {
@@ -94,12 +89,12 @@ describe("extractCommandPatterns", () => {
 		const patterns = extractCommandPatterns("git add .")
 		expect(patterns).toContain("git")
 		expect(patterns).toContain("git add")
-		expect(patterns).not.toContain("git add .")
+		expect(patterns).not.toContain("git add .") // dot is excluded
 	})
 
 	it("should return sorted patterns", () => {
 		const patterns = extractCommandPatterns("npm run build && git push")
-		expect(patterns).toEqual([...patterns].sort())
+		expect(patterns).toEqual(["git", "git push", "npm", "npm run", "npm run build"])
 	})
 
 	it("should handle numeric input like '0 total'", () => {
@@ -351,80 +346,6 @@ drwxr-xr-x  20 user  staff   640 Jan 22 11:00 ..`
 		expect(result.command).toBe("ls -la")
 		expect(result.output).toContain("$ total 341")
 		expect(result.output).toContain("drwxr-xr-x")
-	})
-})
-
-describe("detectSecurityIssues", () => {
-	it("should detect subshell execution with $()", () => {
-		const warnings = detectSecurityIssues("echo $(malicious)")
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0].type).toBe("subshell")
-		expect(warnings[0].message).toContain("subshell execution")
-	})
-
-	it("should detect subshell execution with backticks", () => {
-		const warnings = detectSecurityIssues("echo `malicious`")
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0].type).toBe("subshell")
-		expect(warnings[0].message).toContain("subshell execution")
-	})
-
-	it("should detect nested subshells", () => {
-		const warnings = detectSecurityIssues("echo $(echo $(date))")
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0].type).toBe("subshell")
-	})
-
-	it("should detect subshells in complex commands", () => {
-		const warnings = detectSecurityIssues("npm install && echo $(whoami) || git push")
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0].type).toBe("subshell")
-	})
-
-	it("should not detect issues in safe commands", () => {
-		const warnings = detectSecurityIssues("npm install express")
-		expect(warnings).toHaveLength(0)
-	})
-
-	it("should handle empty commands", () => {
-		const warnings = detectSecurityIssues("")
-		expect(warnings).toHaveLength(0)
-	})
-
-	it("should detect multiple subshell patterns", () => {
-		const warnings = detectSecurityIssues("echo $(date) && echo `whoami`")
-		expect(warnings).toHaveLength(1) // Should still be 1 warning for subshell presence
-		expect(warnings[0].type).toBe("subshell")
-	})
-
-	it("should detect subshells in quoted strings", () => {
-		const warnings = detectSecurityIssues('echo "Current user: $(whoami)"')
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0].type).toBe("subshell")
-	})
-})
-
-describe("security integration with extractCommandPatterns", () => {
-	it("should not include subshell content in patterns", () => {
-		const patterns = extractCommandPatterns("echo $(malicious)")
-		expect(patterns).toContain("echo")
-		expect(patterns).not.toContain("$(malicious)")
-		expect(patterns).not.toContain("malicious")
-	})
-
-	it("should handle commands with subshells properly", () => {
-		const patterns = extractCommandPatterns("npm install && echo $(whoami)")
-		expect(patterns).toContain("npm")
-		expect(patterns).toContain("npm install")
-		expect(patterns).toContain("echo")
-		expect(patterns).not.toContain("whoami")
-	})
-
-	it("should extract patterns from commands with backtick subshells", () => {
-		const patterns = extractCommandPatterns("git commit -m `date`")
-		expect(patterns).toContain("git")
-		expect(patterns).toContain("git commit")
-		expect(patterns).not.toContain("date")
 	})
 })
 

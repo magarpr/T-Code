@@ -1,19 +1,12 @@
-import { extractPatternsFromCommand, detectCommandSecurityIssues, SecurityWarning } from "./command-parser"
+import { extractPatternsFromCommand } from "./command-parser"
 
 export interface CommandPattern {
 	pattern: string
 	description?: string
 }
 
-// Re-export SecurityWarning type from command-parser
-export type { SecurityWarning }
-
 export function extractCommandPatterns(command: string): string[] {
 	return extractPatternsFromCommand(command)
-}
-
-export function detectSecurityIssues(command: string): SecurityWarning[] {
-	return detectCommandSecurityIssues(command)
 }
 
 /**

@@ -1,4 +1,4 @@
-import { parseCommandString } from "./command-parser"
+import { parse } from "shell-quote"
 
 /**
  * # Command Denylist Feature - Longest Prefix Match Strategy
@@ -68,8 +68,40 @@ import { parseCommandString } from "./command-parser"
  * - Newlines as command separators
  */
 export function parseCommand(command: string): string[] {
-	const { subCommands } = parseCommandString(command)
-	return subCommands
+	if (!command?.trim()) return []
+
+	try {
+		const parsed = parse(command)
+		const commands: string[] = []
+		let currentCommand: string[] = []
+
+		for (const token of parsed) {
+			if (typeof token === "object" && "op" in token) {
+				// Chain operator - split command
+				if (["&&", "||", ";", "|"].includes(token.op)) {
+					if (currentCommand.length > 0) {
+						commands.push(currentCommand.join(" "))
+						currentCommand = []
+					}
+				} else {
+					// Other operators are part of the command
+					currentCommand.push(token.op)
+				}
+			} else if (typeof token === "string") {
+				currentCommand.push(token)
+			}
+		}
+
+		// Add any remaining command
+		if (currentCommand.length > 0) {
+			commands.push(currentCommand.join(" "))
+		}
+
+		return commands
+	} catch (_error) {
+		// If shell-quote fails, fall back to simple splitting
+		return [command]
+	}
 }
 
 /**
