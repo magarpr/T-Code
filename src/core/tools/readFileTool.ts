@@ -1,5 +1,6 @@
 import path from "path"
 import { isBinaryFile } from "isbinaryfile"
+import { stat } from "fs/promises"
 
 import { Task } from "../task/Task"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
@@ -519,7 +520,8 @@ export async function readFileTool(
 
 				// Handle normal file read with safeguard for large files
 				// Define thresholds for the safeguard
-				const LARGE_FILE_LINE_THRESHOLD = 10000 // Consider files with more than 10000 lines as "large"
+				const LARGE_FILE_SIZE_THRESHOLD = 100 * 1024 // 100KB - files larger than this will be checked for token count
+				const VERY_LARGE_FILE_SIZE = 1024 * 1024 // 1MB - apply safeguard automatically
 				const FALLBACK_MAX_LINES = 2000 // Default number of lines to read when applying safeguard
 
 				// Get the actual context window size from the model
@@ -531,26 +533,31 @@ export async function readFileTool(
 				let safeguardNotice = ""
 				let linesToRead = totalLines
 
-				if (maxReadFileLine === -1 && totalLines > LARGE_FILE_LINE_THRESHOLD) {
-					// File has many lines and we're trying to read the full file
-					// Perform token count check
-					try {
-						const fullContent = await extractTextFromFile(fullPath)
-						const tokenCount = await tiktoken([{ type: "text", text: fullContent }])
+				if (maxReadFileLine === -1) {
+					// Get file size
+					const fileStats = await stat(fullPath)
+					const fileSizeKB = Math.round(fileStats.size / 1024)
 
-						if (tokenCount > MAX_TOKEN_THRESHOLD) {
-							shouldApplySafeguard = true
-							linesToRead = FALLBACK_MAX_LINES
-							safeguardNotice = `<notice>This file contains ${totalLines} lines and approximately ${tokenCount.toLocaleString()} tokens, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
-						}
-					} catch (error) {
-						// If token counting fails, apply safeguard based on line count alone
-						console.warn(`Failed to count tokens for large file ${relPath}:`, error)
-						if (totalLines > LARGE_FILE_LINE_THRESHOLD * 5) {
-							// For very large files (>50000 lines), apply safeguard anyway
-							shouldApplySafeguard = true
-							linesToRead = FALLBACK_MAX_LINES
-							safeguardNotice = `<notice>This file contains ${totalLines} lines, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
+					if (fileStats.size > LARGE_FILE_SIZE_THRESHOLD) {
+						// File is large enough to warrant token count check
+						try {
+							const fullContent = await extractTextFromFile(fullPath)
+							const tokenCount = await tiktoken([{ type: "text", text: fullContent }])
+
+							if (tokenCount > MAX_TOKEN_THRESHOLD) {
+								shouldApplySafeguard = true
+								linesToRead = FALLBACK_MAX_LINES
+								safeguardNotice = `<notice>This file is ${fileSizeKB}KB and contains approximately ${tokenCount.toLocaleString()} tokens, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
+							}
+						} catch (error) {
+							// If token counting fails, apply safeguard based on file size alone
+							console.warn(`Failed to count tokens for large file ${relPath}:`, error)
+							if (fileStats.size > VERY_LARGE_FILE_SIZE) {
+								// For very large files (>1MB), apply safeguard anyway
+								shouldApplySafeguard = true
+								linesToRead = FALLBACK_MAX_LINES
+								safeguardNotice = `<notice>This file is ${fileSizeKB}KB, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
+							}
 						}
 					}
 				}
