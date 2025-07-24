@@ -79,6 +79,11 @@
 		"title": "Cancelar",
 		"tooltip": "Cancelar a operação atual"
 	},
+	"editMessage": {
+		"placeholder": "Edite sua mensagem...",
+		"doubleClickToEdit": "Clique duas vezes para editar a mensagem",
+		"editButton": "Editar mensagem"
+	},
 	"scrollToBottom": "Rolar para o final do chat",
 	"about": "Gere, refatore e depure código com assistência de IA. Confira nossa <DocsLink>documentação</DocsLink> para saber mais.",
 	"onboarding": "<strong>Sua lista de tarefas neste espaço de trabalho está vazia.</strong> Comece digitando uma tarefa abaixo. Não sabe como começar? Leia mais sobre o que o Roo pode fazer por você nos <DocsLink>documentos</DocsLink>.",
@@ -322,8 +327,5 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versão {{version}} - Clique para ver as notas de lançamento"
-	},
-	"editMessage": {
-		"placeholder": "Edite sua mensagem..."
 	}
 }

@@ -79,6 +79,11 @@
 		"title": "Annulla",
 		"tooltip": "Annulla l'operazione corrente"
 	},
+	"editMessage": {
+		"placeholder": "Modifica il tuo messaggio...",
+		"doubleClickToEdit": "Fai doppio clic per modificare",
+		"editButton": "Modifica messaggio"
+	},
 	"scrollToBottom": "Scorri fino alla fine della chat",
 	"about": "Genera, refactor e debug del codice con l'assistenza dell'IA. Consulta la nostra <DocsLink>documentazione</DocsLink> per saperne di più.",
 	"onboarding": "Grazie alle più recenti innovazioni nelle capacità di codifica agentica, posso gestire complesse attività di sviluppo software passo dopo passo. Con strumenti che mi permettono di creare e modificare file, esplorare progetti complessi, utilizzare il browser ed eseguire comandi da terminale (dopo la tua autorizzazione), posso aiutarti in modi che vanno oltre il completamento del codice o il supporto tecnico. Posso persino usare MCP per creare nuovi strumenti ed estendere le mie capacità.",
@@ -322,8 +327,5 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versione {{version}} - Clicca per visualizzare le note di rilascio"
-	},
-	"editMessage": {
-		"placeholder": "Modifica il tuo messaggio..."
 	}
 }

@@ -324,6 +324,8 @@
 		"ariaLabel": "版本 {{version}} - 點擊查看發布說明"
 	},
 	"editMessage": {
-		"placeholder": "編輯訊息..."
+		"placeholder": "編輯你的訊息...",
+		"doubleClickToEdit": "雙擊編輯",
+		"editButton": "編輯訊息"
 	}
 }

@@ -93,6 +93,11 @@
 		"title": "Batal",
 		"tooltip": "Batalkan operasi saat ini"
 	},
+	"editMessage": {
+		"placeholder": "Ubah pesan Anda...",
+		"doubleClickToEdit": "Klik dua kali untuk mengubah",
+		"editButton": "Ubah pesan"
+	},
 	"scrollToBottom": "Gulir ke bawah chat",
 	"about": "Buat, refaktor, dan debug kode dengan bantuan AI.<br />Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
 	"onboarding": "Daftar tugas di workspace ini kosong.",
@@ -328,8 +333,5 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versi {{version}} - Klik untuk melihat catatan rilis"
-	},
-	"editMessage": {
-		"placeholder": "Edit pesan Anda..."
 	}
 }

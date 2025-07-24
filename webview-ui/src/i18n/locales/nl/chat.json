@@ -79,6 +79,11 @@
 		"title": "Annuleren",
 		"tooltip": "Annuleer de huidige bewerking"
 	},
+	"editMessage": {
+		"placeholder": "Bewerk je bericht...",
+		"doubleClickToEdit": "Dubbelklik om te bewerken",
+		"editButton": "Bewerk bericht"
+	},
 	"scrollToBottom": "Scroll naar onderaan de chat",
 	"about": "Genereer, refactor en debug code met AI-assistentie. Bekijk onze <DocsLink>documentatie</DocsLink> voor meer informatie.",
 	"onboarding": "Je takenlijst in deze werkruimte is leeg.",
@@ -322,8 +327,5 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Versie {{version}} - Klik om release notes te bekijken"
-	},
-	"editMessage": {
-		"placeholder": "Bewerk je bericht..."
 	}
 }

@@ -79,6 +79,11 @@
 		"title": "Abbrechen",
 		"tooltip": "Aktuelle Operation abbrechen"
 	},
+	"editMessage": {
+		"placeholder": "Bearbeite deine Nachricht ...",
+		"doubleClickToEdit": "Doppelklick zum Bearbeiten",
+		"editButton": "Nachricht bearbeiten"
+	},
 	"scrollToBottom": "Zum Chat-Ende scrollen",
 	"about": "Generiere, überarbeite und debugge Code mit KI-Unterstützung. Weitere Informationen findest du in unserer <DocsLink>Dokumentation</DocsLink>.",
 	"onboarding": "<strong>Deine Aufgabenliste in diesem Arbeitsbereich ist leer.</strong> Beginne mit der Eingabe einer Aufgabe unten. Du bist dir nicht sicher, wie du anfangen sollst? Lies mehr darüber, was Roo für dich tun kann, in <DocsLink>den Dokumenten</DocsLink>.",
@@ -322,8 +327,5 @@
 	},
 	"versionIndicator": {
 		"ariaLabel": "Version {{version}} - Klicken Sie, um die Versionshinweise anzuzeigen"
-	},
-	"editMessage": {
-		"placeholder": "Bearbeite deine Nachricht..."
 	}
 }
