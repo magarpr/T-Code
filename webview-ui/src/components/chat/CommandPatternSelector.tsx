@@ -81,7 +81,7 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 
 			{isExpanded && (
 				<div className="px-3 pb-3 space-y-2">
-					{patterns.map((item, index) => {
+					{patterns.map((item) => {
 						const status = getPatternStatus(item.pattern)
 						return (
 							<div key={item.pattern} className="ml-5 flex items-center gap-2">
