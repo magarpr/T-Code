@@ -137,6 +137,15 @@ describe("read_file tool with maxReadFileLine setting", () => {
 		mockCline.recordToolUsage = vi.fn().mockReturnValue(undefined)
 		mockCline.recordToolError = vi.fn().mockReturnValue(undefined)
 
+		// Add default api mock
+		mockCline.api = {
+			getModel: vi.fn().mockReturnValue({
+				info: {
+					contextWindow: 100000,
+				},
+			}),
+		}
+
 		toolResult = undefined
 	})
 
@@ -393,6 +402,15 @@ describe("read_file tool XML output structure", () => {
 		mockCline.recordToolError = vi.fn().mockReturnValue(undefined)
 		mockCline.didRejectTool = false
 
+		// Add default api mock
+		mockCline.api = {
+			getModel: vi.fn().mockReturnValue({
+				info: {
+					contextWindow: 100000,
+				},
+			}),
+		}
+
 		toolResult = undefined
 	})
 
@@ -573,6 +591,15 @@ describe("read_file tool with large file safeguard", () => {
 		mockCline.recordToolUsage = vi.fn().mockReturnValue(undefined)
 		mockCline.recordToolError = vi.fn().mockReturnValue(undefined)
 
+		// Add default api mock
+		mockCline.api = {
+			getModel: vi.fn().mockReturnValue({
+				info: {
+					contextWindow: 100000,
+				},
+			}),
+		}
+
 		toolResult = undefined
 	})
 
@@ -618,7 +645,7 @@ describe("read_file tool with large file safeguard", () => {
 	describe("when file has many lines and high token count", () => {
 		it("should apply safeguard and read only first 2000 lines", async () => {
 			// Setup - large file with high token count
-			const largeFileContent = Array(1500).fill("This is a line of text").join("\n")
+			const largeFileContent = Array(15000).fill("This is a line of text").join("\n")
 			const partialContent = Array(2000).fill("This is a line of text").join("\n")
 
 			mockedExtractTextFromFile.mockResolvedValue(largeFileContent)
@@ -630,12 +657,21 @@ describe("read_file tool with large file safeguard", () => {
 				return lines.map((line: string, i: number) => `${i + 1} | ${line}`).join("\n")
 			})
 
+			// Mock the api.getModel() to return a model with context window
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
+
 			// Execute with high line count and token count
 			const result = await executeReadFileTool(
 				{},
 				{
 					maxReadFileLine: -1,
-					totalLines: 1500,
+					totalLines: 15000,
 					tokenCount: 60000, // Above threshold
 				},
 			)
@@ -645,14 +681,14 @@ describe("read_file tool with large file safeguard", () => {
 			expect(mockedReadLines).toHaveBeenCalledWith(absoluteFilePath, 1999, 0)
 
 			// Verify the result contains the safeguard notice
-			expect(result).toContain("<notice>This file contains 1500 lines and approximately 60,000 tokens")
+			expect(result).toContain("<notice>This file contains 15000 lines and approximately 60,000 tokens")
 			expect(result).toContain("Showing only the first 2000 lines to preserve context space")
 			expect(result).toContain(`<content lines="1-2000">`)
 		})
 
 		it("should not apply safeguard when token count is below threshold", async () => {
 			// Setup - large file but with low token count
-			const fileContent = Array(1500).fill("Short").join("\n")
+			const fileContent = Array(15000).fill("Short").join("\n")
 			const numberedContent = fileContent
 				.split("\n")
 				.map((line, i) => `${i + 1} | ${line}`)
@@ -660,12 +696,21 @@ describe("read_file tool with large file safeguard", () => {
 
 			mockedExtractTextFromFile.mockImplementation(() => Promise.resolve(numberedContent))
 
+			// Mock the api.getModel() to return a model with context window
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
+
 			// Execute with high line count but low token count
 			const result = await executeReadFileTool(
 				{},
 				{
 					maxReadFileLine: -1,
-					totalLines: 1500,
+					totalLines: 15000,
 					tokenCount: 30000, // Below threshold
 				},
 			)
@@ -677,12 +722,12 @@ describe("read_file tool with large file safeguard", () => {
 
 			// Verify no safeguard notice
 			expect(result).not.toContain("preserve context space")
-			expect(result).toContain(`<content lines="1-1500">`)
+			expect(result).toContain(`<content lines="1-15000">`)
 		})
 
-		it("should not apply safeguard for files under 1000 lines", async () => {
-			// Setup - file with less than 1000 lines
-			const fileContent = Array(999).fill("This is a line of text").join("\n")
+		it("should not apply safeguard for files under 10000 lines", async () => {
+			// Setup - file with less than 10000 lines
+			const fileContent = Array(9999).fill("This is a line of text").join("\n")
 			const numberedContent = fileContent
 				.split("\n")
 				.map((line, i) => `${i + 1} | ${line}`)
@@ -690,12 +735,21 @@ describe("read_file tool with large file safeguard", () => {
 
 			mockedExtractTextFromFile.mockImplementation(() => Promise.resolve(numberedContent))
 
+			// Mock the api.getModel() to return a model with context window
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
+
 			// Execute
 			const result = await executeReadFileTool(
 				{},
 				{
 					maxReadFileLine: -1,
-					totalLines: 999,
+					totalLines: 9999,
 					tokenCount: 100000, // Even with high token count
 				},
 			)
@@ -707,7 +761,7 @@ describe("read_file tool with large file safeguard", () => {
 
 			// Verify no safeguard notice
 			expect(result).not.toContain("preserve context space")
-			expect(result).toContain(`<content lines="1-999">`)
+			expect(result).toContain(`<content lines="1-9999">`)
 		})
 
 		it("should apply safeguard for very large files even if token counting fails", async () => {
@@ -723,9 +777,18 @@ describe("read_file tool with large file safeguard", () => {
 				return lines.map((line: string, i: number) => `${i + 1} | ${line}`).join("\n")
 			})
 
+			// Mock the api.getModel() to return a model with context window
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
+
 			// Set up the provider state
 			mockProvider.getState.mockResolvedValue({ maxReadFileLine: -1 })
-			mockedCountFileLines.mockResolvedValue(6000)
+			mockedCountFileLines.mockResolvedValue(60000)
 
 			// IMPORTANT: Set up tiktoken to reject AFTER other mocks are set
 			mockedTiktoken.mockRejectedValue(new Error("Token counting failed"))
@@ -755,22 +818,31 @@ describe("read_file tool with large file safeguard", () => {
 			expect(mockedReadLines).toHaveBeenCalledWith(absoluteFilePath, 1999, 0)
 
 			// Verify the result contains the safeguard notice (without token count)
-			expect(toolResult).toContain("<notice>This file contains 6000 lines")
+			expect(toolResult).toContain("<notice>This file contains 60000 lines")
 			expect(toolResult).toContain("Showing only the first 2000 lines to preserve context space")
 			expect(toolResult).toContain(`<content lines="1-2000">`)
 		})
 
 		it("should not apply safeguard when maxReadFileLine is not -1", async () => {
 			// Setup
-			const fileContent = Array(2000).fill("This is a line of text").join("\n")
+			const fileContent = Array(20000).fill("This is a line of text").join("\n")
 			mockedExtractTextFromFile.mockResolvedValue(fileContent)
+
+			// Mock the api.getModel() to return a model with context window
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
 
 			// Execute with maxReadFileLine = 500 (not -1)
 			const result = await executeReadFileTool(
 				{},
 				{
 					maxReadFileLine: 500,
-					totalLines: 2000,
+					totalLines: 20000,
 					tokenCount: 100000,
 				},
 			)
@@ -787,6 +859,15 @@ describe("read_file tool with large file safeguard", () => {
 			const rangeContent = "Line 100\nLine 101\nLine 102"
 			mockedReadLines.mockResolvedValue(rangeContent)
 
+			// Mock the api.getModel() to return a model with context window
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
+
 			const argsContent = `<file><path>${testFilePath}</path><line_range>100-102</line_range></file>`
 
 			const toolUse: ReadFileToolUse = {
@@ -797,7 +878,7 @@ describe("read_file tool with large file safeguard", () => {
 			}
 
 			mockProvider.getState.mockResolvedValue({ maxReadFileLine: -1 })
-			mockedCountFileLines.mockResolvedValue(10000)
+			mockedCountFileLines.mockResolvedValue(100000)
 
 			await readFileTool(
 				mockCline,
@@ -819,16 +900,33 @@ describe("read_file tool with large file safeguard", () => {
 
 	describe("safeguard thresholds", () => {
 		it("should use correct thresholds for line count and token count", async () => {
+			// Mock the api.getModel() to return a model with context window
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
+
 			// Test boundary conditions
 
 			// Just below line threshold - no token check
-			await executeReadFileTool({}, { totalLines: 1000, maxReadFileLine: -1 })
+			await executeReadFileTool({}, { totalLines: 10000, maxReadFileLine: -1 })
 			expect(mockedTiktoken).not.toHaveBeenCalled()
 
 			// Just above line threshold - token check performed
 			vi.clearAllMocks()
+			// Re-mock the api.getModel() after clearAllMocks
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
 			mockedExtractTextFromFile.mockResolvedValue("content")
-			await executeReadFileTool({}, { totalLines: 1001, maxReadFileLine: -1, tokenCount: 40000 })
+			await executeReadFileTool({}, { totalLines: 10001, maxReadFileLine: -1, tokenCount: 40000 })
 			expect(mockedTiktoken).toHaveBeenCalled()
 
 			// Token count just below threshold - no safeguard
@@ -836,9 +934,17 @@ describe("read_file tool with large file safeguard", () => {
 
 			// Token count just above threshold - safeguard applied
 			vi.clearAllMocks()
+			// Re-mock the api.getModel() after clearAllMocks
+			mockCline.api = {
+				getModel: vi.fn().mockReturnValue({
+					info: {
+						contextWindow: 100000,
+					},
+				}),
+			}
 			mockedExtractTextFromFile.mockResolvedValue("content")
 			mockedReadLines.mockResolvedValue("partial content")
-			await executeReadFileTool({}, { totalLines: 1001, maxReadFileLine: -1, tokenCount: 50001 })
+			await executeReadFileTool({}, { totalLines: 10001, maxReadFileLine: -1, tokenCount: 50001 })
 			expect(mockedReadLines).toHaveBeenCalled()
 			expect(toolResult).toContain("preserve context space")
 		})

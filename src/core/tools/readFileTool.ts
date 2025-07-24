@@ -519,9 +519,12 @@ export async function readFileTool(
 
 				// Handle normal file read with safeguard for large files
 				// Define thresholds for the safeguard
-				const LARGE_FILE_LINE_THRESHOLD = 1000 // Consider files with more than 1000 lines as "large"
-				const MAX_TOKEN_THRESHOLD = 50000 // ~50% of a typical 100k context window
+				const LARGE_FILE_LINE_THRESHOLD = 10000 // Consider files with more than 10000 lines as "large"
 				const FALLBACK_MAX_LINES = 2000 // Default number of lines to read when applying safeguard
+
+				// Get the actual context window size from the model
+				const contextWindow = cline.api.getModel().info.contextWindow || 100000 // Default to 100k if not available
+				const MAX_TOKEN_THRESHOLD = Math.floor(contextWindow * 0.5) // Use 50% of the actual context window
 
 				// Check if we should apply the safeguard
 				let shouldApplySafeguard = false
@@ -544,7 +547,7 @@ export async function readFileTool(
 						// If token counting fails, apply safeguard based on line count alone
 						console.warn(`Failed to count tokens for large file ${relPath}:`, error)
 						if (totalLines > LARGE_FILE_LINE_THRESHOLD * 5) {
-							// For very large files (>5000 lines), apply safeguard anyway
+							// For very large files (>50000 lines), apply safeguard anyway
 							shouldApplySafeguard = true
 							linesToRead = FALLBACK_MAX_LINES
 							safeguardNotice = `<notice>This file contains ${totalLines} lines, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
