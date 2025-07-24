@@ -7,8 +7,7 @@ import { CloudServiceCallbacks } from "./types"
 import type { AuthService } from "./auth"
 import { WebAuthService, StaticTokenAuthService } from "./auth"
 import type { SettingsService } from "./SettingsService"
-import { CloudSettingsService } from "./CloudSettingsService"
-import { StaticSettingsService } from "./StaticSettingsService"
+import { SettingsService as SettingsServiceImpl } from "./SettingsService"
 import { TelemetryClient } from "./TelemetryClient"
 import { ShareService } from "./ShareService"
 
@@ -55,7 +54,7 @@ export class CloudService {
 			this.authService.on("logged-out", this.authListener)
 			this.authService.on("user-info", this.authListener)
 
-			this.settingsService = new SettingsService(this.context, this.authService, () =>
+			this.settingsService = new SettingsServiceImpl(this.context, this.authService!, () =>
 				this.callbacks.stateChanged?.(),
 			)
 			this.settingsService.initialize()
