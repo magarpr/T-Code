@@ -31,7 +31,8 @@ export function extractPatternsFromCommand(command: string): string[] {
 		if (currentTokens.length > 0) {
 			extractFromTokens(currentTokens, patterns)
 		}
-	} catch (_error) {
+	} catch (error) {
+		console.warn("Failed to parse command:", error)
 		// Fallback: just extract the first word
 		const firstWord = command.trim().split(/\s+/)[0]
 		if (firstWord) patterns.add(firstWord)
