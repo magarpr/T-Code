@@ -84,7 +84,7 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 					{patterns.map((item, index) => {
 						const status = getPatternStatus(item.pattern)
 						return (
-							<div key={`${item.pattern}-${index}`} className="ml-5 flex items-center gap-2">
+							<div key={item.pattern} className="ml-5 flex items-center gap-2">
 								<div className="flex-1">
 									<span className="font-mono text-xs text-vscode-foreground">{item.pattern}</span>
 									{item.description && (
