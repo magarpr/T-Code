@@ -95,6 +95,7 @@ IMPORTANT:
 - Ensure proper escaping of quotes and newlines in JSON`
 
 			// Make first API call for code generation
+			// This uses the existing API handler with full context
 			const codeGenMessages = [
 				{
 					role: "user" as const,
@@ -128,12 +129,32 @@ IMPORTANT:
 				return
 			}
 
-			// Stage 2: Focused Diff Generation
+			// Stage 2: Focused Diff Generation with ISOLATED context
 			let diffContent = ""
 			if (fileExists && codeGenResult.type === "snippet") {
-				const diffGenPrompt = `You are a diff generation expert. Given the original file content and new code, generate a standard unified diff patch to integrate the new code into the original file.
+				// HARDCODED OPTIMIZED PROMPT - This is the key difference
+				// This prompt is specifically designed for diff generation without any conversational noise
+				const DIFF_GENERATION_SYSTEM_PROMPT = `You are a specialized diff generation model. Your ONLY task is to generate accurate diff patches.
 
-Original file content:
+RULES:
+1. You will receive EXACTLY two inputs: original file content and new code to integrate
+2. You must output ONLY the diff patch in the specified format
+3. Do NOT add any explanations, comments, or conversational text
+4. Focus ONLY on the mechanical task of creating the diff
+5. Ensure the SEARCH section matches the original content EXACTLY (including whitespace)
+6. Place the new code in the most logical location within the file
+
+OUTPUT FORMAT:
+<<<<<<< SEARCH
+[exact content from original file]
+=======
+[integrated content with new code]
+>>>>>>> REPLACE
+
+You may use multiple SEARCH/REPLACE blocks if needed.`
+
+				// Simplified prompt for isolated context - no conversational instructions
+				const diffGenPrompt = `Original file content:
 \`\`\`
 ${originalContent}
 \`\`\`
@@ -141,32 +162,26 @@ ${originalContent}
 New code to integrate:
 \`\`\`
 ${codeGenResult.code}
-\`\`\`
+\`\`\``
 
-Generate a diff in the exact format used by the apply_diff tool:
-<<<<<<< SEARCH
-[exact content to find including whitespace]
-=======
-[new content to replace with]
->>>>>>> REPLACE
-
-IMPORTANT:
-- The SEARCH section must exactly match existing content
-- Include proper indentation and whitespace
-- You may use multiple SEARCH/REPLACE blocks if needed
-- Focus only on integrating the new code logically`
-
-				const diffGenMessages = [
+				// Create a COMPLETELY ISOLATED API call
+				// This is a new, independent message array with NO conversation history
+				const isolatedDiffMessages = [
 					{
 						role: "user" as const,
 						content: [{ type: "text" as const, text: diffGenPrompt }],
 					},
 				]
 
-				const diffGenStream = cline.api.createMessage(
-					"You are a diff generation expert. Generate accurate diffs for code integration.",
-					diffGenMessages,
-					{ taskId: cline.taskId, mode: "diff_generation" },
+				// Create a new API handler instance to ensure complete isolation
+				// This prevents any context bleeding from the main conversation
+				const isolatedApiHandler = buildApiHandler(cline.apiConfiguration)
+
+				// Make the isolated API call with the hardcoded system prompt
+				const diffGenStream = isolatedApiHandler.createMessage(
+					DIFF_GENERATION_SYSTEM_PROMPT,
+					isolatedDiffMessages,
+					{ taskId: `${cline.taskId}-diff-gen`, mode: "diff_generation" },
 				)
 
 				for await (const chunk of diffGenStream) {
