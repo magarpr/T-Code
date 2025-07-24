@@ -1,5 +1,6 @@
 import * as path from "path"
 import * as vscode from "vscode"
+import * as fs from "fs/promises"
 import os from "os"
 import crypto from "crypto"
 import EventEmitter from "events"
@@ -745,6 +746,12 @@ export class Task extends EventEmitter<ClineEvents> {
 		this.apiConversationHistory = []
 		await this.providerRef.deref()?.postStateToWebview()
 
+		// Check if the task is the /init command
+		if (task?.trim() === "/init") {
+			await this.handleInitCommand()
+			return
+		}
+
 		await this.say("text", task, images)
 		this.isInitialized = true
 
@@ -759,6 +766,60 @@ export class Task extends EventEmitter<ClineEvents> {
 			},
 			...imageBlocks,
 		])
+	}
+
+	private async handleInitCommand(): Promise<void> {
+		this.isInitialized = true
+
+		try {
+			// Notify user that we're starting the project scan
+			await this.say("text", "🔍 Scanning project structure and analyzing codebase...")
+
+			// Import the project scanner module
+			const { ProjectScanner } = await import("../project-scanner/ProjectScanner")
+			const { DocumentationGenerator } = await import("../project-scanner/DocumentationGenerator")
+
+			// Create scanner instance
+			const scanner = new ProjectScanner(this.cwd, this.rooIgnoreController)
+
+			// Scan the project
+			await this.say("text", "📊 Analyzing project structure...")
+			const projectInfo = await scanner.scanProject()
+
+			// Generate documentation
+			await this.say("text", "📝 Generating ROO.md documentation...")
+			const generator = new DocumentationGenerator()
+			const documentation = await generator.generateDocumentation(projectInfo)
+
+			// Write ROO.md file using the file system
+			const rooMdPath = path.join(this.cwd, "ROO.md")
+			await this.say("text", `✍️ Writing documentation to ${rooMdPath}...`)
+
+			// Write the file directly
+			await fs.writeFile(rooMdPath, documentation, "utf-8")
+
+			// Provide summary to user
+			await this.say(
+				"text",
+				`✅ Project initialization complete!
+
+I've created a ROO.md file with comprehensive documentation about your project:
+- Project structure and organization
+- Detected technologies and frameworks
+- Key configuration files
+- Development setup instructions
+- Important patterns and conventions
+
+The ROO.md file will help me better understand your project context in future conversations.`,
+			)
+
+			// Mark task as complete by completing the task loop
+			this.abort = true
+		} catch (error) {
+			await this.say("error", `Failed to initialize project: ${error.message}`)
+			console.error("Error in handleInitCommand:", error)
+			this.abort = true
+		}
 	}
 
 	public async resumePausedTask(lastMessage: string) {
