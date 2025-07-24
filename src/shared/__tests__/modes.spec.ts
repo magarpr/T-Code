@@ -498,6 +498,65 @@ describe("FileRestrictionError", () => {
 	})
 })
 
+describe("codebase-doc mode", () => {
+	it("is configured correctly", () => {
+		const codebaseDocMode = modes.find((mode) => mode.slug === "codebase-doc")
+		expect(codebaseDocMode).toBeDefined()
+		expect(codebaseDocMode).toMatchObject({
+			slug: "codebase-doc",
+			name: "🗂️ Codebase Documentation Generator",
+			roleDefinition:
+				"You are a codebase analyst and documentation generator. Your job is to analyze the project structure, environment, and dependencies, and generate a PROJECT_DOC.md file with actionable context.",
+			whenToUse:
+				"Use this mode to create or update project documentation and provide environment-specific guidance.",
+			description: "Generate comprehensive project documentation",
+			groups: ["read", "edit", "browser"],
+		})
+		expect(codebaseDocMode?.customInstructions).toContain("PROJECT_DOC.md Template")
+		expect(codebaseDocMode?.customInstructions).toContain("Use existing tools")
+		expect(codebaseDocMode?.customInstructions).toContain("list_files")
+		expect(codebaseDocMode?.customInstructions).toContain("read_file")
+		expect(codebaseDocMode?.customInstructions).toContain("write_to_file")
+	})
+
+	it("allows read, edit, and browser tools", () => {
+		expect(isToolAllowedForMode("read_file", "codebase-doc", [])).toBe(true)
+		expect(isToolAllowedForMode("list_files", "codebase-doc", [])).toBe(true)
+		expect(isToolAllowedForMode("search_files", "codebase-doc", [])).toBe(true)
+		expect(isToolAllowedForMode("write_to_file", "codebase-doc", [])).toBe(true)
+		expect(isToolAllowedForMode("browser_action", "codebase-doc", [])).toBe(true)
+	})
+
+	it("does not allow command or mcp tools", () => {
+		expect(isToolAllowedForMode("execute_command", "codebase-doc", [])).toBe(false)
+		expect(isToolAllowedForMode("use_mcp_tool", "codebase-doc", [])).toBe(false)
+	})
+
+	it("allows editing any file type", () => {
+		// Test various file types
+		expect(
+			isToolAllowedForMode("write_to_file", "codebase-doc", [], undefined, {
+				path: "PROJECT_DOC.md",
+				content: "# Documentation",
+			}),
+		).toBe(true)
+
+		expect(
+			isToolAllowedForMode("write_to_file", "codebase-doc", [], undefined, {
+				path: "config.json",
+				content: "{}",
+			}),
+		).toBe(true)
+
+		expect(
+			isToolAllowedForMode("write_to_file", "codebase-doc", [], undefined, {
+				path: "script.py",
+				content: "print('hello')",
+			}),
+		).toBe(true)
+	})
+})
+
 describe("getModeSelection", () => {
 	const builtInAskMode = modes.find((m) => m.slug === "ask")!
 	const customModesList: ModeConfig[] = [
