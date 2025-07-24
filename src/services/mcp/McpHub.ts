@@ -1464,12 +1464,39 @@ export class McpHub {
 	): Promise<McpToolCallResponse> {
 		const connection = this.findConnection(serverName, source)
 		if (!connection) {
+			// Provide helpful suggestions
+			const availableServers = this.getAllServers()
+				.filter((s) => !s.disabled)
+				.map((s) => s.name)
+				.join(", ")
+
+			const errorMsg =
+				availableServers.length > 0
+					? `MCP server '${serverName}' not found. Available servers: ${availableServers}`
+					: `No MCP servers are currently connected. Please configure MCP servers in your settings.`
+
+			throw new Error(errorMsg)
+		}
+
+		if (connection.server.disabled) {
 			throw new Error(
-				`No connection found for server: ${serverName}${source ? ` with source ${source}` : ""}. Please make sure to use MCP servers available under 'Connected MCP Servers'.`,
+				`MCP server '${serverName}' is currently disabled. Please enable it in the MCP settings to use it.`,
 			)
 		}
-		if (connection.server.disabled) {
-			throw new Error(`Server "${serverName}" is disabled and cannot be used`)
+
+		// Check if server is connected
+		if (connection.server.status !== "connected") {
+			throw new Error(
+				`MCP server '${serverName}' is not connected (status: ${connection.server.status}). Please check the server configuration and logs.`,
+			)
+		}
+
+		// Validate tool exists
+		const availableTools = connection.server.tools || []
+		const toolExists = availableTools.some((t) => t.name === toolName)
+		if (!toolExists && availableTools.length > 0) {
+			const toolNames = availableTools.map((t) => t.name).join(", ")
+			throw new Error(`Tool '${toolName}' not found on server '${serverName}'. Available tools: ${toolNames}`)
 		}
 
 		let timeout: number
@@ -1482,19 +1509,44 @@ export class McpHub {
 			timeout = 60 * 1000
 		}
 
-		return await connection.client.request(
-			{
-				method: "tools/call",
-				params: {
-					name: toolName,
-					arguments: toolArguments,
+		try {
+			const result = await connection.client.request(
+				{
+					method: "tools/call",
+					params: {
+						name: toolName,
+						arguments: toolArguments,
+					},
 				},
-			},
-			CallToolResultSchema,
-			{
-				timeout,
-			},
-		)
+				CallToolResultSchema,
+				{
+					timeout,
+				},
+			)
+
+			return result
+		} catch (error) {
+			// Enhance error messages for common issues
+			if (error instanceof Error) {
+				if (error.message.includes("timeout")) {
+					throw new Error(
+						`MCP tool '${toolName}' on server '${serverName}' timed out after ${timeout / 1000} seconds. The tool may be taking too long to respond or the server may be unresponsive.`,
+					)
+				}
+				if (error.message.includes("ECONNREFUSED")) {
+					throw new Error(
+						`Cannot connect to MCP server '${serverName}'. The server may not be running or may be configured incorrectly.`,
+					)
+				}
+				if (error.message.includes("EPIPE") || error.message.includes("ENOTCONN")) {
+					throw new Error(
+						`Lost connection to MCP server '${serverName}'. The server may have crashed or been terminated.`,
+					)
+				}
+			}
+			// Re-throw with original error if not a known issue
+			throw error
+		}
 	}
 
 	/**

@@ -5,7 +5,9 @@
 		"invalid_settings_validation": "Invalid MCP settings format: {{errorMessages}}",
 		"create_json": "Failed to create or open .roo/mcp.json: {{error}}",
 		"failed_update_project": "Failed to update project MCP servers",
-		"invalidJsonArgument": "Roo tried to use {{toolName}} with an invalid JSON argument. Retrying..."
+		"invalidJsonArgument": "Roo tried to use {{toolName}} with an invalid JSON argument. Retrying...",
+		"connection_failed": "Failed to connect to MCP server '{{serverName}}'. Please check your server configuration and ensure the server is running.",
+		"tool_execution_failed": "Failed to execute MCP tool '{{toolName}}' on server '{{serverName}}': {{error}}"
 	},
 	"info": {
 		"server_restarting": "Restarting {{serverName}} MCP server...",

@@ -54,20 +54,45 @@ async function validateParams(
 		return { isValid: false }
 	}
 
+	// Validate server name format
+	const serverName = params.server_name.trim()
+	if (!serverName) {
+		cline.consecutiveMistakeCount++
+		cline.recordToolError("use_mcp_tool")
+		await cline.say("error", "Server name cannot be empty or contain only whitespace")
+		pushToolResult(formatResponse.toolError("Invalid server name: cannot be empty"))
+		return { isValid: false }
+	}
+
+	// Validate tool name format
+	const toolName = params.tool_name.trim()
+	if (!toolName) {
+		cline.consecutiveMistakeCount++
+		cline.recordToolError("use_mcp_tool")
+		await cline.say("error", "Tool name cannot be empty or contain only whitespace")
+		pushToolResult(formatResponse.toolError("Invalid tool name: cannot be empty"))
+		return { isValid: false }
+	}
+
 	let parsedArguments: Record<string, unknown> | undefined
 
 	if (params.arguments) {
 		try {
 			parsedArguments = JSON.parse(params.arguments)
+
+			// Validate that arguments is an object (not array or primitive)
+			if ((parsedArguments !== null && typeof parsedArguments !== "object") || Array.isArray(parsedArguments)) {
+				throw new Error("Arguments must be a JSON object, not an array or primitive value")
+			}
 		} catch (error) {
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("use_mcp_tool")
-			await cline.say("error", t("mcp:errors.invalidJsonArgument", { toolName: params.tool_name }))
+
+			const errorMessage = error instanceof Error ? error.message : "Invalid JSON"
+			await cline.say("error", `Invalid JSON arguments for tool '${toolName}': ${errorMessage}`)
 
 			pushToolResult(
-				formatResponse.toolError(
-					formatResponse.invalidMcpToolArgumentError(params.server_name, params.tool_name),
-				),
+				formatResponse.toolError(`Invalid JSON arguments for ${serverName}.${toolName}: ${errorMessage}`),
 			)
 			return { isValid: false }
 		}
@@ -75,8 +100,8 @@ async function validateParams(
 
 	return {
 		isValid: true,
-		serverName: params.server_name,
-		toolName: params.tool_name,
+		serverName,
+		toolName,
 		parsedArguments,
 	}
 }
@@ -127,41 +152,74 @@ async function executeToolAndProcessResult(
 		toolName,
 	})
 
-	const toolResult = await cline.providerRef.deref()?.getMcpHub()?.callTool(serverName, toolName, parsedArguments)
+	let retryCount = 0
+	const maxRetries = 3
+	let lastError: Error | null = null
 
-	let toolResultPretty = "(No response)"
+	while (retryCount <= maxRetries) {
+		try {
+			const mcpHub = cline.providerRef.deref()?.getMcpHub()
+			if (!mcpHub) {
+				throw new Error("MCP Hub is not available. Please ensure MCP servers are properly configured.")
+			}
 
-	if (toolResult) {
-		const outputText = processToolContent(toolResult)
+			const toolResult = await mcpHub.callTool(serverName, toolName, parsedArguments)
 
-		if (outputText) {
-			await sendExecutionStatus(cline, {
-				executionId,
-				status: "output",
-				response: outputText,
-			})
+			if (toolResult) {
+				const outputText = processToolContent(toolResult)
 
-			toolResultPretty = (toolResult.isError ? "Error:\n" : "") + outputText
+				if (outputText) {
+					await sendExecutionStatus(cline, {
+						executionId,
+						status: "output",
+						response: outputText,
+					})
+
+					const toolResultPretty = (toolResult.isError ? "Error:\n" : "") + outputText
+
+					// Send completion status
+					await sendExecutionStatus(cline, {
+						executionId,
+						status: toolResult.isError ? "error" : "completed",
+						response: toolResultPretty,
+						error: toolResult.isError ? outputText : undefined,
+					})
+
+					await cline.say("mcp_server_response", toolResultPretty)
+					pushToolResult(formatResponse.toolResult(toolResultPretty))
+					return
+				}
+			}
+
+			// If we get here, toolResult was null/undefined
+			throw new Error(`No response received from MCP server '${serverName}' for tool '${toolName}'`)
+		} catch (error) {
+			lastError = error instanceof Error ? error : new Error(String(error))
+			retryCount++
+
+			if (retryCount <= maxRetries) {
+				const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000) // Exponential backoff with max 5s
+				await cline.say(
+					"error",
+					`MCP tool execution failed (attempt ${retryCount}/${maxRetries}). Retrying in ${delay / 1000}s...`,
+				)
+				await new Promise((resolve) => setTimeout(resolve, delay))
+			}
 		}
-
-		// Send completion status
-		await sendExecutionStatus(cline, {
-			executionId,
-			status: toolResult.isError ? "error" : "completed",
-			response: toolResultPretty,
-			error: toolResult.isError ? "Error executing MCP tool" : undefined,
-		})
-	} else {
-		// Send error status if no result
-		await sendExecutionStatus(cline, {
-			executionId,
-			status: "error",
-			error: "No response from MCP server",
-		})
 	}
 
-	await cline.say("mcp_server_response", toolResultPretty)
-	pushToolResult(formatResponse.toolResult(toolResultPretty))
+	// All retries failed
+	const errorMessage = lastError?.message || "Unknown error occurred"
+	const userFriendlyError = `Failed to execute MCP tool '${toolName}' on server '${serverName}' after ${maxRetries} attempts. ${errorMessage}`
+
+	await sendExecutionStatus(cline, {
+		executionId,
+		status: "error",
+		error: userFriendlyError,
+	})
+
+	await cline.say("mcp_server_response", `Error: ${userFriendlyError}`)
+	pushToolResult(formatResponse.toolError(userFriendlyError))
 }
 
 export async function useMcpToolTool(

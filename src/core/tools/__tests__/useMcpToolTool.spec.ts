@@ -136,8 +136,13 @@ describe("useMcpToolTool", () => {
 
 			expect(mockTask.consecutiveMistakeCount).toBe(1)
 			expect(mockTask.recordToolError).toHaveBeenCalledWith("use_mcp_tool")
-			expect(mockTask.say).toHaveBeenCalledWith("error", expect.stringContaining("invalid JSON argument"))
-			expect(mockPushToolResult).toHaveBeenCalledWith("Tool error: Invalid args for test_server:test_tool")
+			expect(mockTask.say).toHaveBeenCalledWith(
+				"error",
+				expect.stringContaining("Invalid JSON arguments for tool 'test_tool'"),
+			)
+			expect(mockPushToolResult).toHaveBeenCalledWith(
+				expect.stringContaining("Invalid JSON arguments for test_server.test_tool"),
+			)
 		})
 	})
 

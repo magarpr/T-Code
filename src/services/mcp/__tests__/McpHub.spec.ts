@@ -545,7 +545,7 @@ describe("McpHub", () => {
 			mcpHub.connections = [mockConnection]
 
 			await expect(mcpHub.callTool("disabled-server", "some-tool", {})).rejects.toThrow(
-				'Server "disabled-server" is disabled and cannot be used',
+				"MCP server 'disabled-server' is currently disabled. Please enable it in the MCP settings to use it.",
 			)
 		})
 
@@ -610,7 +610,7 @@ describe("McpHub", () => {
 
 		it("should throw error if server not found", async () => {
 			await expect(mcpHub.callTool("non-existent-server", "some-tool", {})).rejects.toThrow(
-				"No connection found for server: non-existent-server",
+				"No MCP servers are currently connected. Please configure MCP servers in your settings.",
 			)
 		})
 
