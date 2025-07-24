@@ -5,6 +5,7 @@ import { defaultModeSlug } from "@roo/modes"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { vscode } from "@src/utils/vscode"
 import * as pathMentions from "@src/utils/path-mentions"
+import { BASE_IMAGE_FORMATS, VIDEO_FORMATS } from "@src/utils/media-config"
 
 import ChatTextArea from "../ChatTextArea"
 
@@ -60,7 +61,7 @@ describe("ChatTextArea", () => {
 		mode: defaultModeSlug,
 		setMode: vi.fn(),
 		modeShortcutText: "(⌘. for next mode)",
-		acceptedFileTypes: ["png", "jpeg", "gif", "mp4"],
+		acceptedFileTypes: [...BASE_IMAGE_FORMATS, ...VIDEO_FORMATS],
 	}
 
 	beforeEach(() => {

@@ -40,6 +40,7 @@ import RooTips from "@src/components/welcome/RooTips"
 import { StandardTooltip } from "@src/components/ui"
 import { useAutoApprovalState } from "@src/hooks/useAutoApprovalState"
 import { useAutoApprovalToggles } from "@src/hooks/useAutoApprovalToggles"
+import { getAcceptedFileTypes } from "@src/utils/media-config"
 
 import TelemetryBanner from "../common/TelemetryBanner"
 import VersionIndicator from "../common/VersionIndicator"
@@ -702,27 +703,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const selectImages = useCallback(() => vscode.postMessage({ type: "selectImages" }), [])
 
 	const acceptedFileTypes = useMemo(() => {
-		const modelId = apiConfiguration?.apiModelId
-		const isGeminiPro = modelId?.includes("gemini-2.5-pro")
-		const isGeminiFlash =
-			modelId?.includes("gemini-1.5-flash") ||
-			modelId?.includes("gemini-2.0-flash-001") ||
-			modelId?.includes("gemini-2.5-flash-preview-05-20") ||
-			modelId?.includes("gemini-2.5-flash") ||
-			modelId?.includes("gemini-2.0-flash-lite-preview-02-05") ||
-			modelId?.includes("gemini-2.0-flash-thinking-exp-01-21") ||
-			modelId?.includes("gemini-2.0-flash-thinking-exp-1219") ||
-			modelId?.includes("gemini-2.0-flash-exp") ||
-			modelId?.includes("gemini-2.5-flash-lite-preview-06-17")
-
-		if ((isGeminiPro || isGeminiFlash) && model?.supportsImages) {
-			return ["png", "jpeg", "webp", "heic", "heif", "mp4", "mov", "avi", "wmv", "flv", "webm"]
-		}
-		if (model?.supportsImages) {
-			return ["png", "jpeg", "webp", "heic", "heif"]
-		}
-		return []
-	}, [apiConfiguration, model])
+		return getAcceptedFileTypes(apiConfiguration?.apiModelId, model?.supportsImages)
+	}, [apiConfiguration?.apiModelId, model?.supportsImages])
 
 	const shouldDisableImages =
 		!model?.supportsImages || sendingDisabled || selectedMedia.length >= MAX_IMAGES_PER_MESSAGE

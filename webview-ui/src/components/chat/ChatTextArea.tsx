@@ -23,7 +23,7 @@ import { SelectDropdown, DropdownOptionType, Button, StandardTooltip } from "@/c
 
 import ModeSelector from "./ModeSelector"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
-import MediaThumbnails from "../common/MediaThumbnails"
+import Thumbnails from "../common/Thumbnails"
 import ContextMenu from "./ContextMenu"
 import { VolumeX, Pin, Check, Image, WandSparkles, SendHorizontal } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
@@ -1268,9 +1268,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				</div>
 
 				{selectedMedia.length > 0 && (
-					<MediaThumbnails
-						mediaItems={selectedMedia}
-						setMediaItems={setSelectedMedia}
+					<Thumbnails
+						images={selectedMedia}
+						setImages={setSelectedMedia}
 						style={{
 							left: "16px",
 							zIndex: 2,

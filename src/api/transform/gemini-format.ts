@@ -1,7 +1,17 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Content, Part } from "@google/genai"
 
-// Extended type to support video content blocks that aren't in the standard Anthropic SDK
+/**
+ * Extended content block type to support video content that isn't in the standard Anthropic SDK.
+ * This interface extends the standard Anthropic content blocks to include video support for Gemini models.
+ *
+ * @interface VideoContentBlock
+ * @property {string} type - Must be "video" to identify this as a video content block
+ * @property {Object} source - The video source information
+ * @property {string} source.type - Must be "base64" for base64-encoded video data
+ * @property {string} source.data - The base64-encoded video data
+ * @property {string} source.media_type - The MIME type of the video (e.g., "video/mp4", "video/webm")
+ */
 interface VideoContentBlock {
 	type: "video"
 	source: {
@@ -11,6 +21,10 @@ interface VideoContentBlock {
 	}
 }
 
+/**
+ * Extended content block parameter type that includes both standard Anthropic content blocks
+ * and our custom video content block for Gemini model support.
+ */
 type ExtendedContentBlockParam = Anthropic.ContentBlockParam | VideoContentBlock
 
 export function convertAnthropicContentToGemini(content: string | ExtendedContentBlockParam[]): Part[] {
@@ -28,11 +42,39 @@ export function convertAnthropicContentToGemini(content: string | ExtendedConten
 				}
 
 				return { inlineData: { data: block.source.data, mimeType: block.source.media_type } }
-			case "video":
+			case "video": {
 				if (block.source.type !== "base64") {
-					throw new Error("Unsupported video source type")
+					throw new Error("Unsupported video source type. Only base64 encoded videos are supported.")
 				}
+
+				// Validate video MIME type
+				const supportedVideoTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"]
+				if (!supportedVideoTypes.includes(block.source.media_type)) {
+					throw new Error(
+						`Unsupported video format: ${block.source.media_type}. Supported formats: ${supportedVideoTypes.join(", ")}`,
+					)
+				}
+
+				// Check if video data exists
+				if (!block.source.data || block.source.data.trim() === "") {
+					throw new Error("Video data is empty or missing")
+				}
+
+				// Validate base64 format
+				try {
+					// Basic validation - check if it's valid base64
+					const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+					if (!base64Regex.test(block.source.data.replace(/\s/g, ""))) {
+						throw new Error("Invalid base64 format for video data")
+					}
+				} catch (e) {
+					throw new Error(
+						`Failed to validate video data: ${e instanceof Error ? e.message : "Unknown error"}`,
+					)
+				}
+
 				return { inlineData: { data: block.source.data, mimeType: block.source.media_type } }
+			}
 			case "tool_use":
 				return {
 					functionCall: {
