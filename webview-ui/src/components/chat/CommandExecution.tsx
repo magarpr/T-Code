@@ -43,7 +43,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 		if (outputIndex !== -1) {
 			// Text is split into command and output
-			const cmd = text!.slice(0, outputIndex).trim()
+			const cmd = (text ?? '').slice(0, outputIndex).trim()
 			// Skip the newline and "Output:" text
 			const afterSeparator = outputIndex + 1 + outputSeparator.length
 			let startOfOutput = afterSeparator
