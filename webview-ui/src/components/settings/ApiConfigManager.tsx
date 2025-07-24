@@ -250,14 +250,14 @@ const ApiConfigManager = ({
 							className="grow min-w-0"
 							data-testid="select-component"
 						/>
-						<div className="flex items-center gap-1 flex-shrink-0">
+						<div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
 							<StandardTooltip content={t("settings:providers.addProfile")}>
 								<Button
 									variant="ghost"
 									size="icon"
 									onClick={handleAdd}
 									data-testid="add-profile-button"
-									className="flex-shrink-0">
+									className="flex-shrink-0 min-w-[32px]">
 									<span className="codicon codicon-add" />
 								</Button>
 							</StandardTooltip>
@@ -269,7 +269,7 @@ const ApiConfigManager = ({
 											size="icon"
 											onClick={handleStartRename}
 											data-testid="rename-profile-button"
-											className="flex-shrink-0">
+											className="flex-shrink-0 min-w-[32px]">
 											<span className="codicon codicon-edit" />
 										</Button>
 									</StandardTooltip>
@@ -285,7 +285,7 @@ const ApiConfigManager = ({
 											onClick={handleDelete}
 											data-testid="delete-profile-button"
 											disabled={isOnlyProfile}
-											className="flex-shrink-0">
+											className="flex-shrink-0 min-w-[32px]">
 											<span className="codicon codicon-trash" />
 										</Button>
 									</StandardTooltip>

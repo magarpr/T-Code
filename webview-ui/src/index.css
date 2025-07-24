@@ -420,6 +420,26 @@ vscode-dropdown::part(listbox) {
 	min-height: 16px;
 }
 
+/* VSCode checkbox specific styles to prevent squeezing */
+vscode-checkbox {
+	flex-shrink: 0;
+	min-width: fit-content;
+	display: inline-flex;
+	align-items: center;
+}
+
+/* Ensure VSCode checkbox internals don't squeeze */
+vscode-checkbox::part(control) {
+	flex-shrink: 0;
+	min-width: 16px;
+	min-height: 16px;
+}
+
+vscode-checkbox::part(label) {
+	min-width: 0;
+	margin-left: 0.5rem;
+}
+
 /**
  * @shadcn/ui Overrides / Hacks
  */
@@ -580,6 +600,31 @@ input[cmdk-input]:focus {
 /* Prevent icon buttons from shrinking */
 button[class*="codicon"] {
 	flex-shrink: 0;
+}
+
+/* Additional responsive adjustments for very narrow sidebars */
+@media (max-width: 350px) {
+	/* Ensure button groups stay visible */
+	.flex-shrink-0 {
+		overflow-x: auto;
+		overflow-y: hidden;
+		scrollbar-width: thin;
+	}
+
+	/* Minimum width for button containers */
+	.flex-shrink-0:has(button) {
+		min-width: fit-content;
+	}
+}
+
+/* Ensure all settings checkboxes don't squeeze */
+.settings-view vscode-checkbox,
+[class*="settings"] vscode-checkbox,
+[class*="Settings"] vscode-checkbox {
+	flex-shrink: 0;
+	min-width: fit-content;
+	display: inline-flex;
+	align-items: center;
 }
 
 /* Ensure proper text wrapping and overflow handling */
