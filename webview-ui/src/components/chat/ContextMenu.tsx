@@ -69,6 +69,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	const renderOptionContent = (option: ContextMenuQueryItem) => {
 		switch (option.type) {
 			case ContextMenuOptionType.Mode:
+			case ContextMenuOptionType.Export:
 				return (
 					<div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
 						<span style={{ lineHeight: "1.2" }}>{option.label}</span>
@@ -163,6 +164,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 		switch (option.type) {
 			case ContextMenuOptionType.Mode:
 				return "symbol-misc"
+			case ContextMenuOptionType.Export:
+				return "export"
 			case ContextMenuOptionType.OpenedFile:
 				return "window"
 			case ContextMenuOptionType.File:
@@ -263,7 +266,20 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 										}}
 									/>
 								)}
+								{(option.type === ContextMenuOptionType.Mode ||
+									option.type === ContextMenuOptionType.Export) && (
+									<i
+										className={`codicon codicon-${getIconForOption(option)}`}
+										style={{
+											marginRight: "6px",
+											flexShrink: 0,
+											fontSize: "14px",
+											marginTop: 0,
+										}}
+									/>
+								)}
 								{option.type !== ContextMenuOptionType.Mode &&
+									option.type !== ContextMenuOptionType.Export &&
 									option.type !== ContextMenuOptionType.File &&
 									option.type !== ContextMenuOptionType.Folder &&
 									option.type !== ContextMenuOptionType.OpenedFile &&

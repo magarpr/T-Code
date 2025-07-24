@@ -105,6 +105,7 @@ export enum ContextMenuOptionType {
 	Git = "git",
 	NoResults = "noResults",
 	Mode = "mode", // Add mode type
+	Export = "export", // Add export type
 }
 
 export interface ContextMenuQueryItem {
@@ -126,7 +127,18 @@ export function getContextMenuOptions(
 	// Handle slash commands for modes
 	if (query.startsWith("/") && inputValue.startsWith("/")) {
 		const modeQuery = query.slice(1)
-		if (!modes?.length) return [{ type: ContextMenuOptionType.NoResults }]
+
+		// Always include Export option at the top
+		const exportOption: ContextMenuQueryItem = {
+			type: ContextMenuOptionType.Export,
+			label: "Export current mode",
+			description: "Export the current mode configuration",
+		}
+
+		if (!modes?.length) {
+			// If no modes, just show export option
+			return [exportOption]
+		}
 
 		// Create searchable strings array for fzf
 		const searchableItems = modes.map((mode) => ({
@@ -154,7 +166,11 @@ export function getContextMenuOptions(
 					description: getModeDescription(mode),
 				}))
 
-		return matchingModes.length > 0 ? matchingModes : [{ type: ContextMenuOptionType.NoResults }]
+		// Filter export option based on search query
+		const exportMatches = modeQuery === "" || "export".toLowerCase().includes(modeQuery.toLowerCase())
+		const filteredOptions = exportMatches ? [exportOption, ...matchingModes] : matchingModes
+
+		return filteredOptions.length > 0 ? filteredOptions : [{ type: ContextMenuOptionType.NoResults }]
 	}
 
 	const workingChanges: ContextMenuQueryItem = {

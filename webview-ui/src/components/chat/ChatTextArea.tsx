@@ -264,6 +264,14 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					return
 				}
 
+				if (type === ContextMenuOptionType.Export) {
+					// Handle export action for current mode
+					setInputValue("")
+					setShowContextMenu(false)
+					vscode.postMessage({ type: "exportMode", slug: mode })
+					return
+				}
+
 				if (type === ContextMenuOptionType.Mode && value) {
 					// Handle mode selection.
 					setMode(value)
@@ -325,7 +333,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}
 			},
 			// eslint-disable-next-line react-hooks/exhaustive-deps
-			[setInputValue, cursorPosition],
+			[setInputValue, cursorPosition, mode],
 		)
 
 		const handleKeyDown = useCallback(
