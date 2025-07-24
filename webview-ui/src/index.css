@@ -399,6 +399,27 @@ vscode-dropdown::part(listbox) {
 	min-height: 16px;
 }
 
+/* Ensure checkbox containers don't squeeze */
+.vscrui-checkbox {
+	flex-shrink: 0;
+	min-width: fit-content;
+}
+
+/* Prevent checkbox label text from wrapping inappropriately */
+.vscrui-checkbox label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+/* Ensure checkbox input maintains size */
+.vscrui-checkbox input[type="checkbox"] {
+	flex-shrink: 0;
+	min-width: 16px;
+	min-height: 16px;
+}
+
 /**
  * @shadcn/ui Overrides / Hacks
  */
@@ -485,11 +506,11 @@ input[cmdk-input]:focus {
 	.responsive-text {
 		font-size: 0.875rem;
 	}
-	
+
 	.responsive-gap {
 		gap: 0.25rem;
 	}
-	
+
 	.responsive-padding {
 		padding: 0.5rem;
 	}
@@ -501,7 +522,7 @@ input[cmdk-input]:focus {
 		flex-direction: column;
 		gap: 0.5rem;
 	}
-	
+
 	.container-compact .settings-tab {
 		min-width: auto;
 		flex: 1;
@@ -533,6 +554,32 @@ input[cmdk-input]:focus {
 	min-width: 0;
 	flex: 1;
 	overflow: hidden;
+}
+
+/* Settings view specific responsive adjustments */
+@container (max-width: 400px) {
+	/* Reduce button sizes in very narrow containers */
+	.settings-view button[class*="size-icon"] {
+		width: 2rem;
+		height: 2rem;
+		padding: 0.25rem;
+	}
+
+	/* Adjust gap between elements */
+	.settings-view .flex.gap-1 {
+		gap: 0.25rem;
+	}
+}
+
+/* Ensure profile selector doesn't overflow */
+.profile-selector-container {
+	min-width: 0;
+	overflow: hidden;
+}
+
+/* Prevent icon buttons from shrinking */
+button[class*="codicon"] {
+	flex-shrink: 0;
 }
 
 /* Ensure proper text wrapping and overflow handling */
