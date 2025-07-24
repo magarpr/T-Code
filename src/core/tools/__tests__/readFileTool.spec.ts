@@ -10,6 +10,7 @@ import { isBinaryFile } from "isbinaryfile"
 import { ReadFileToolUse, ToolParamName, ToolResponse } from "../../../shared/tools"
 import { readFileTool } from "../readFileTool"
 import { formatResponse } from "../../prompts/responses"
+import { tiktoken } from "../../../utils/tiktoken"
 
 vi.mock("path", async () => {
 	const originalPath = await vi.importActual("path")
@@ -35,18 +36,27 @@ vi.mock("../../../integrations/misc/read-lines")
 let mockInputContent = ""
 
 // First create all the mocks
-vi.mock("../../../integrations/misc/extract-text")
+vi.mock("../../../integrations/misc/extract-text", () => ({
+	extractTextFromFile: vi.fn(),
+	addLineNumbers: vi.fn(),
+	getSupportedBinaryFormats: vi.fn(() => [".pdf", ".docx", ".ipynb"]),
+}))
 vi.mock("../../../services/tree-sitter")
+vi.mock("../../../utils/tiktoken")
+
+// Import the mocked functions
+import { addLineNumbers, getSupportedBinaryFormats } from "../../../integrations/misc/extract-text"
 
 // Then create the mock functions
-const addLineNumbersMock = vi.fn().mockImplementation((text, startLine = 1) => {
+const addLineNumbersMock = vi.mocked(addLineNumbers)
+addLineNumbersMock.mockImplementation((text: string, startLine = 1) => {
 	if (!text) return ""
 	const lines = typeof text === "string" ? text.split("\n") : [text]
-	return lines.map((line, i) => `${startLine + i} | ${line}`).join("\n")
+	return lines.map((line: string, i: number) => `${startLine + i} | ${line}`).join("\n")
 })
 
-const extractTextFromFileMock = vi.fn()
-const getSupportedBinaryFormatsMock = vi.fn(() => [".pdf", ".docx", ".ipynb"])
+const extractTextFromFileMock = vi.mocked(extractTextFromFile)
+const getSupportedBinaryFormatsMock = vi.mocked(getSupportedBinaryFormats)
 
 vi.mock("../../ignore/RooIgnoreController", () => ({
 	RooIgnoreController: class {
@@ -517,6 +527,320 @@ describe("read_file tool XML output structure", () => {
 			expect(result).toBe(
 				`<files>\n<file><path>${testFilePath}</path><error>Access to ${testFilePath} is blocked by the .rooignore file settings. You must try to continue in the task without using this file, or ask the user to update the .rooignore file.</error></file>\n</files>`,
 			)
+		})
+	})
+})
+
+describe("read_file tool with large file safeguard", () => {
+	// Test data
+	const testFilePath = "test/largefile.txt"
+	const absoluteFilePath = "/test/largefile.txt"
+
+	// Mocked functions
+	const mockedCountFileLines = vi.mocked(countFileLines)
+	const mockedReadLines = vi.mocked(readLines)
+	const mockedExtractTextFromFile = vi.mocked(extractTextFromFile)
+	const mockedIsBinaryFile = vi.mocked(isBinaryFile)
+	const mockedPathResolve = vi.mocked(path.resolve)
+	const mockedTiktoken = vi.mocked(tiktoken)
+
+	const mockCline: any = {}
+	let mockProvider: any
+	let toolResult: ToolResponse | undefined
+
+	beforeEach(() => {
+		vi.clearAllMocks()
+
+		mockedPathResolve.mockReturnValue(absoluteFilePath)
+		mockedIsBinaryFile.mockResolvedValue(false)
+
+		mockProvider = {
+			getState: vi.fn(),
+			deref: vi.fn().mockReturnThis(),
+		}
+
+		mockCline.cwd = "/"
+		mockCline.task = "Test"
+		mockCline.providerRef = mockProvider
+		mockCline.rooIgnoreController = {
+			validateAccess: vi.fn().mockReturnValue(true),
+		}
+		mockCline.say = vi.fn().mockResolvedValue(undefined)
+		mockCline.ask = vi.fn().mockResolvedValue({ response: "yesButtonClicked" })
+		mockCline.fileContextTracker = {
+			trackFileContext: vi.fn().mockResolvedValue(undefined),
+		}
+		mockCline.recordToolUsage = vi.fn().mockReturnValue(undefined)
+		mockCline.recordToolError = vi.fn().mockReturnValue(undefined)
+
+		toolResult = undefined
+	})
+
+	async function executeReadFileTool(
+		params: Partial<ReadFileToolUse["params"]> = {},
+		options: {
+			maxReadFileLine?: number
+			totalLines?: number
+			tokenCount?: number
+		} = {},
+	): Promise<ToolResponse | undefined> {
+		const maxReadFileLine = options.maxReadFileLine ?? -1
+		const totalLines = options.totalLines ?? 5
+		const tokenCount = options.tokenCount ?? 100
+
+		mockProvider.getState.mockResolvedValue({ maxReadFileLine })
+		mockedCountFileLines.mockResolvedValue(totalLines)
+		mockedTiktoken.mockResolvedValue(tokenCount)
+
+		const argsContent = `<file><path>${testFilePath}</path></file>`
+
+		const toolUse: ReadFileToolUse = {
+			type: "tool_use",
+			name: "read_file",
+			params: { args: argsContent, ...params },
+			partial: false,
+		}
+
+		await readFileTool(
+			mockCline,
+			toolUse,
+			mockCline.ask,
+			vi.fn(),
+			(result: ToolResponse) => {
+				toolResult = result
+			},
+			(_: ToolParamName, content?: string) => content ?? "",
+		)
+
+		return toolResult
+	}
+
+	describe("when file has many lines and high token count", () => {
+		it("should apply safeguard and read only first 2000 lines", async () => {
+			// Setup - large file with high token count
+			const largeFileContent = Array(1500).fill("This is a line of text").join("\n")
+			const partialContent = Array(2000).fill("This is a line of text").join("\n")
+
+			mockedExtractTextFromFile.mockResolvedValue(largeFileContent)
+			mockedReadLines.mockResolvedValue(partialContent)
+
+			// Setup addLineNumbers mock for this test
+			addLineNumbersMock.mockImplementation((text: string) => {
+				const lines = text.split("\n")
+				return lines.map((line: string, i: number) => `${i + 1} | ${line}`).join("\n")
+			})
+
+			// Execute with high line count and token count
+			const result = await executeReadFileTool(
+				{},
+				{
+					maxReadFileLine: -1,
+					totalLines: 1500,
+					tokenCount: 60000, // Above threshold
+				},
+			)
+
+			// Verify safeguard was applied
+			expect(mockedTiktoken).toHaveBeenCalled()
+			expect(mockedReadLines).toHaveBeenCalledWith(absoluteFilePath, 1999, 0)
+
+			// Verify the result contains the safeguard notice
+			expect(result).toContain("<notice>This file contains 1500 lines and approximately 60,000 tokens")
+			expect(result).toContain("Showing only the first 2000 lines to preserve context space")
+			expect(result).toContain(`<content lines="1-2000">`)
+		})
+
+		it("should not apply safeguard when token count is below threshold", async () => {
+			// Setup - large file but with low token count
+			const fileContent = Array(1500).fill("Short").join("\n")
+			const numberedContent = fileContent
+				.split("\n")
+				.map((line, i) => `${i + 1} | ${line}`)
+				.join("\n")
+
+			mockedExtractTextFromFile.mockImplementation(() => Promise.resolve(numberedContent))
+
+			// Execute with high line count but low token count
+			const result = await executeReadFileTool(
+				{},
+				{
+					maxReadFileLine: -1,
+					totalLines: 1500,
+					tokenCount: 30000, // Below threshold
+				},
+			)
+
+			// Verify safeguard was NOT applied
+			expect(mockedTiktoken).toHaveBeenCalled()
+			expect(mockedReadLines).not.toHaveBeenCalled()
+			expect(mockedExtractTextFromFile).toHaveBeenCalled()
+
+			// Verify no safeguard notice
+			expect(result).not.toContain("preserve context space")
+			expect(result).toContain(`<content lines="1-1500">`)
+		})
+
+		it("should not apply safeguard for files under 1000 lines", async () => {
+			// Setup - file with less than 1000 lines
+			const fileContent = Array(999).fill("This is a line of text").join("\n")
+			const numberedContent = fileContent
+				.split("\n")
+				.map((line, i) => `${i + 1} | ${line}`)
+				.join("\n")
+
+			mockedExtractTextFromFile.mockImplementation(() => Promise.resolve(numberedContent))
+
+			// Execute
+			const result = await executeReadFileTool(
+				{},
+				{
+					maxReadFileLine: -1,
+					totalLines: 999,
+					tokenCount: 100000, // Even with high token count
+				},
+			)
+
+			// Verify tiktoken was NOT called (optimization)
+			expect(mockedTiktoken).not.toHaveBeenCalled()
+			expect(mockedReadLines).not.toHaveBeenCalled()
+			expect(mockedExtractTextFromFile).toHaveBeenCalled()
+
+			// Verify no safeguard notice
+			expect(result).not.toContain("preserve context space")
+			expect(result).toContain(`<content lines="1-999">`)
+		})
+
+		it("should apply safeguard for very large files even if token counting fails", async () => {
+			// Setup - very large file and token counting fails
+			const partialContent = Array(2000).fill("This is a line of text").join("\n")
+
+			mockedExtractTextFromFile.mockResolvedValue("Large content")
+			mockedReadLines.mockResolvedValue(partialContent)
+
+			// Setup addLineNumbers mock for partial content
+			addLineNumbersMock.mockImplementation((text: string) => {
+				const lines = text.split("\n")
+				return lines.map((line: string, i: number) => `${i + 1} | ${line}`).join("\n")
+			})
+
+			// Set up the provider state
+			mockProvider.getState.mockResolvedValue({ maxReadFileLine: -1 })
+			mockedCountFileLines.mockResolvedValue(6000)
+
+			// IMPORTANT: Set up tiktoken to reject AFTER other mocks are set
+			mockedTiktoken.mockRejectedValue(new Error("Token counting failed"))
+
+			const argsContent = `<file><path>${testFilePath}</path></file>`
+
+			const toolUse: ReadFileToolUse = {
+				type: "tool_use",
+				name: "read_file",
+				params: { args: argsContent },
+				partial: false,
+			}
+
+			await readFileTool(
+				mockCline,
+				toolUse,
+				mockCline.ask,
+				vi.fn(),
+				(result: ToolResponse) => {
+					toolResult = result
+				},
+				(_: ToolParamName, content?: string) => content ?? "",
+			)
+
+			// Verify safeguard was applied despite token counting failure
+			expect(mockedTiktoken).toHaveBeenCalled()
+			expect(mockedReadLines).toHaveBeenCalledWith(absoluteFilePath, 1999, 0)
+
+			// Verify the result contains the safeguard notice (without token count)
+			expect(toolResult).toContain("<notice>This file contains 6000 lines")
+			expect(toolResult).toContain("Showing only the first 2000 lines to preserve context space")
+			expect(toolResult).toContain(`<content lines="1-2000">`)
+		})
+
+		it("should not apply safeguard when maxReadFileLine is not -1", async () => {
+			// Setup
+			const fileContent = Array(2000).fill("This is a line of text").join("\n")
+			mockedExtractTextFromFile.mockResolvedValue(fileContent)
+
+			// Execute with maxReadFileLine = 500 (not -1)
+			const result = await executeReadFileTool(
+				{},
+				{
+					maxReadFileLine: 500,
+					totalLines: 2000,
+					tokenCount: 100000,
+				},
+			)
+
+			// Verify tiktoken was NOT called
+			expect(mockedTiktoken).not.toHaveBeenCalled()
+
+			// The normal maxReadFileLine logic should apply
+			expect(mockedReadLines).toHaveBeenCalled()
+		})
+
+		it("should handle line ranges correctly with safeguard", async () => {
+			// When line ranges are specified, safeguard should not apply
+			const rangeContent = "Line 100\nLine 101\nLine 102"
+			mockedReadLines.mockResolvedValue(rangeContent)
+
+			const argsContent = `<file><path>${testFilePath}</path><line_range>100-102</line_range></file>`
+
+			const toolUse: ReadFileToolUse = {
+				type: "tool_use",
+				name: "read_file",
+				params: { args: argsContent },
+				partial: false,
+			}
+
+			mockProvider.getState.mockResolvedValue({ maxReadFileLine: -1 })
+			mockedCountFileLines.mockResolvedValue(10000)
+
+			await readFileTool(
+				mockCline,
+				toolUse,
+				mockCline.ask,
+				vi.fn(),
+				(result: ToolResponse) => {
+					toolResult = result
+				},
+				(_: ToolParamName, content?: string) => content ?? "",
+			)
+
+			// Verify tiktoken was NOT called for range reads
+			expect(mockedTiktoken).not.toHaveBeenCalled()
+			expect(toolResult).toContain(`<content lines="100-102">`)
+			expect(toolResult).not.toContain("preserve context space")
+		})
+	})
+
+	describe("safeguard thresholds", () => {
+		it("should use correct thresholds for line count and token count", async () => {
+			// Test boundary conditions
+
+			// Just below line threshold - no token check
+			await executeReadFileTool({}, { totalLines: 1000, maxReadFileLine: -1 })
+			expect(mockedTiktoken).not.toHaveBeenCalled()
+
+			// Just above line threshold - token check performed
+			vi.clearAllMocks()
+			mockedExtractTextFromFile.mockResolvedValue("content")
+			await executeReadFileTool({}, { totalLines: 1001, maxReadFileLine: -1, tokenCount: 40000 })
+			expect(mockedTiktoken).toHaveBeenCalled()
+
+			// Token count just below threshold - no safeguard
+			expect(toolResult).not.toContain("preserve context space")
+
+			// Token count just above threshold - safeguard applied
+			vi.clearAllMocks()
+			mockedExtractTextFromFile.mockResolvedValue("content")
+			mockedReadLines.mockResolvedValue("partial content")
+			await executeReadFileTool({}, { totalLines: 1001, maxReadFileLine: -1, tokenCount: 50001 })
+			expect(mockedReadLines).toHaveBeenCalled()
+			expect(toolResult).toContain("preserve context space")
 		})
 	})
 })

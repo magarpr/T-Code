@@ -14,6 +14,7 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
+import { tiktoken } from "../../utils/tiktoken"
 
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
@@ -516,13 +517,60 @@ export async function readFileTool(
 					continue
 				}
 
-				// Handle normal file read
-				const content = await extractTextFromFile(fullPath)
-				const lineRangeAttr = ` lines="1-${totalLines}"`
+				// Handle normal file read with safeguard for large files
+				// Define thresholds for the safeguard
+				const LARGE_FILE_LINE_THRESHOLD = 1000 // Consider files with more than 1000 lines as "large"
+				const MAX_TOKEN_THRESHOLD = 50000 // ~50% of a typical 100k context window
+				const FALLBACK_MAX_LINES = 2000 // Default number of lines to read when applying safeguard
+
+				// Check if we should apply the safeguard
+				let shouldApplySafeguard = false
+				let safeguardNotice = ""
+				let linesToRead = totalLines
+
+				if (maxReadFileLine === -1 && totalLines > LARGE_FILE_LINE_THRESHOLD) {
+					// File has many lines and we're trying to read the full file
+					// Perform token count check
+					try {
+						const fullContent = await extractTextFromFile(fullPath)
+						const tokenCount = await tiktoken([{ type: "text", text: fullContent }])
+
+						if (tokenCount > MAX_TOKEN_THRESHOLD) {
+							shouldApplySafeguard = true
+							linesToRead = FALLBACK_MAX_LINES
+							safeguardNotice = `<notice>This file contains ${totalLines} lines and approximately ${tokenCount.toLocaleString()} tokens, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
+						}
+					} catch (error) {
+						// If token counting fails, apply safeguard based on line count alone
+						console.warn(`Failed to count tokens for large file ${relPath}:`, error)
+						if (totalLines > LARGE_FILE_LINE_THRESHOLD * 5) {
+							// For very large files (>5000 lines), apply safeguard anyway
+							shouldApplySafeguard = true
+							linesToRead = FALLBACK_MAX_LINES
+							safeguardNotice = `<notice>This file contains ${totalLines} lines, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
+						}
+					}
+				}
+
+				let content: string
+				let lineRangeAttr: string
+
+				if (shouldApplySafeguard) {
+					// Read partial file with safeguard
+					content = addLineNumbers(await readLines(fullPath, linesToRead - 1, 0))
+					lineRangeAttr = ` lines="1-${linesToRead}"`
+				} else {
+					// Read full file as normal
+					content = await extractTextFromFile(fullPath)
+					lineRangeAttr = ` lines="1-${totalLines}"`
+				}
+
 				let xmlInfo = totalLines > 0 ? `<content${lineRangeAttr}>\n${content}</content>\n` : `<content/>`
 
 				if (totalLines === 0) {
 					xmlInfo += `<notice>File is empty</notice>\n`
+				} else if (safeguardNotice) {
+					xmlInfo += safeguardNotice
 				}
 
 				// Track file read
