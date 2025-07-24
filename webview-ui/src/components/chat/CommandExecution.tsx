@@ -78,7 +78,6 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		const extractedPatterns = extractPatternsFromCommand(command)
 		return extractedPatterns.map((pattern) => ({
 			pattern,
-			description: `${pattern} commands`,
 		}))
 	}, [command])
 
