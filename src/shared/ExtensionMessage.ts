@@ -315,6 +315,7 @@ export interface ClineSayTool {
 	tool:
 		| "editedExistingFile"
 		| "appliedDiff"
+		| "applyCode"
 		| "newFileCreated"
 		| "codebaseSearch"
 		| "readFile"
@@ -346,6 +347,7 @@ export interface ClineSayTool {
 	endLine?: number
 	lineNumber?: number
 	query?: string
+	instruction?: string
 	batchFiles?: Array<{
 		path: string
 		lineSnippet: string
