@@ -2,8 +2,12 @@ import React from "react"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { describe, it, expect, vi } from "vitest"
 import { CommandPatternSelector } from "../CommandPatternSelector"
-import { CommandPattern } from "../../../utils/commandPatterns"
 import { TooltipProvider } from "../../../components/ui/tooltip"
+
+interface CommandPattern {
+	pattern: string
+	description?: string
+}
 
 // Mock react-i18next
 vi.mock("react-i18next", () => ({

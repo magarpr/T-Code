@@ -3,8 +3,12 @@ import { Check, ChevronDown, Info, X } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { useTranslation, Trans } from "react-i18next"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
-import { CommandPattern } from "../../utils/commandPatterns"
 import { StandardTooltip } from "../ui/standard-tooltip"
+
+interface CommandPattern {
+	pattern: string
+	description?: string
+}
 
 interface CommandPatternSelectorProps {
 	patterns: CommandPattern[]

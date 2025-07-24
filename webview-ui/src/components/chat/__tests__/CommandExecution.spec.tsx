@@ -21,19 +21,6 @@ vi.mock("../../common/CodeBlock", () => ({
 	default: ({ source }: { source: string }) => <div data-testid="code-block">{source}</div>,
 }))
 
-// Mock the commandPatterns module but use the actual implementation
-vi.mock("../../../utils/commandPatterns", async () => {
-	const actual = await vi.importActual<typeof import("../../../utils/commandPatterns")>(
-		"../../../utils/commandPatterns",
-	)
-	return {
-		...actual,
-		parseCommandAndOutput: actual.parseCommandAndOutput,
-		extractCommandPatterns: actual.extractCommandPatterns,
-		getPatternDescription: actual.getPatternDescription,
-	}
-})
-
 vi.mock("../CommandPatternSelector", () => ({
 	CommandPatternSelector: ({ patterns, onAllowPatternChange, onDenyPatternChange }: any) => (
 		<div data-testid="command-pattern-selector">

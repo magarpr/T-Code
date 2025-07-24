@@ -13,12 +13,12 @@ import { cn } from "@src/lib/utils"
 import { Button } from "@src/components/ui"
 import CodeBlock from "../common/CodeBlock"
 import { CommandPatternSelector } from "./CommandPatternSelector"
-import {
-	extractCommandPatterns,
-	getPatternDescription,
-	parseCommandAndOutput,
-	CommandPattern,
-} from "../../utils/commandPatterns"
+import { extractPatternsFromCommand } from "../../utils/command-parser"
+
+interface CommandPattern {
+	pattern: string
+	description?: string
+}
 
 interface CommandExecutionProps {
 	executionId: string
@@ -37,8 +37,28 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 	} = useExtensionState()
 
 	const { command, output: parsedOutput } = useMemo(() => {
-		// Use the enhanced parser from commandPatterns
-		return parseCommandAndOutput(text || "")
+		// Parse command and output using the "Output:" separator
+		const outputSeparator = "Output:"
+		const outputIndex = text?.indexOf(`\n${outputSeparator}`) ?? -1
+
+		if (outputIndex !== -1) {
+			// Text is split into command and output
+			const cmd = text!.slice(0, outputIndex).trim()
+			// Skip the newline and "Output:" text
+			const afterSeparator = outputIndex + 1 + outputSeparator.length
+			let startOfOutput = afterSeparator
+			if (text![afterSeparator] === "\n") {
+				startOfOutput = afterSeparator + 1
+			}
+			const out = text!.slice(startOfOutput).trim()
+			return { command: cmd, output: out }
+		} else if (text?.indexOf(outputSeparator) === 0) {
+			// Edge case: text starts with "Output:" (no command)
+			return { command: "", output: text.slice(outputSeparator.length).trim() }
+		} else {
+			// No output separator found, the entire text is the command
+			return { command: text?.trim() || "", output: "" }
+		}
 	}, [text])
 
 	// If we aren't opening the VSCode terminal for this command then we default
@@ -54,20 +74,12 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 	// Extract command patterns from the actual command that was executed
 	const commandPatterns = useMemo<CommandPattern[]>(() => {
-		const patterns: CommandPattern[] = []
-
-		// Always extract patterns from the actual command that was executed
-		// We don't use AI suggestions because the patterns should reflect
-		// what was actually executed, not what the AI thinks might be useful
-		const extractedPatterns = extractCommandPatterns(command)
-		extractedPatterns.forEach((pattern) => {
-			patterns.push({
-				pattern,
-				description: getPatternDescription(pattern),
-			})
-		})
-
-		return patterns
+		// Extract patterns from the actual command that was executed
+		const extractedPatterns = extractPatternsFromCommand(command)
+		return extractedPatterns.map((pattern) => ({
+			pattern,
+			description: `${pattern} commands`,
+		}))
 	}, [command])
 
 	// Handle pattern changes
