@@ -54,12 +54,13 @@ describe("ChatTextArea", () => {
 		onSelectImages: vi.fn(),
 		shouldDisableImages: false,
 		placeholderText: "Type a message...",
-		selectedImages: [],
-		setSelectedImages: vi.fn(),
+		selectedMedia: [],
+		setSelectedMedia: vi.fn(),
 		onHeightChange: vi.fn(),
 		mode: defaultModeSlug,
 		setMode: vi.fn(),
 		modeShortcutText: "(⌘. for next mode)",
+		acceptedFileTypes: ["png", "jpeg", "gif", "mp4"],
 	}
 
 	beforeEach(() => {

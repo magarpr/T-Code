@@ -1069,8 +1069,8 @@ export const ChatRowContent = ({
 										sendingDisabled={false}
 										selectApiConfigDisabled={true}
 										placeholderText={t("chat:editMessage.placeholder")}
-										selectedImages={editImages}
-										setSelectedImages={setEditImages}
+										selectedMedia={editImages}
+										setSelectedMedia={setEditImages}
 										onSend={handleSaveEdit}
 										onSelectImages={handleSelectImages}
 										shouldDisableImages={false}
@@ -1079,6 +1079,7 @@ export const ChatRowContent = ({
 										modeShortcutText=""
 										isEditMode={true}
 										onCancel={handleCancelEdit}
+										acceptedFileTypes={[]}
 									/>
 								</div>
 							) : (

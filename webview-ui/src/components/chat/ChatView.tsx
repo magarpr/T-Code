@@ -9,7 +9,6 @@ import useSound from "use-sound"
 import { LRUCache } from "lru-cache"
 
 import { useDebounceEffect } from "@src/utils/useDebounceEffect"
-import { appendImages } from "@src/utils/imageUtils"
 
 import type { ClineAsk, ClineMessage } from "@roo-code/types"
 
@@ -153,7 +152,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [inputValue, setInputValue] = useState("")
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
-	const [selectedImages, setSelectedImages] = useState<string[]>([])
+	const [selectedMedia, setSelectedMedia] = useState<string[]>([])
 
 	// we need to hold on to the ask because useEffect > lastMessage will always let us know when an ask comes in and handle it, but by the time handleMessage is called, the last message might not be the ask anymore (it could be a say that followed)
 	const [clineAsk, setClineAsk] = useState<ClineAsk | undefined>(undefined)
@@ -396,7 +395,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "api_req_started":
 							if (secondLastMessage?.ask === "command_output") {
 								setSendingDisabled(true)
-								setSelectedImages([])
+								setSelectedMedia([])
 								setClineAsk(undefined)
 								setEnableButtons(false)
 							}
@@ -529,7 +528,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// Only reset message-specific state, preserving mode.
 		setInputValue("")
 		setSendingDisabled(true)
-		setSelectedImages([])
+		setSelectedMedia([])
 		setClineAsk(undefined)
 		setEnableButtons(false)
 		// Do not reset mode here as it should persist.
@@ -589,9 +588,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			}
 
 			setInputValue(newValue)
-			setSelectedImages([...selectedImages, ...images])
+			setSelectedMedia([...selectedMedia, ...images])
 		},
-		[inputValue, selectedImages],
+		[inputValue, selectedMedia],
 	)
 
 	const startNewTask = useCallback(() => vscode.postMessage({ type: "clearTask" }), [])
@@ -627,7 +626,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}
 					// Clear input state after sending
 					setInputValue("")
-					setSelectedImages([])
+					setSelectedMedia([])
 					break
 				case "completion_result":
 				case "resume_completed_task":
@@ -683,7 +682,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}
 					// Clear input state after sending
 					setInputValue("")
-					setSelectedImages([])
+					setSelectedMedia([])
 					break
 				case "command_output":
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "abort" })
@@ -702,8 +701,31 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const selectImages = useCallback(() => vscode.postMessage({ type: "selectImages" }), [])
 
+	const acceptedFileTypes = useMemo(() => {
+		const modelId = apiConfiguration?.apiModelId
+		const isGeminiPro = modelId?.includes("gemini-2.5-pro")
+		const isGeminiFlash =
+			modelId?.includes("gemini-1.5-flash") ||
+			modelId?.includes("gemini-2.0-flash-001") ||
+			modelId?.includes("gemini-2.5-flash-preview-05-20") ||
+			modelId?.includes("gemini-2.5-flash") ||
+			modelId?.includes("gemini-2.0-flash-lite-preview-02-05") ||
+			modelId?.includes("gemini-2.0-flash-thinking-exp-01-21") ||
+			modelId?.includes("gemini-2.0-flash-thinking-exp-1219") ||
+			modelId?.includes("gemini-2.0-flash-exp") ||
+			modelId?.includes("gemini-2.5-flash-lite-preview-06-17")
+
+		if ((isGeminiPro || isGeminiFlash) && model?.supportsImages) {
+			return ["png", "jpeg", "webp", "heic", "heif", "mp4", "mov", "avi", "wmv", "flv", "webm"]
+		}
+		if (model?.supportsImages) {
+			return ["png", "jpeg", "webp", "heic", "heif"]
+		}
+		return []
+	}, [apiConfiguration, model])
+
 	const shouldDisableImages =
-		!model?.supportsImages || sendingDisabled || selectedImages.length >= MAX_IMAGES_PER_MESSAGE
+		!model?.supportsImages || sendingDisabled || selectedMedia.length >= MAX_IMAGES_PER_MESSAGE
 
 	const handleMessage = useCallback(
 		(e: MessageEvent) => {
@@ -726,8 +748,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					// Only handle selectedImages if it's not for editing context
 					// When context is "edit", ChatRow will handle the images
 					if (message.context !== "edit") {
-						setSelectedImages((prevImages) =>
-							appendImages(prevImages, message.images, MAX_IMAGES_PER_MESSAGE),
+						setSelectedMedia((prevItems) =>
+							[...prevItems, ...(message.images ?? [])].slice(0, MAX_IMAGES_PER_MESSAGE),
 						)
 					}
 					break
@@ -1611,9 +1633,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	useImperativeHandle(ref, () => ({
 		acceptInput: () => {
 			if (enableButtons && primaryButtonText) {
-				handlePrimaryButtonClick(inputValue, selectedImages)
-			} else if (!sendingDisabled && !isProfileDisabled && (inputValue.trim() || selectedImages.length > 0)) {
-				handleSendMessage(inputValue, selectedImages)
+				handlePrimaryButtonClick(inputValue, selectedMedia)
+			} else if (!sendingDisabled && !isProfileDisabled && (inputValue.trim() || selectedMedia.length > 0)) {
+				handleSendMessage(inputValue, selectedMedia)
 			}
 		},
 	}))
@@ -1813,7 +1835,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 												appearance="primary"
 												disabled={!enableButtons}
 												className={secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
-												onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
+												onClick={() => handlePrimaryButtonClick(inputValue, selectedMedia)}>
 												{primaryButtonText}
 											</VSCodeButton>
 										</StandardTooltip>
@@ -1835,7 +1857,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 												appearance="secondary"
 												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
 												className={isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"}
-												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
+												onClick={() => handleSecondaryButtonClick(inputValue, selectedMedia)}>
 												{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
 											</VSCodeButton>
 										</StandardTooltip>
@@ -1854,11 +1876,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				sendingDisabled={sendingDisabled || isProfileDisabled}
 				selectApiConfigDisabled={sendingDisabled && clineAsk !== "api_req_failed"}
 				placeholderText={placeholderText}
-				selectedImages={selectedImages}
-				setSelectedImages={setSelectedImages}
-				onSend={() => handleSendMessage(inputValue, selectedImages)}
+				selectedMedia={selectedMedia}
+				setSelectedMedia={setSelectedMedia}
+				onSend={() => handleSendMessage(inputValue, selectedMedia)}
 				onSelectImages={selectImages}
 				shouldDisableImages={shouldDisableImages}
+				acceptedFileTypes={acceptedFileTypes}
 				onHeightChange={() => {
 					if (isAtBottom) {
 						scrollToBottomAuto()

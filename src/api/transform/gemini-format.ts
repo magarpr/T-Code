@@ -1,12 +1,24 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { Content, Part } from "@google/genai"
 
-export function convertAnthropicContentToGemini(content: string | Anthropic.ContentBlockParam[]): Part[] {
+// Extended type to support video content blocks that aren't in the standard Anthropic SDK
+interface VideoContentBlock {
+	type: "video"
+	source: {
+		type: "base64"
+		data: string
+		media_type: string
+	}
+}
+
+type ExtendedContentBlockParam = Anthropic.ContentBlockParam | VideoContentBlock
+
+export function convertAnthropicContentToGemini(content: string | ExtendedContentBlockParam[]): Part[] {
 	if (typeof content === "string") {
 		return [{ text: content }]
 	}
 
-	return content.flatMap((block): Part | Part[] => {
+	const parts = content.flatMap((block): Part | Part[] => {
 		switch (block.type) {
 			case "text":
 				return { text: block.text }
@@ -15,6 +27,11 @@ export function convertAnthropicContentToGemini(content: string | Anthropic.Cont
 					throw new Error("Unsupported image source type")
 				}
 
+				return { inlineData: { data: block.source.data, mimeType: block.source.media_type } }
+			case "video":
+				if (block.source.type !== "base64") {
+					throw new Error("Unsupported video source type")
+				}
 				return { inlineData: { data: block.source.data, mimeType: block.source.media_type } }
 			case "tool_use":
 				return {
@@ -67,6 +84,17 @@ export function convertAnthropicContentToGemini(content: string | Anthropic.Cont
 				// Currently unsupported: "thinking" | "redacted_thinking" | "document"
 				throw new Error(`Unsupported content block type: ${block.type}`)
 		}
+	})
+
+	// Sort parts to ensure inlineData comes before text
+	return parts.sort((a, b) => {
+		if ("inlineData" in a && "text" in b) {
+			return -1
+		}
+		if ("text" in a && "inlineData" in b) {
+			return 1
+		}
+		return 0
 	})
 }
 
