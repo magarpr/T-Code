@@ -228,12 +228,15 @@ describe("CommandPatternSelector", () => {
 		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
 		fireEvent.change(input, { target: { value: "npm install react" } })
 
-		// Press Enter to confirm edit
-		fireEvent.keyDown(input, { key: "Enter" })
+		// Don't press Enter or blur - just click the button while still editing
+		// This simulates the user clicking the button while the input is still focused
 
-		// Click the allow button
-		const fullCommandPattern = screen.getByText("npm install react").closest(".ml-5")
-		const allowButton = fullCommandPattern?.querySelector('button[aria-label*="addToAllowed"]')
+		// Find the allow button in the same row as the input
+		const patternRow = input.closest(".ml-5")
+		const allowButton = patternRow?.querySelector('button[aria-label*="addToAllowed"]')
+		expect(allowButton).toBeInTheDocument()
+
+		// Click the allow button - this should use the current edited value
 		fireEvent.click(allowButton!)
 
 		// Check that the callback was called with the edited pattern

@@ -22,11 +22,11 @@ vi.mock("../../common/CodeBlock", () => ({
 }))
 
 vi.mock("../CommandPatternSelector", () => ({
-	CommandPatternSelector: ({ command, onAllowCommandChange, onDenyCommandChange }: any) => (
+	CommandPatternSelector: ({ command, onAllowPatternChange, onDenyPatternChange }: any) => (
 		<div data-testid="command-pattern-selector">
 			<span>{command}</span>
-			<button onClick={() => onAllowCommandChange(command)}>Allow {command}</button>
-			<button onClick={() => onDenyCommandChange(command)}>Deny {command}</button>
+			<button onClick={() => onAllowPatternChange(command)}>Allow {command}</button>
+			<button onClick={() => onDenyPatternChange(command)}>Deny {command}</button>
 		</div>
 	),
 }))
@@ -92,7 +92,9 @@ describe("CommandExecution", () => {
 		)
 
 		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		expect(screen.getByText("npm install express")).toBeInTheDocument()
+		// Check that the command is shown in the pattern selector
+		const selector = screen.getByTestId("command-pattern-selector")
+		expect(selector).toHaveTextContent("npm install express")
 	})
 
 	it("should handle allow command change", () => {
@@ -206,9 +208,10 @@ Suggested patterns: npm, npm install, npm run`
 		expect(codeBlocks[0]).toHaveTextContent("npm install")
 		expect(codeBlocks[1]).toHaveTextContent("Suggested patterns: npm, npm install, npm run")
 
-		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		// Should show the full command
-		expect(screen.getByText("npm install")).toBeInTheDocument()
+		const selector = screen.getByTestId("command-pattern-selector")
+		expect(selector).toBeInTheDocument()
+		// Should show the full command in the selector
+		expect(selector).toHaveTextContent("npm install")
 	})
 
 	it("should handle commands with pipes", () => {
@@ -218,8 +221,9 @@ Suggested patterns: npm, npm install, npm run`
 			</ExtensionStateWrapper>,
 		)
 
-		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		expect(screen.getByText("ls -la | grep test")).toBeInTheDocument()
+		const selector = screen.getByTestId("command-pattern-selector")
+		expect(selector).toBeInTheDocument()
+		expect(selector).toHaveTextContent("ls -la | grep test")
 	})
 
 	it("should handle commands with && operator", () => {
@@ -229,8 +233,9 @@ Suggested patterns: npm, npm install, npm run`
 			</ExtensionStateWrapper>,
 		)
 
-		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		expect(screen.getByText("npm install && npm test")).toBeInTheDocument()
+		const selector = screen.getByTestId("command-pattern-selector")
+		expect(selector).toBeInTheDocument()
+		expect(selector).toHaveTextContent("npm install && npm test")
 	})
 
 	it("should not show pattern selector for empty commands", () => {
@@ -316,7 +321,7 @@ Output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("npm install && npm test || echo 'failed'")).toBeInTheDocument()
+			expect(selector).toHaveTextContent("npm install && npm test || echo 'failed'")
 		})
 
 		it("should handle commands with output", () => {
@@ -338,8 +343,8 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			// Should show the command
-			expect(screen.getByText("npm install")).toBeInTheDocument()
+			// Should show the command in the selector
+			expect(selector).toHaveTextContent("npm install")
 		})
 
 		it("should handle commands with subshells", () => {
@@ -351,7 +356,7 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("echo $(whoami) && git status")).toBeInTheDocument()
+			expect(selector).toHaveTextContent("echo $(whoami) && git status")
 		})
 
 		it("should handle commands with backtick subshells", () => {
@@ -363,7 +368,7 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("git commit -m `date`")).toBeInTheDocument()
+			expect(selector).toHaveTextContent("git commit -m `date`")
 		})
 
 		it("should handle commands with special characters", () => {
@@ -375,7 +380,7 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("cd ~/projects && npm start")).toBeInTheDocument()
+			expect(selector).toHaveTextContent("cd ~/projects && npm start")
 		})
 
 		it("should handle commands with mixed content including output", () => {
@@ -398,8 +403,8 @@ Running tests...
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			// Should show the command
-			expect(screen.getByText("npm test")).toBeInTheDocument()
+			// Should show the command in the selector
+			expect(selector).toHaveTextContent("npm test")
 		})
 
 		it("should update both allowed and denied lists when commands conflict", () => {
@@ -438,8 +443,9 @@ Running tests...
 			expect(screen.getByTestId("code-block")).toHaveTextContent("echo 'test with unclosed quote")
 
 			// Should show pattern selector with the full command
-			expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-			expect(screen.getByText("echo 'test with unclosed quote")).toBeInTheDocument()
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			expect(selector).toHaveTextContent("echo 'test with unclosed quote")
 		})
 
 		it("should handle empty or whitespace-only commands", () => {
@@ -488,8 +494,9 @@ Without any command prefix`
 			expect(screen.getByTestId("code-block")).toHaveTextContent("docker build .")
 
 			// Should show pattern selector with the full command
-			expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-			expect(screen.getByText("docker build .")).toBeInTheDocument()
+			const selector = screen.getByTestId("command-pattern-selector")
+			expect(selector).toBeInTheDocument()
+			expect(selector).toHaveTextContent("docker build .")
 
 			// Verify no output is shown (since there's no Output: separator)
 			const codeBlocks = screen.getAllByTestId("code-block")
@@ -518,8 +525,8 @@ Output:
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
 
-			// Should show the full command
-			expect(screen.getByText("wc -l *.go *.java")).toBeInTheDocument()
+			// Should show the full command in the selector
+			expect(selector).toHaveTextContent("wc -l *.go *.java")
 
 			// The output should still be displayed in the code block
 			expect(codeBlocks.length).toBeGreaterThan(1)
@@ -541,8 +548,8 @@ Output:
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
 
-			// Should show the full command
-			expect(screen.getByText("wc -l *.go *.java")).toBeInTheDocument()
+			// Should show the full command in the selector
+			expect(selector).toHaveTextContent("wc -l *.go *.java")
 
 			// The output should still be displayed in the code block
 			const codeBlocks = screen.getAllByTestId("code-block")

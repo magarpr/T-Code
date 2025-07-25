@@ -54,7 +54,24 @@ function extractFromTokens(tokens: string[], patterns: Set<string>): void {
 	patterns.add(pattern)
 
 	for (let i = 1; i < Math.min(tokens.length, 3); i++) {
-		pattern += ` ${tokens[i]}`
+		const token = tokens[i]
+
+		// Stop at flags (starting with -)
+		if (token.startsWith("-")) break
+
+		// Stop at paths (starting with / or ~)
+		if (token.startsWith("/") || token.startsWith("~")) break
+
+		// Stop at file extensions
+		if (token.includes(".") && /\.\w+$/.test(token)) break
+
+		// Stop at colons (like image:tag)
+		if (token.includes(":")) break
+
+		// Stop at dots (like . for current directory)
+		if (token === ".") break
+
+		pattern += ` ${token}`
 		patterns.add(pattern)
 	}
 }
