@@ -63,6 +63,6 @@ function extractFromTokens(tokens: string[], patterns: Set<string>): void {
 		if (typeof arg !== "string" || breakingExps.some((re) => re.test(arg))) break
 
 		const pattern = tokens.slice(0, i + 1).join(" ")
-		patterns.add(pattern)
+		patterns.add(pattern.trim())
 	}
 }
