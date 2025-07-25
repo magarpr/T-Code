@@ -42,20 +42,27 @@ export function extractPatternsFromCommand(command: string): string[] {
 }
 
 function extractFromTokens(tokens: string[], patterns: Set<string>): void {
-	if (tokens.length === 0) return
+	if (tokens.length === 0 || typeof tokens[0] !== "string") return
 
 	const mainCmd = tokens[0]
 
 	// Skip numeric commands like "0" from "0 total"
 	if (/^\d+$/.test(mainCmd)) return
 
-	// Build patterns progressively up to 3 levels
-	let pattern = mainCmd
-	patterns.add(pattern.trim())
+	patterns.add(mainCmd)
 
-	for (let i = 1; i < Math.min(tokens.length, 3); i++) {
-		const token = tokens[i]
-		pattern += ` ${token}`
-		patterns.add(pattern.trim()) // Ensure no trailing whitespace
+	// Breaking expressions that indicate we should stop looking for subcommands
+	const breakingExps = [/^-/, /[\\/:.~ ]/]
+
+	// Extract up to 3 levels maximum
+	const maxLevels = Math.min(tokens.length, 3)
+
+	for (let i = 1; i < maxLevels; i++) {
+		const arg = tokens[i]
+
+		if (typeof arg !== "string" || breakingExps.some((re) => re.test(arg))) break
+
+		const pattern = tokens.slice(0, i + 1).join(" ")
+		patterns.add(pattern)
 	}
 }
