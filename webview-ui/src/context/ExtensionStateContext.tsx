@@ -202,6 +202,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		customModes: [],
 		maxOpenTabsContext: 20,
 		maxWorkspaceFiles: 200,
+		includeVSCodeFileContext: true,
 		cwd: "",
 		browserToolEnabled: true,
 		telemetrySetting: "unset",
