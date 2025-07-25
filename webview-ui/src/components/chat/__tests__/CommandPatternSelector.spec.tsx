@@ -48,7 +48,7 @@ describe("CommandPatternSelector", () => {
 		expect(container).toBeTruthy()
 
 		// Check for the command permissions text
-		expect(screen.getByText("chat:commandExecution.commandPermissions")).toBeInTheDocument()
+		expect(screen.getByText("chat:commandExecution.manageCommands")).toBeInTheDocument()
 	})
 
 	it("should show full command as first pattern when expanded", () => {
@@ -62,9 +62,8 @@ describe("CommandPatternSelector", () => {
 		const expandButton = screen.getByRole("button")
 		fireEvent.click(expandButton)
 
-		// Check that the full command is shown with description
+		// Check that the full command is shown
 		expect(screen.getByText("npm install express")).toBeInTheDocument()
-		expect(screen.getByText("- Full command")).toBeInTheDocument()
 	})
 
 	it("should show extracted patterns when expanded", () => {

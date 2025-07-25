@@ -33,7 +33,7 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 
 	// Create a combined list with full command first, then patterns
 	const allPatterns = useMemo(() => {
-		const fullCommandPattern = { pattern: command, description: "Full command" }
+		const fullCommandPattern: CommandPattern = { pattern: command }
 		return [fullCommandPattern, ...patterns]
 	}, [command, patterns])
 
@@ -65,37 +65,30 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 							"-rotate-90": !isExpanded,
 						})}
 					/>
-					<span className="text-sm font-medium">{t("chat:commandExecution.commandPermissions")}</span>
+					<span className="text-sm font-medium">{t("chat:commandExecution.manageCommands")}</span>
 					<StandardTooltip
 						content={
-							<div className="space-y-2 max-w-xs">
-								<p>{t("chat:commandExecution.permissionsTooltip")}</p>
-								<p>
-									<Trans
-										i18nKey="chat:commandExecution.learnMore"
-										components={{
-											link: (
-												<VSCodeLink
-													href="https://docs.roo-code.com/features/command-permissions"
-													className="text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground"
-												/>
-											),
-										}}
-									/>
-								</p>
+							<div className="max-w-xs">
+								<Trans
+									i18nKey="chat:commandExecution.commandManagementDescription"
+									components={{
+										settingsLink: (
+											<VSCodeLink
+												href="command:workbench.action.openSettings?%5B%22roo-code%22%5D"
+												className="text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground"
+											/>
+										),
+									}}
+								/>
 							</div>
 						}>
 						<Info className="size-3.5 text-vscode-descriptionForeground" />
 					</StandardTooltip>
 				</div>
 				<div className="flex items-center gap-2 text-xs text-vscode-descriptionForeground">
-					<span>
-						{allowedCommands.length} {t("chat:commandExecution.allowed")}
-					</span>
+					<span>{allowedCommands.length} allowed</span>
 					<span>•</span>
-					<span>
-						{deniedCommands.length} {t("chat:commandExecution.denied")}
-					</span>
+					<span>{deniedCommands.length} denied</span>
 				</div>
 			</button>
 
