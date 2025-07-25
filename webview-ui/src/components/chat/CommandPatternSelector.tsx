@@ -23,6 +23,7 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 	const { t } = useTranslation()
 	const [isExpanded, setIsExpanded] = useState(false)
 	const [editedCommand, setEditedCommand] = useState(command)
+	const [isEditing, setIsEditing] = useState(false)
 
 	const getCommandStatus = (cmd: string): "allowed" | "denied" | "none" => {
 		if (allowedCommands.includes(cmd)) return "allowed"
@@ -78,16 +79,36 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 			</button>
 
 			{isExpanded && (
-				<div className="px-3 pb-3">
+				<div className="px-3 pb-3 pt-2">
 					<div className="ml-5 flex items-center gap-2">
 						<div className="flex-1">
-							<input
-								type="text"
-								value={editedCommand}
-								onChange={(e) => setEditedCommand(e.target.value)}
-								className="font-mono text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded px-2 py-1 w-full focus:outline-none focus:border-vscode-focusBorder"
-								placeholder={command}
-							/>
+							{isEditing ? (
+								<input
+									type="text"
+									value={editedCommand}
+									onChange={(e) => setEditedCommand(e.target.value)}
+									onBlur={() => setIsEditing(false)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											setIsEditing(false)
+										}
+										if (e.key === "Escape") {
+											setEditedCommand(command)
+											setIsEditing(false)
+										}
+									}}
+									className="font-mono text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded px-2 py-1.5 w-full focus:outline-0"
+									placeholder={command}
+									autoFocus
+								/>
+							) : (
+								<div
+									onClick={() => setIsEditing(true)}
+									className="font-mono text-xs text-vscode-foreground cursor-pointer hover:bg-vscode-list-hoverBackground px-2 py-1.5 rounded transition-colors border border-transparent"
+									title="Click to edit command">
+									{editedCommand}
+								</div>
+							)}
 						</div>
 						<div className="flex items-center gap-1">
 							<button
