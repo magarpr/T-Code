@@ -330,5 +330,7 @@
 	},
 	"editMessage": {
 		"placeholder": "Mesajını düzenle..."
-	}
+	},
+	"exportCurrentMode": "Export current mode",
+	"exportModeDescription": "Export the current mode configuration"
 }
