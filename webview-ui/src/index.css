@@ -570,12 +570,6 @@ input[cmdk-input]:focus {
 	max-width: 100%;
 }
 
-.dropdown-container {
-	min-width: 0;
-	flex: 1;
-	overflow: hidden;
-}
-
 /* Settings view specific responsive adjustments */
 @container (max-width: 400px) {
 	/* Reduce button sizes in very narrow containers */

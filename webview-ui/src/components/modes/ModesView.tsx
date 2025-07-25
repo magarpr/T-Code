@@ -670,8 +670,8 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 																{modeConfig.name}
 															</span>
 															<span
-																className="text-foreground text-xs opacity-70 truncate flex-shrink-0 max-w-[40%] text-right"
-																style={{ direction: "rtl" }}
+																className="text-foreground text-xs opacity-70 truncate flex-shrink-0 max-w-[40%]"
+																style={{ textAlign: "right" }}
 																title={modeConfig.slug}>
 																{modeConfig.slug}
 															</span>
