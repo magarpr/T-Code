@@ -123,16 +123,18 @@ export function getContextMenuOptions(
 	queryItems: ContextMenuQueryItem[],
 	dynamicSearchResults: SearchResult[] = [],
 	modes?: ModeConfig[],
+	exportLabel: string = "Export current mode",
+	exportDescription: string = "Export the current mode configuration",
 ): ContextMenuQueryItem[] {
 	// Handle slash commands for modes
 	if (query.startsWith("/") && inputValue.startsWith("/")) {
 		const modeQuery = query.slice(1)
 
-		// Always include Export option at the top
+		// Create export option
 		const exportOption: ContextMenuQueryItem = {
 			type: ContextMenuOptionType.Export,
-			label: "Export current mode",
-			description: "Export the current mode configuration",
+			label: exportLabel,
+			description: exportDescription,
 		}
 
 		if (!modes?.length) {
@@ -168,7 +170,9 @@ export function getContextMenuOptions(
 
 		// Filter export option based on search query
 		const exportMatches = modeQuery === "" || "export".toLowerCase().includes(modeQuery.toLowerCase())
-		const filteredOptions = exportMatches ? [exportOption, ...matchingModes] : matchingModes
+
+		// Place modes first, then export option (consistent with Problems/Terminal ordering)
+		const filteredOptions = exportMatches ? [...matchingModes, exportOption] : matchingModes
 
 		return filteredOptions.length > 0 ? filteredOptions : [{ type: ContextMenuOptionType.NoResults }]
 	}

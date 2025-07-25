@@ -23,6 +23,8 @@ interface ContextMenuProps {
 	modes?: ModeConfig[]
 	loading?: boolean
 	dynamicSearchResults?: SearchResult[]
+	exportLabel?: string
+	exportDescription?: string
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -36,13 +38,24 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	queryItems,
 	modes,
 	dynamicSearchResults = [],
+	exportLabel = "Export current mode",
+	exportDescription = "Export the current mode configuration",
 }) => {
 	const [materialIconsBaseUri, setMaterialIconsBaseUri] = useState("")
 	const menuRef = useRef<HTMLDivElement>(null)
 
 	const filteredOptions = useMemo(() => {
-		return getContextMenuOptions(searchQuery, inputValue, selectedType, queryItems, dynamicSearchResults, modes)
-	}, [searchQuery, inputValue, selectedType, queryItems, dynamicSearchResults, modes])
+		return getContextMenuOptions(
+			searchQuery,
+			inputValue,
+			selectedType,
+			queryItems,
+			dynamicSearchResults,
+			modes,
+			exportLabel,
+			exportDescription,
+		)
+	}, [searchQuery, inputValue, selectedType, queryItems, dynamicSearchResults, modes, exportLabel, exportDescription])
 
 	useEffect(() => {
 		if (menuRef.current) {

@@ -356,6 +356,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								queryItems,
 								fileSearchResults,
 								allModes,
+								t("chat:exportCurrentMode"),
+								t("chat:exportModeDescription"),
 							)
 							const optionsLength = options.length
 
@@ -393,6 +395,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							queryItems,
 							fileSearchResults,
 							allModes,
+							t("chat:exportCurrentMode"),
+							t("chat:exportModeDescription"),
 						)[selectedMenuIndex]
 						if (
 							selectedOption &&
@@ -483,6 +487,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				fileSearchResults,
 				handleHistoryNavigation,
 				resetHistoryNavigation,
+				t,
 			],
 		)
 
@@ -1253,6 +1258,8 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									modes={allModes}
 									loading={searchLoading}
 									dynamicSearchResults={fileSearchResults}
+									exportLabel={t("chat:exportCurrentMode")}
+									exportDescription={t("chat:exportModeDescription")}
 								/>
 							</div>
 						)}
