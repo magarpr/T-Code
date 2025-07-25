@@ -10,6 +10,7 @@ import {
 	SearchResult,
 } from "@src/utils/context-mentions"
 import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
 
 interface ContextMenuProps {
 	onSelect: (type: ContextMenuOptionType, value?: string) => void
@@ -37,6 +38,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	modes,
 	dynamicSearchResults = [],
 }) => {
+	const { t } = useAppTranslation()
 	const [materialIconsBaseUri, setMaterialIconsBaseUri] = useState("")
 	const menuRef = useRef<HTMLDivElement>(null)
 
@@ -69,7 +71,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	const renderOptionContent = (option: ContextMenuQueryItem) => {
 		switch (option.type) {
 			case ContextMenuOptionType.Mode:
-			case ContextMenuOptionType.Export:
 				return (
 					<div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
 						<span style={{ lineHeight: "1.2" }}>{option.label}</span>
@@ -84,6 +85,25 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 									textOverflow: "ellipsis",
 								}}>
 								{option.description}
+							</span>
+						)}
+					</div>
+				)
+			case ContextMenuOptionType.Export:
+				return (
+					<div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+						<span style={{ lineHeight: "1.2" }}>{t(option.label || "")}</span>
+						{option.description && (
+							<span
+								style={{
+									opacity: 0.5,
+									fontSize: "0.9em",
+									lineHeight: "1.2",
+									whiteSpace: "nowrap",
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+								}}>
+								{t(option.description)}
 							</span>
 						)}
 					</div>
@@ -252,12 +272,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 									overflow: "hidden",
 									paddingTop: 0,
 								}}>
-								{(option.type === ContextMenuOptionType.File ||
-									option.type === ContextMenuOptionType.Folder ||
-									option.type === ContextMenuOptionType.OpenedFile) && (
+								{/* Render icon based on option type */}
+								{option.type === ContextMenuOptionType.File ||
+								option.type === ContextMenuOptionType.Folder ||
+								option.type === ContextMenuOptionType.OpenedFile ? (
 									<img
 										src={getMaterialIconForOption(option)}
-										alt="Mode"
+										alt="Icon"
 										style={{
 											marginRight: "6px",
 											flexShrink: 0,
@@ -265,24 +286,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 											height: "16px",
 										}}
 									/>
-								)}
-								{(option.type === ContextMenuOptionType.Mode ||
-									option.type === ContextMenuOptionType.Export) && (
-									<i
-										className={`codicon codicon-${getIconForOption(option)}`}
-										style={{
-											marginRight: "6px",
-											flexShrink: 0,
-											fontSize: "14px",
-											marginTop: 0,
-										}}
-									/>
-								)}
-								{option.type !== ContextMenuOptionType.Mode &&
-									option.type !== ContextMenuOptionType.Export &&
-									option.type !== ContextMenuOptionType.File &&
-									option.type !== ContextMenuOptionType.Folder &&
-									option.type !== ContextMenuOptionType.OpenedFile &&
+								) : (
 									getIconForOption(option) && (
 										<i
 											className={`codicon codicon-${getIconForOption(option)}`}
@@ -293,7 +297,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 												marginTop: 0,
 											}}
 										/>
-									)}
+									)
+								)}
 								{renderOptionContent(option)}
 							</div>
 							{(option.type === ContextMenuOptionType.File ||

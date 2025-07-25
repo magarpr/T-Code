@@ -131,8 +131,8 @@ export function getContextMenuOptions(
 		// Always include Export option at the top
 		const exportOption: ContextMenuQueryItem = {
 			type: ContextMenuOptionType.Export,
-			label: "Export current mode",
-			description: "Export the current mode configuration",
+			label: "chat:modeSelector.exportCurrentMode",
+			description: "chat:modeSelector.exportCurrentModeDescription",
 		}
 
 		if (!modes?.length) {

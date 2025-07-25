@@ -435,9 +435,65 @@ describe("getContextMenuOptions", () => {
 
 		const result = getContextMenuOptions("/co", "/co", null, [], [], mockModes)
 
-		// Verify mode results are returned
+		// When searching for "co", it matches "code" mode but not "export"
+		// So only the code mode should be returned
 		expect(result[0].type).toBe(ContextMenuOptionType.Mode)
 		expect(result[0].value).toBe("code")
+		expect(result.length).toBe(1) // Only the matching mode
+	})
+
+	it("should always include Export option at the top for slash commands", () => {
+		const mockModes = [
+			{
+				slug: "test",
+				name: "Test Mode",
+				roleDefinition: "Test mode",
+				groups: ["read" as const],
+			},
+		]
+
+		// Test with empty query
+		const result1 = getContextMenuOptions("/", "/", null, [], [], mockModes)
+		expect(result1[0].type).toBe(ContextMenuOptionType.Export)
+
+		// Test with query that doesn't match any mode or export
+		const result2 = getContextMenuOptions("/xyz", "/xyz", null, [], [], mockModes)
+		expect(result2[0].type).toBe(ContextMenuOptionType.NoResults)
+		expect(result2.length).toBe(1) // No results since "xyz" doesn't match "export" or any mode
+	})
+
+	it("should include Export option even when no modes are available", () => {
+		// Test with no modes
+		const result = getContextMenuOptions("/", "/", null, [], [], [])
+		expect(result.length).toBe(1)
+		expect(result[0].type).toBe(ContextMenuOptionType.Export)
+		expect(result[0].label).toBe("chat:modeSelector.exportCurrentMode")
+		expect(result[0].description).toBe("chat:modeSelector.exportCurrentModeDescription")
+	})
+
+	it("should filter Export option based on search query", () => {
+		const mockModes = [
+			{
+				slug: "test",
+				name: "Test Mode",
+				roleDefinition: "Test mode",
+				groups: ["read" as const],
+			},
+		]
+
+		// Query that matches "export"
+		const result1 = getContextMenuOptions("/exp", "/exp", null, [], [], mockModes)
+		expect(result1[0].type).toBe(ContextMenuOptionType.Export)
+
+		// Query that matches "export" partially
+		const result2 = getContextMenuOptions("/ex", "/ex", null, [], [], mockModes)
+		expect(result2[0].type).toBe(ContextMenuOptionType.Export)
+
+		// Query that doesn't match "export" but matches a mode
+		const result3 = getContextMenuOptions("/test", "/test", null, [], [], mockModes)
+		// Export should not be included since it doesn't match the query
+		expect(result3[0].type).toBe(ContextMenuOptionType.Mode)
+		expect(result3[0].value).toBe("test")
 	})
 
 	it("should not process slash commands when query starts with slash but inputValue doesn't", () => {
