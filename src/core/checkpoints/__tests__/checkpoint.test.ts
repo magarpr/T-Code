@@ -176,21 +176,6 @@ describe("Checkpoint functionality", () => {
 			expect(mockTask.enableCheckpoints).toBe(true)
 		})
 
-		it("should prevent duplicate checkpoint operations for the same task", async () => {
-			// Start two checkpoint saves simultaneously
-			const promise1 = checkpointSave(mockTask)
-			const promise2 = checkpointSave(mockTask)
-
-			// Wait for both promises
-			const [result1, result2] = await Promise.all([promise1, promise2])
-
-			// Both should return the same result
-			expect(result1).toEqual(result2)
-
-			// saveCheckpoint should only be called once due to deduplication
-			expect(mockCheckpointService.saveCheckpoint).toHaveBeenCalledTimes(1)
-		})
-
 		it("should handle errors gracefully and disable checkpoints", async () => {
 			mockCheckpointService.saveCheckpoint.mockRejectedValue(new Error("Save failed"))
 
