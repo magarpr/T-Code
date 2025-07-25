@@ -85,11 +85,6 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 						<Info className="size-3.5 text-vscode-descriptionForeground" />
 					</StandardTooltip>
 				</div>
-				<div className="flex items-center gap-2 text-xs text-vscode-descriptionForeground">
-					<span>{allowedCommands.length} allowed</span>
-					<span>•</span>
-					<span>{deniedCommands.length} denied</span>
-				</div>
 			</button>
 
 			{isExpanded && (

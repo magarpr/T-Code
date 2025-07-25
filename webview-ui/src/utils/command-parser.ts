@@ -41,10 +41,6 @@ export function extractPatternsFromCommand(command: string): string[] {
 	return Array.from(patterns).sort()
 }
 
-function isValidToken(token: string): boolean {
-	return !!token && !token.startsWith("-") && !token.match(/[/\\~:]/) && token !== "." && !token.match(/\.\w+$/)
-}
-
 function extractFromTokens(tokens: string[], patterns: Set<string>): void {
 	if (tokens.length === 0) return
 
@@ -58,11 +54,7 @@ function extractFromTokens(tokens: string[], patterns: Set<string>): void {
 	patterns.add(pattern)
 
 	for (let i = 1; i < Math.min(tokens.length, 3); i++) {
-		if (isValidToken(tokens[i])) {
-			pattern += ` ${tokens[i]}`
-			patterns.add(pattern)
-		} else {
-			break // Stop at first invalid token
-		}
+		pattern += ` ${tokens[i]}`
+		patterns.add(pattern)
 	}
 }
