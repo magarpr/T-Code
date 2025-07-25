@@ -1236,6 +1236,10 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("maxWorkspaceFiles", fileCount)
 			await provider.postStateToWebview()
 			break
+		case "includeVSCodeFileContext":
+			await updateGlobalState("includeVSCodeFileContext", message.bool ?? true)
+			await provider.postStateToWebview()
+			break
 		case "alwaysAllowFollowupQuestions":
 			await updateGlobalState("alwaysAllowFollowupQuestions", message.bool ?? false)
 			await provider.postStateToWebview()

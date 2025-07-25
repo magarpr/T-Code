@@ -30,48 +30,54 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 		terminalOutputLineLimit = 500,
 		terminalOutputCharacterLimit = DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 		maxWorkspaceFiles = 200,
+		includeVSCodeFileContext = true,
 	} = state ?? {}
 
-	// It could be useful for cline to know if the user went from one or no
-	// file to another between messages, so we always include this context.
-	details += "\n\n# VSCode Visible Files"
+	// Only include VSCode file context if enabled in settings or if this is the first request
+	const shouldIncludeVSCodeContext = includeFileDetails || includeVSCodeFileContext
 
-	const visibleFilePaths = vscode.window.visibleTextEditors
-		?.map((editor) => editor.document?.uri?.fsPath)
-		.filter(Boolean)
-		.map((absolutePath) => path.relative(cline.cwd, absolutePath))
-		.slice(0, maxWorkspaceFiles)
+	if (shouldIncludeVSCodeContext) {
+		// It could be useful for cline to know if the user went from one or no
+		// file to another between messages, so we always include this context.
+		details += "\n\n# VSCode Visible Files"
 
-	// Filter paths through rooIgnoreController
-	const allowedVisibleFiles = cline.rooIgnoreController
-		? cline.rooIgnoreController.filterPaths(visibleFilePaths)
-		: visibleFilePaths.map((p) => p.toPosix()).join("\n")
+		const visibleFilePaths = vscode.window.visibleTextEditors
+			?.map((editor) => editor.document?.uri?.fsPath)
+			.filter(Boolean)
+			.map((absolutePath) => path.relative(cline.cwd, absolutePath))
+			.slice(0, maxWorkspaceFiles)
 
-	if (allowedVisibleFiles) {
-		details += `\n${allowedVisibleFiles}`
-	} else {
-		details += "\n(No visible files)"
-	}
+		// Filter paths through rooIgnoreController
+		const allowedVisibleFiles = cline.rooIgnoreController
+			? cline.rooIgnoreController.filterPaths(visibleFilePaths)
+			: visibleFilePaths.map((p) => p.toPosix()).join("\n")
 
-	details += "\n\n# VSCode Open Tabs"
-	const { maxOpenTabsContext } = state ?? {}
-	const maxTabs = maxOpenTabsContext ?? 20
-	const openTabPaths = vscode.window.tabGroups.all
-		.flatMap((group) => group.tabs)
-		.map((tab) => (tab.input as vscode.TabInputText)?.uri?.fsPath)
-		.filter(Boolean)
-		.map((absolutePath) => path.relative(cline.cwd, absolutePath).toPosix())
-		.slice(0, maxTabs)
+		if (allowedVisibleFiles) {
+			details += `\n${allowedVisibleFiles}`
+		} else {
+			details += "\n(No visible files)"
+		}
 
-	// Filter paths through rooIgnoreController
-	const allowedOpenTabs = cline.rooIgnoreController
-		? cline.rooIgnoreController.filterPaths(openTabPaths)
-		: openTabPaths.map((p) => p.toPosix()).join("\n")
+		details += "\n\n# VSCode Open Tabs"
+		const { maxOpenTabsContext } = state ?? {}
+		const maxTabs = maxOpenTabsContext ?? 20
+		const openTabPaths = vscode.window.tabGroups.all
+			.flatMap((group) => group.tabs)
+			.map((tab) => (tab.input as vscode.TabInputText)?.uri?.fsPath)
+			.filter(Boolean)
+			.map((absolutePath) => path.relative(cline.cwd, absolutePath).toPosix())
+			.slice(0, maxTabs)
 
-	if (allowedOpenTabs) {
-		details += `\n${allowedOpenTabs}`
-	} else {
-		details += "\n(No open tabs)"
+		// Filter paths through rooIgnoreController
+		const allowedOpenTabs = cline.rooIgnoreController
+			? cline.rooIgnoreController.filterPaths(openTabPaths)
+			: openTabPaths.map((p) => p.toPosix()).join("\n")
+
+		if (allowedOpenTabs) {
+			details += `\n${allowedOpenTabs}`
+		} else {
+			details += "\n(No open tabs)"
+		}
 	}
 
 	// Get task-specific and background terminals.

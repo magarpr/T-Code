@@ -101,6 +101,7 @@ export const globalSettingsSchema = z.object({
 	maxWorkspaceFiles: z.number().optional(),
 	showRooIgnoredFiles: z.boolean().optional(),
 	maxReadFileLine: z.number().optional(),
+	includeVSCodeFileContext: z.boolean().optional(),
 
 	terminalOutputLineLimit: z.number().optional(),
 	terminalOutputCharacterLimit: z.number().optional(),
@@ -272,6 +273,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	maxWorkspaceFiles: 200,
 	showRooIgnoredFiles: true,
 	maxReadFileLine: -1, // -1 to enable full file reading.
+	includeVSCodeFileContext: true, // Include VSCode file context in all API calls by default
 
 	includeDiagnosticMessages: true,
 	maxDiagnosticMessages: 50,

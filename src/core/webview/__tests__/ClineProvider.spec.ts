@@ -528,6 +528,7 @@ describe("ClineProvider", () => {
 			experiments: experimentDefault,
 			maxOpenTabsContext: 20,
 			maxWorkspaceFiles: 200,
+			includeVSCodeFileContext: true,
 			browserToolEnabled: true,
 			telemetrySetting: "unset",
 			showRooIgnoredFiles: true,
@@ -1076,6 +1077,25 @@ describe("ClineProvider", () => {
 
 		expect(updateGlobalStateSpy).toHaveBeenCalledWith("maxWorkspaceFiles", 300)
 		expect(mockContext.globalState.update).toHaveBeenCalledWith("maxWorkspaceFiles", 300)
+		expect(mockPostMessage).toHaveBeenCalled()
+	})
+
+	test("handles includeVSCodeFileContext message", async () => {
+		await provider.resolveWebviewView(mockWebviewView)
+		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
+
+		// Test setting to false
+		await messageHandler({ type: "includeVSCodeFileContext", bool: false })
+
+		expect(updateGlobalStateSpy).toHaveBeenCalledWith("includeVSCodeFileContext", false)
+		expect(mockContext.globalState.update).toHaveBeenCalledWith("includeVSCodeFileContext", false)
+		expect(mockPostMessage).toHaveBeenCalled()
+
+		// Test setting to true
+		await messageHandler({ type: "includeVSCodeFileContext", bool: true })
+
+		expect(updateGlobalStateSpy).toHaveBeenCalledWith("includeVSCodeFileContext", true)
+		expect(mockContext.globalState.update).toHaveBeenCalledWith("includeVSCodeFileContext", true)
 		expect(mockPostMessage).toHaveBeenCalled()
 	})
 

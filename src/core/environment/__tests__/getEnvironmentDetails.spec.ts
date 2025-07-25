@@ -73,6 +73,7 @@ describe("getEnvironmentDetails", () => {
 			terminalOutputLineLimit: 100,
 			maxWorkspaceFiles: 50,
 			maxOpenTabsContext: 10,
+			includeVSCodeFileContext: true,
 			mode: "code",
 			customModes: [],
 			experiments: {},
@@ -360,5 +361,55 @@ describe("getEnvironmentDetails", () => {
 		;(mockCline.fileContextTracker!.getAndClearRecentlyModifiedFiles as Mock).mockReturnValue([])
 
 		await expect(getEnvironmentDetails(mockCline as Task)).resolves.not.toThrow()
+	})
+
+	describe("VSCode file context inclusion", () => {
+		it("should include VSCode file context when includeVSCodeFileContext is true", async () => {
+			mockProvider.getState.mockResolvedValue({
+				...mockState,
+				includeVSCodeFileContext: true,
+			})
+
+			const result = await getEnvironmentDetails(mockCline as Task, false)
+
+			expect(result).toContain("# VSCode Visible Files")
+			expect(result).toContain("# VSCode Open Tabs")
+		})
+
+		it("should exclude VSCode file context when includeVSCodeFileContext is false and includeFileDetails is false", async () => {
+			mockProvider.getState.mockResolvedValue({
+				...mockState,
+				includeVSCodeFileContext: false,
+			})
+
+			const result = await getEnvironmentDetails(mockCline as Task, false)
+
+			expect(result).not.toContain("# VSCode Visible Files")
+			expect(result).not.toContain("# VSCode Open Tabs")
+		})
+
+		it("should always include VSCode file context when includeFileDetails is true regardless of includeVSCodeFileContext", async () => {
+			mockProvider.getState.mockResolvedValue({
+				...mockState,
+				includeVSCodeFileContext: false,
+			})
+
+			const result = await getEnvironmentDetails(mockCline as Task, true)
+
+			expect(result).toContain("# VSCode Visible Files")
+			expect(result).toContain("# VSCode Open Tabs")
+		})
+
+		it("should default to including VSCode file context when includeVSCodeFileContext is undefined", async () => {
+			mockProvider.getState.mockResolvedValue({
+				...mockState,
+				includeVSCodeFileContext: undefined,
+			})
+
+			const result = await getEnvironmentDetails(mockCline as Task, false)
+
+			expect(result).toContain("# VSCode Visible Files")
+			expect(result).toContain("# VSCode Open Tabs")
+		})
 	})
 })

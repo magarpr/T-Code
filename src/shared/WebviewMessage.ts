@@ -151,6 +151,7 @@ export interface WebviewMessage {
 		| "deleteMcpServer"
 		| "maxOpenTabsContext"
 		| "maxWorkspaceFiles"
+		| "includeVSCodeFileContext"
 		| "humanRelayResponse"
 		| "humanRelayCancel"
 		| "browserToolEnabled"
