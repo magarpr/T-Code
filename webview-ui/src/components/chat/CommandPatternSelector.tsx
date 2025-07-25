@@ -5,34 +5,32 @@ import { useTranslation, Trans } from "react-i18next"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { StandardTooltip } from "../ui/standard-tooltip"
 
-interface CommandPattern {
-	pattern: string
-	description?: string
-}
-
 interface CommandPatternSelectorProps {
-	patterns: CommandPattern[]
+	command: string
 	allowedCommands: string[]
 	deniedCommands: string[]
-	onAllowPatternChange: (pattern: string) => void
-	onDenyPatternChange: (pattern: string) => void
+	onAllowCommandChange: (command: string) => void
+	onDenyCommandChange: (command: string) => void
 }
 
 export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
-	patterns,
+	command,
 	allowedCommands,
 	deniedCommands,
-	onAllowPatternChange,
-	onDenyPatternChange,
+	onAllowCommandChange,
+	onDenyCommandChange,
 }) => {
 	const { t } = useTranslation()
 	const [isExpanded, setIsExpanded] = useState(false)
+	const [editedCommand, setEditedCommand] = useState(command)
 
-	const getPatternStatus = (pattern: string): "allowed" | "denied" | "none" => {
-		if (allowedCommands.includes(pattern)) return "allowed"
-		if (deniedCommands.includes(pattern)) return "denied"
+	const getCommandStatus = (cmd: string): "allowed" | "denied" | "none" => {
+		if (allowedCommands.includes(cmd)) return "allowed"
+		if (deniedCommands.includes(cmd)) return "denied"
 		return "none"
 	}
+
+	const currentStatus = getCommandStatus(editedCommand)
 
 	return (
 		<div className="border-t border-vscode-panel-border bg-vscode-sideBar-background/30">
@@ -80,53 +78,48 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 			</button>
 
 			{isExpanded && (
-				<div className="px-3 pb-3 space-y-2">
-					{patterns.map((item) => {
-						const status = getPatternStatus(item.pattern)
-						return (
-							<div key={item.pattern} className="ml-5 flex items-center gap-2">
-								<div className="flex-1">
-									<span className="font-mono text-xs text-vscode-foreground">{item.pattern}</span>
-									{item.description && (
-										<span className="text-xs text-vscode-descriptionForeground ml-2">
-											- {item.description}
-										</span>
-									)}
-								</div>
-								<div className="flex items-center gap-1">
-									<button
-										className={cn("p-1 rounded transition-all", {
-											"bg-green-500/20 text-green-500 hover:bg-green-500/30":
-												status === "allowed",
-											"text-vscode-descriptionForeground hover:text-green-500 hover:bg-green-500/10":
-												status !== "allowed",
-										})}
-										onClick={() => onAllowPatternChange(item.pattern)}
-										aria-label={t(
-											status === "allowed"
-												? "chat:commandExecution.removeFromAllowed"
-												: "chat:commandExecution.addToAllowed",
-										)}>
-										<Check className="size-3.5" />
-									</button>
-									<button
-										className={cn("p-1 rounded transition-all", {
-											"bg-red-500/20 text-red-500 hover:bg-red-500/30": status === "denied",
-											"text-vscode-descriptionForeground hover:text-red-500 hover:bg-red-500/10":
-												status !== "denied",
-										})}
-										onClick={() => onDenyPatternChange(item.pattern)}
-										aria-label={t(
-											status === "denied"
-												? "chat:commandExecution.removeFromDenied"
-												: "chat:commandExecution.addToDenied",
-										)}>
-										<X className="size-3.5" />
-									</button>
-								</div>
-							</div>
-						)
-					})}
+				<div className="px-3 pb-3">
+					<div className="ml-5 flex items-center gap-2">
+						<div className="flex-1">
+							<input
+								type="text"
+								value={editedCommand}
+								onChange={(e) => setEditedCommand(e.target.value)}
+								className="font-mono text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded px-2 py-1 w-full focus:outline-none focus:border-vscode-focusBorder"
+								placeholder={command}
+							/>
+						</div>
+						<div className="flex items-center gap-1">
+							<button
+								className={cn("p-1 rounded transition-all", {
+									"bg-green-500/20 text-green-500 hover:bg-green-500/30": currentStatus === "allowed",
+									"text-vscode-descriptionForeground hover:text-green-500 hover:bg-green-500/10":
+										currentStatus !== "allowed",
+								})}
+								onClick={() => onAllowCommandChange(editedCommand)}
+								aria-label={t(
+									currentStatus === "allowed"
+										? "chat:commandExecution.removeFromAllowed"
+										: "chat:commandExecution.addToAllowed",
+								)}>
+								<Check className="size-3.5" />
+							</button>
+							<button
+								className={cn("p-1 rounded transition-all", {
+									"bg-red-500/20 text-red-500 hover:bg-red-500/30": currentStatus === "denied",
+									"text-vscode-descriptionForeground hover:text-red-500 hover:bg-red-500/10":
+										currentStatus !== "denied",
+								})}
+								onClick={() => onDenyCommandChange(editedCommand)}
+								aria-label={t(
+									currentStatus === "denied"
+										? "chat:commandExecution.removeFromDenied"
+										: "chat:commandExecution.addToDenied",
+								)}>
+								<X className="size-3.5" />
+							</button>
+						</div>
+					</div>
 				</div>
 			)}
 		</div>

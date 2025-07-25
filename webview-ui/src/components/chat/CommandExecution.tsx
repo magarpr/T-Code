@@ -13,12 +13,6 @@ import { cn } from "@src/lib/utils"
 import { Button } from "@src/components/ui"
 import CodeBlock from "../common/CodeBlock"
 import { CommandPatternSelector } from "./CommandPatternSelector"
-import { extractPatternsFromCommand } from "../../utils/command-parser"
-
-interface CommandPattern {
-	pattern: string
-	description?: string
-}
 
 interface CommandExecutionProps {
 	executionId: string
@@ -43,7 +37,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 		if (outputIndex !== -1) {
 			// Text is split into command and output
-			const cmd = (text ?? '').slice(0, outputIndex).trim()
+			const cmd = (text ?? "").slice(0, outputIndex).trim()
 			// Skip the newline and "Output:" text
 			const afterSeparator = outputIndex + 1 + outputSeparator.length
 			let startOfOutput = afterSeparator
@@ -72,20 +66,11 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 	// streaming output (this is the case for running commands).
 	const output = streamingOutput || parsedOutput
 
-	// Extract command patterns from the actual command that was executed
-	const commandPatterns = useMemo<CommandPattern[]>(() => {
-		// Extract patterns from the actual command that was executed
-		const extractedPatterns = extractPatternsFromCommand(command)
-		return extractedPatterns.map((pattern) => ({
-			pattern,
-		}))
-	}, [command])
-
-	// Handle pattern changes
-	const handleAllowPatternChange = (pattern: string) => {
-		const isAllowed = allowedCommands.includes(pattern)
-		const newAllowed = isAllowed ? allowedCommands.filter((p) => p !== pattern) : [...allowedCommands, pattern]
-		const newDenied = deniedCommands.filter((p) => p !== pattern)
+	// Handle command changes
+	const handleAllowCommandChange = (cmd: string) => {
+		const isAllowed = allowedCommands.includes(cmd)
+		const newAllowed = isAllowed ? allowedCommands.filter((c) => c !== cmd) : [...allowedCommands, cmd]
+		const newDenied = deniedCommands.filter((c) => c !== cmd)
 
 		setAllowedCommands(newAllowed)
 		setDeniedCommands(newDenied)
@@ -93,10 +78,10 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		vscode.postMessage({ type: "deniedCommands", commands: newDenied })
 	}
 
-	const handleDenyPatternChange = (pattern: string) => {
-		const isDenied = deniedCommands.includes(pattern)
-		const newDenied = isDenied ? deniedCommands.filter((p) => p !== pattern) : [...deniedCommands, pattern]
-		const newAllowed = allowedCommands.filter((p) => p !== pattern)
+	const handleDenyCommandChange = (cmd: string) => {
+		const isDenied = deniedCommands.includes(cmd)
+		const newDenied = isDenied ? deniedCommands.filter((c) => c !== cmd) : [...deniedCommands, cmd]
+		const newAllowed = allowedCommands.filter((c) => c !== cmd)
 
 		setAllowedCommands(newAllowed)
 		setDeniedCommands(newDenied)
@@ -193,13 +178,13 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 					<CodeBlock source={command} language="shell" />
 					<OutputContainer isExpanded={isExpanded} output={output} />
 				</div>
-				{commandPatterns.length > 0 && (
+				{command && (
 					<CommandPatternSelector
-						patterns={commandPatterns}
+						command={command}
 						allowedCommands={allowedCommands}
 						deniedCommands={deniedCommands}
-						onAllowPatternChange={handleAllowPatternChange}
-						onDenyPatternChange={handleDenyPatternChange}
+						onAllowCommandChange={handleAllowCommandChange}
+						onDenyCommandChange={handleDenyCommandChange}
 					/>
 				)}
 			</div>

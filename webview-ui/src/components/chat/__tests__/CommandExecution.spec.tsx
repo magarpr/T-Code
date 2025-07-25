@@ -22,15 +22,11 @@ vi.mock("../../common/CodeBlock", () => ({
 }))
 
 vi.mock("../CommandPatternSelector", () => ({
-	CommandPatternSelector: ({ patterns, onAllowPatternChange, onDenyPatternChange }: any) => (
+	CommandPatternSelector: ({ command, onAllowCommandChange, onDenyCommandChange }: any) => (
 		<div data-testid="command-pattern-selector">
-			{patterns.map((p: any, i: number) => (
-				<div key={i}>
-					<span>{p.pattern}</span>
-					<button onClick={() => onAllowPatternChange(p.pattern)}>Allow {p.pattern}</button>
-					<button onClick={() => onDenyPatternChange(p.pattern)}>Deny {p.pattern}</button>
-				</div>
-			))}
+			<span>{command}</span>
+			<button onClick={() => onAllowCommandChange(command)}>Allow {command}</button>
+			<button onClick={() => onDenyCommandChange(command)}>Deny {command}</button>
 		</div>
 	),
 }))
@@ -88,7 +84,7 @@ describe("CommandExecution", () => {
 		expect(screen.getByTestId("custom-title")).toBeInTheDocument()
 	})
 
-	it("should show command pattern selector for simple commands", () => {
+	it("should show command pattern selector for commands", () => {
 		render(
 			<ExtensionStateWrapper>
 				<CommandExecution executionId="test-1" text="npm install express" />
@@ -96,72 +92,85 @@ describe("CommandExecution", () => {
 		)
 
 		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		expect(screen.getByText("npm")).toBeInTheDocument()
-		expect(screen.getByText("npm install")).toBeInTheDocument()
+		expect(screen.getByText("npm install express")).toBeInTheDocument()
 	})
 
-	it("should handle allow pattern change", () => {
+	it("should handle allow command change", () => {
 		render(
 			<ExtensionStateWrapper>
 				<CommandExecution executionId="test-1" text="git push" />
 			</ExtensionStateWrapper>,
 		)
 
-		const allowButton = screen.getByText("Allow git")
+		const allowButton = screen.getByText("Allow git push")
 		fireEvent.click(allowButton)
 
-		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm", "git"])
+		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm", "git push"])
 		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm"])
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "git"] })
+		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "git push"] })
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm"] })
 	})
 
-	it("should handle deny pattern change", () => {
+	it("should handle deny command change", () => {
 		render(
 			<ExtensionStateWrapper>
 				<CommandExecution executionId="test-1" text="docker run" />
 			</ExtensionStateWrapper>,
 		)
 
-		const denyButton = screen.getByText("Deny docker")
+		const denyButton = screen.getByText("Deny docker run")
 		fireEvent.click(denyButton)
 
 		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm"])
-		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm", "docker"])
+		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm", "docker run"])
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm"] })
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm", "docker"] })
+		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm", "docker run"] })
 	})
 
-	it("should toggle allowed pattern", () => {
+	it("should toggle allowed command", () => {
+		// Update the mock state to have "npm test" in allowedCommands
+		const stateWithNpmTest = {
+			...mockExtensionState,
+			allowedCommands: ["npm test"],
+			deniedCommands: ["rm"],
+		}
+
 		render(
-			<ExtensionStateWrapper>
+			<ExtensionStateContext.Provider value={stateWithNpmTest as any}>
 				<CommandExecution executionId="test-1" text="npm test" />
-			</ExtensionStateWrapper>,
+			</ExtensionStateContext.Provider>,
 		)
 
-		const allowButton = screen.getByText("Allow npm")
+		const allowButton = screen.getByText("Allow npm test")
 		fireEvent.click(allowButton)
 
-		// npm is already in allowedCommands, so it should be removed
-		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith([])
-		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith(["rm"])
+		// "npm test" is already in allowedCommands, so it should be removed
+		expect(stateWithNpmTest.setAllowedCommands).toHaveBeenCalledWith([])
+		expect(stateWithNpmTest.setDeniedCommands).toHaveBeenCalledWith(["rm"])
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: [] })
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: ["rm"] })
 	})
 
-	it("should toggle denied pattern", () => {
+	it("should toggle denied command", () => {
+		// Update the mock state to have "rm -rf" in deniedCommands
+		const stateWithRmRf = {
+			...mockExtensionState,
+			allowedCommands: ["npm"],
+			deniedCommands: ["rm -rf"],
+		}
+
 		render(
-			<ExtensionStateWrapper>
+			<ExtensionStateContext.Provider value={stateWithRmRf as any}>
 				<CommandExecution executionId="test-1" text="rm -rf" />
-			</ExtensionStateWrapper>,
+			</ExtensionStateContext.Provider>,
 		)
 
-		const denyButton = screen.getByText("Deny rm")
+		const denyButton = screen.getByText("Deny rm -rf")
 		fireEvent.click(denyButton)
 
-		// rm is already in deniedCommands, so it should be removed
-		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm"])
-		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith([])
+		// "rm -rf" is already in deniedCommands, so it should be removed
+		expect(stateWithRmRf.setAllowedCommands).toHaveBeenCalledWith(["npm"])
+		expect(stateWithRmRf.setDeniedCommands).toHaveBeenCalledWith([])
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm"] })
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: [] })
 	})
@@ -181,7 +190,7 @@ Installing...`
 		expect(codeBlocks[0]).toHaveTextContent("npm install")
 	})
 
-	it("should parse command with AI suggestions", () => {
+	it("should parse command with output", () => {
 		const commandText = `npm install
 Output:
 Suggested patterns: npm, npm install, npm run`
@@ -198,11 +207,8 @@ Suggested patterns: npm, npm install, npm run`
 		expect(codeBlocks[1]).toHaveTextContent("Suggested patterns: npm, npm install, npm run")
 
 		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		// Check that only patterns from the actual command are extracted, not from AI suggestions
-		expect(screen.getByText("npm")).toBeInTheDocument()
-		expect(screen.getAllByText("npm install").length).toBeGreaterThan(0)
-		// "npm run" should NOT be in the patterns since it's only in the AI suggestions, not the actual command
-		expect(screen.queryByText("npm run")).not.toBeInTheDocument()
+		// Should show the full command
+		expect(screen.getByText("npm install")).toBeInTheDocument()
 	})
 
 	it("should handle commands with pipes", () => {
@@ -213,8 +219,7 @@ Suggested patterns: npm, npm install, npm run`
 		)
 
 		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		expect(screen.getByText("ls")).toBeInTheDocument()
-		expect(screen.getByText("grep")).toBeInTheDocument()
+		expect(screen.getByText("ls -la | grep test")).toBeInTheDocument()
 	})
 
 	it("should handle commands with && operator", () => {
@@ -225,9 +230,7 @@ Suggested patterns: npm, npm install, npm run`
 		)
 
 		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-		expect(screen.getByText("npm")).toBeInTheDocument()
-		expect(screen.getByText("npm install")).toBeInTheDocument()
-		expect(screen.getByText("npm test")).toBeInTheDocument()
+		expect(screen.getByText("npm install && npm test")).toBeInTheDocument()
 	})
 
 	it("should not show pattern selector for empty commands", () => {
@@ -279,25 +282,32 @@ Output here`
 		expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
 	})
 
-	it("should handle pattern change when moving from denied to allowed", () => {
+	it("should handle command change when moving from denied to allowed", () => {
+		// Update the mock state to have "rm file.txt" in deniedCommands
+		const stateWithRmInDenied = {
+			...mockExtensionState,
+			allowedCommands: ["npm"],
+			deniedCommands: ["rm file.txt"],
+		}
+
 		render(
-			<ExtensionStateWrapper>
+			<ExtensionStateContext.Provider value={stateWithRmInDenied as any}>
 				<CommandExecution executionId="test-1" text="rm file.txt" />
-			</ExtensionStateWrapper>,
+			</ExtensionStateContext.Provider>,
 		)
 
-		const allowButton = screen.getByText("Allow rm")
+		const allowButton = screen.getByText("Allow rm file.txt")
 		fireEvent.click(allowButton)
 
-		// rm should be removed from denied and added to allowed
-		expect(mockExtensionState.setAllowedCommands).toHaveBeenCalledWith(["npm", "rm"])
-		expect(mockExtensionState.setDeniedCommands).toHaveBeenCalledWith([])
-		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "rm"] })
+		// "rm file.txt" should be removed from denied and added to allowed
+		expect(stateWithRmInDenied.setAllowedCommands).toHaveBeenCalledWith(["npm", "rm file.txt"])
+		expect(stateWithRmInDenied.setDeniedCommands).toHaveBeenCalledWith([])
+		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "allowedCommands", commands: ["npm", "rm file.txt"] })
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "deniedCommands", commands: [] })
 	})
 
 	describe("integration with CommandPatternSelector", () => {
-		it("should extract patterns from complex commands with multiple operators", () => {
+		it("should show complex commands with multiple operators", () => {
 			render(
 				<ExtensionStateWrapper>
 					<CommandExecution executionId="test-6" text="npm install && npm test || echo 'failed'" />
@@ -306,23 +316,20 @@ Output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("npm")).toBeInTheDocument()
-			expect(screen.getByText("npm install")).toBeInTheDocument()
-			expect(screen.getByText("npm test")).toBeInTheDocument()
-			expect(screen.getByText("echo")).toBeInTheDocument()
+			expect(screen.getByText("npm install && npm test || echo 'failed'")).toBeInTheDocument()
 		})
 
-		it("should handle commands with malformed suggestions gracefully", () => {
-			const commandWithMalformedSuggestions = `npm install
+		it("should handle commands with output", () => {
+			const commandWithOutput = `npm install
 Output:
-Suggested patterns: npm, , npm install,
+Installing packages...
 Other output here`
 
 			render(
 				<ExtensionStateWrapper>
 					<CommandExecution
 						executionId="test-6"
-						text={commandWithMalformedSuggestions}
+						text={commandWithOutput}
 						icon={<span>icon</span>}
 						title={<span>Run Command</span>}
 					/>
@@ -331,12 +338,11 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			// Should still show valid patterns
-			expect(screen.getAllByText("npm")[0]).toBeInTheDocument()
-			expect(screen.getAllByText("npm install")[0]).toBeInTheDocument()
+			// Should show the command
+			expect(screen.getByText("npm install")).toBeInTheDocument()
 		})
 
-		it("should handle commands with subshells by not including them in patterns", () => {
+		it("should handle commands with subshells", () => {
 			render(
 				<ExtensionStateWrapper>
 					<CommandExecution executionId="test-7" text="echo $(whoami) && git status" />
@@ -345,11 +351,7 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("echo")).toBeInTheDocument()
-			expect(screen.getByText("git")).toBeInTheDocument()
-			expect(screen.getByText("git status")).toBeInTheDocument()
-			// Should not include subshell content
-			expect(screen.queryByText("whoami")).not.toBeInTheDocument()
+			expect(screen.getByText("echo $(whoami) && git status")).toBeInTheDocument()
 		})
 
 		it("should handle commands with backtick subshells", () => {
@@ -361,13 +363,10 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("git")).toBeInTheDocument()
-			expect(screen.getByText("git commit")).toBeInTheDocument()
-			// Should not include subshell content
-			expect(screen.queryByText("date")).not.toBeInTheDocument()
+			expect(screen.getByText("git commit -m `date`")).toBeInTheDocument()
 		})
 
-		it("should handle pattern changes for commands with special characters", () => {
+		it("should handle commands with special characters", () => {
 			render(
 				<ExtensionStateWrapper>
 					<CommandExecution executionId="test-9" text="cd ~/projects && npm start" />
@@ -376,22 +375,15 @@ Other output here`
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			expect(screen.getByText("cd")).toBeInTheDocument()
-			expect(screen.getByText("npm")).toBeInTheDocument()
-			expect(screen.getByText("npm start")).toBeInTheDocument()
+			expect(screen.getByText("cd ~/projects && npm start")).toBeInTheDocument()
 		})
 
-		it("should handle commands with mixed content including output and suggestions", () => {
+		it("should handle commands with mixed content including output", () => {
 			const commandWithMixedContent = `npm test
 Output:
 Running tests...
 ✓ Test 1 passed
-✓ Test 2 passed
-
-Suggested patterns: npm, npm test, npm run
-- npm
-- npm test
-- npm run test`
+✓ Test 2 passed`
 
 			render(
 				<ExtensionStateWrapper>
@@ -406,18 +398,15 @@ Suggested patterns: npm, npm test, npm run
 
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
-			// Should show patterns only from the actual command, not from AI suggestions
-			expect(screen.getAllByText("npm")[0]).toBeInTheDocument()
-			expect(screen.getAllByText("npm test")[0]).toBeInTheDocument()
-			// "npm run" should NOT be in the patterns since it's only in the AI suggestions
-			expect(screen.queryByText("npm run")).not.toBeInTheDocument()
+			// Should show the command
+			expect(screen.getByText("npm test")).toBeInTheDocument()
 		})
 
-		it("should update both allowed and denied lists when patterns conflict", () => {
+		it("should update both allowed and denied lists when commands conflict", () => {
 			const conflictState = {
 				...mockExtensionState,
 				allowedCommands: ["git"],
-				deniedCommands: ["git push"],
+				deniedCommands: ["git push origin main"],
 			}
 
 			render(
@@ -426,31 +415,31 @@ Suggested patterns: npm, npm test, npm run
 				</ExtensionStateContext.Provider>,
 			)
 
-			// Click to allow "git push"
-			const allowButton = screen.getByText("Allow git push")
+			// Click to allow "git push origin main"
+			const allowButton = screen.getByText("Allow git push origin main")
 			fireEvent.click(allowButton)
 
 			// Should add to allowed and remove from denied
-			expect(conflictState.setAllowedCommands).toHaveBeenCalledWith(["git", "git push"])
+			expect(conflictState.setAllowedCommands).toHaveBeenCalledWith(["git", "git push origin main"])
 			expect(conflictState.setDeniedCommands).toHaveBeenCalledWith([])
 		})
 
-		it("should handle commands that cannot be parsed and fallback gracefully", () => {
-			// Test with a command that might cause parsing issues
-			const unparsableCommand = "echo 'test with unclosed quote"
+		it("should handle commands with special quotes", () => {
+			// Test with a command that has quotes
+			const commandWithQuotes = "echo 'test with unclosed quote"
 
 			render(
 				<ExtensionStateWrapper>
-					<CommandExecution executionId="test-12" text={unparsableCommand} />
+					<CommandExecution executionId="test-12" text={commandWithQuotes} />
 				</ExtensionStateWrapper>,
 			)
 
 			// Should still render the command
 			expect(screen.getByTestId("code-block")).toHaveTextContent("echo 'test with unclosed quote")
 
-			// Should show pattern selector with at least the main command
+			// Should show pattern selector with the full command
 			expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-			expect(screen.getByText("echo")).toBeInTheDocument()
+			expect(screen.getByText("echo 'test with unclosed quote")).toBeInTheDocument()
 		})
 
 		it("should handle empty or whitespace-only commands", () => {
@@ -486,9 +475,7 @@ Without any command prefix`
 			expect(codeBlock.textContent).toContain("Without any command prefix")
 		})
 
-		it("should handle fallback case where parsed command equals original text", () => {
-			// This tests the case where parseCommandAndOutput returns command === text
-			// which happens when there's no output separator or command prefix
+		it("should handle simple commands", () => {
 			const plainCommand = "docker build ."
 
 			render(
@@ -500,18 +487,16 @@ Without any command prefix`
 			// Should render the command
 			expect(screen.getByTestId("code-block")).toHaveTextContent("docker build .")
 
-			// Should show pattern selector with extracted patterns
+			// Should show pattern selector with the full command
 			expect(screen.getByTestId("command-pattern-selector")).toBeInTheDocument()
-			expect(screen.getByText("docker")).toBeInTheDocument()
-			expect(screen.getByText("docker build")).toBeInTheDocument()
+			expect(screen.getByText("docker build .")).toBeInTheDocument()
 
-			// Verify no output is shown (since command === text means no output)
+			// Verify no output is shown (since there's no Output: separator)
 			const codeBlocks = screen.getAllByTestId("code-block")
 			expect(codeBlocks).toHaveLength(1) // Only the command block, no output block
 		})
 
-		it("should not extract patterns from command output numbers", () => {
-			// This tests the specific bug where "0 total" from wc output was being extracted as a command
+		it("should handle commands with numeric output", () => {
 			const commandWithNumericOutput = `wc -l *.go *.java
 Output:
 			   10 file1.go
@@ -533,17 +518,15 @@ Output:
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
 
-			// Should only extract "wc" from the actual command
-			expect(screen.getByText("wc")).toBeInTheDocument()
+			// Should show the full command
+			expect(screen.getByText("wc -l *.go *.java")).toBeInTheDocument()
 
-			// Should NOT extract numeric patterns from output like "45 total"
-			expect(screen.queryByText("45")).not.toBeInTheDocument()
-			expect(screen.queryByText("total")).not.toBeInTheDocument()
-			expect(screen.queryByText("45 total")).not.toBeInTheDocument()
+			// The output should still be displayed in the code block
+			expect(codeBlocks.length).toBeGreaterThan(1)
+			expect(codeBlocks[1].textContent).toContain("45 total")
 		})
 
-		it("should handle the edge case of 0 total in output", () => {
-			// This is the exact case from the bug report
+		it("should handle commands with zero output", () => {
 			const commandWithZeroTotal = `wc -l *.go *.java
 Output:
 		     0 total`
@@ -558,17 +541,8 @@ Output:
 			const selector = screen.getByTestId("command-pattern-selector")
 			expect(selector).toBeInTheDocument()
 
-			// Should only extract "wc" from the actual command
-			// Check within the pattern selector specifically
-			const patternTexts = Array.from(selector.querySelectorAll("span")).map((el) => el.textContent)
-
-			// Should have "wc" as a pattern
-			expect(patternTexts).toContain("wc")
-
-			// Should NOT have "0", "total", or "0 total" as patterns
-			expect(patternTexts).not.toContain("0")
-			expect(patternTexts).not.toContain("total")
-			expect(patternTexts).not.toContain("0 total")
+			// Should show the full command
+			expect(screen.getByText("wc -l *.go *.java")).toBeInTheDocument()
 
 			// The output should still be displayed in the code block
 			const codeBlocks = screen.getAllByTestId("code-block")
