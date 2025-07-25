@@ -7,6 +7,8 @@ import { CommandExecutionStatus, commandExecutionStatusSchema } from "@roo-code/
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { safeJsonParse } from "@roo/safeJsonParse"
 
+import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
+
 import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { cn } from "@src/lib/utils"
@@ -36,30 +38,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		setDeniedCommands,
 	} = useExtensionState()
 
-	const { command, output: parsedOutput } = useMemo(() => {
-		// Parse command and output using the "Output:" separator
-		const outputSeparator = "Output:"
-		const outputIndex = text?.indexOf(`\n${outputSeparator}`) ?? -1
-
-		if (outputIndex !== -1) {
-			// Text is split into command and output
-			const cmd = (text ?? "").slice(0, outputIndex).trim()
-			// Skip the newline and "Output:" text
-			const afterSeparator = outputIndex + 1 + outputSeparator.length
-			let startOfOutput = afterSeparator
-			if (text![afterSeparator] === "\n") {
-				startOfOutput = afterSeparator + 1
-			}
-			const out = text!.slice(startOfOutput).trim()
-			return { command: cmd, output: out }
-		} else if (text?.indexOf(outputSeparator) === 0) {
-			// Edge case: text starts with "Output:" (no command)
-			return { command: "", output: text.slice(outputSeparator.length).trim() }
-		} else {
-			// No output separator found, the entire text is the command
-			return { command: text?.trim() || "", output: "" }
-		}
-	}, [text])
+	const { command, output: parsedOutput } = useMemo(() => parseCommandAndOutput(text), [text])
 
 	// If we aren't opening the VSCode terminal for this command then we default
 	// to expanding the command execution output.
@@ -192,7 +171,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 					<CodeBlock source={command} language="shell" />
 					<OutputContainer isExpanded={isExpanded} output={output} />
 				</div>
-				{command && (
+				{command && command.trim() && (
 					<CommandPatternSelector
 						command={command}
 						patterns={commandPatterns}
@@ -220,3 +199,20 @@ const OutputContainerInternal = ({ isExpanded, output }: { isExpanded: boolean; 
 )
 
 const OutputContainer = memo(OutputContainerInternal)
+
+const parseCommandAndOutput = (text: string | undefined) => {
+	if (!text) {
+		return { command: "", output: "" }
+	}
+
+	const index = text.indexOf(COMMAND_OUTPUT_STRING)
+
+	if (index === -1) {
+		return { command: text, output: "" }
+	}
+
+	return {
+		command: text.slice(0, index),
+		output: text.slice(index + COMMAND_OUTPUT_STRING.length),
+	}
+}
