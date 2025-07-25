@@ -27,13 +27,17 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => <TooltipPro
 describe("CommandPatternSelector", () => {
 	const defaultProps = {
 		command: "npm install express",
+		patterns: [
+			{ pattern: "npm install", description: "Install npm packages" },
+			{ pattern: "npm *", description: "Any npm command" },
+		],
 		allowedCommands: ["npm install"],
 		deniedCommands: ["git push"],
-		onAllowCommandChange: vi.fn(),
-		onDenyCommandChange: vi.fn(),
+		onAllowPatternChange: vi.fn(),
+		onDenyPatternChange: vi.fn(),
 	}
 
-	it("should render with command input", () => {
+	it("should render with command permissions header", () => {
 		const { container } = render(
 			<TestWrapper>
 				<CommandPatternSelector {...defaultProps} />
@@ -43,16 +47,11 @@ describe("CommandPatternSelector", () => {
 		// The component should render without errors
 		expect(container).toBeTruthy()
 
-		// Click to expand the component
-		const expandButton = screen.getByRole("button", { name: /chat:commandExecution.expandManagement/i })
-		fireEvent.click(expandButton)
-
-		// Check that the input is rendered with the command
-		const input = screen.getByDisplayValue("npm install express")
-		expect(input).toBeInTheDocument()
+		// Check for the command permissions text
+		expect(screen.getByText("chat:commandExecution.commandPermissions")).toBeInTheDocument()
 	})
 
-	it("should allow editing the command", () => {
+	it("should show full command as first pattern when expanded", () => {
 		render(
 			<TestWrapper>
 				<CommandPatternSelector {...defaultProps} />
@@ -60,42 +59,79 @@ describe("CommandPatternSelector", () => {
 		)
 
 		// Click to expand the component
-		const expandButton = screen.getByRole("button", { name: /chat:commandExecution.expandManagement/i })
+		const expandButton = screen.getByRole("button")
 		fireEvent.click(expandButton)
 
-		// Get the input and change its value
-		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
-		fireEvent.change(input, { target: { value: "npm install react" } })
+		// Check that the full command is shown with description
+		expect(screen.getByText("npm install express")).toBeInTheDocument()
+		expect(screen.getByText("- Full command")).toBeInTheDocument()
+	})
 
-		// Check that the input value has changed
+	it("should show extracted patterns when expanded", () => {
+		render(
+			<TestWrapper>
+				<CommandPatternSelector {...defaultProps} />
+			</TestWrapper>,
+		)
+
+		// Click to expand the component
+		const expandButton = screen.getByRole("button")
+		fireEvent.click(expandButton)
+
+		// Check that patterns are shown
+		expect(screen.getByText("npm install")).toBeInTheDocument()
+		expect(screen.getByText("- Install npm packages")).toBeInTheDocument()
+		expect(screen.getByText("npm *")).toBeInTheDocument()
+		expect(screen.getByText("- Any npm command")).toBeInTheDocument()
+	})
+
+	it("should allow editing patterns when clicked", () => {
+		render(
+			<TestWrapper>
+				<CommandPatternSelector {...defaultProps} />
+			</TestWrapper>,
+		)
+
+		// Click to expand the component
+		const expandButton = screen.getByRole("button")
+		fireEvent.click(expandButton)
+
+		// Click on the full command pattern
+		const fullCommandDiv = screen.getByText("npm install express").closest("div")
+		fireEvent.click(fullCommandDiv!)
+
+		// An input should appear
+		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
+		expect(input).toBeInTheDocument()
+
+		// Change the value
+		fireEvent.change(input, { target: { value: "npm install react" } })
 		expect(input.value).toBe("npm install react")
 	})
 
-	it("should show allowed status for commands in allowed list", () => {
-		const props = {
-			...defaultProps,
-			command: "npm install",
-		}
-
+	it("should show allowed status for patterns in allowed list", () => {
 		render(
 			<TestWrapper>
-				<CommandPatternSelector {...props} />
+				<CommandPatternSelector {...defaultProps} />
 			</TestWrapper>,
 		)
 
 		// Click to expand the component
-		const expandButton = screen.getByRole("button", { name: /chat:commandExecution.expandManagement/i })
+		const expandButton = screen.getByRole("button")
 		fireEvent.click(expandButton)
 
+		// Find the npm install pattern row
+		const npmInstallPattern = screen.getByText("npm install").closest(".ml-5")
+
 		// The allow button should have the active styling (we can check by aria-label)
-		const allowButton = screen.getByRole("button", { name: /chat:commandExecution.removeFromAllowed/i })
+		const allowButton = npmInstallPattern?.querySelector('button[aria-label*="removeFromAllowed"]')
 		expect(allowButton).toBeInTheDocument()
 	})
 
-	it("should show denied status for commands in denied list", () => {
+	it("should show denied status for patterns in denied list", () => {
 		const props = {
 			...defaultProps,
-			command: "git push",
+			patterns: [{ pattern: "git push", description: "Push to git" }],
 		}
 
 		render(
@@ -105,19 +141,22 @@ describe("CommandPatternSelector", () => {
 		)
 
 		// Click to expand the component
-		const expandButton = screen.getByRole("button", { name: /chat:commandExecution.expandManagement/i })
+		const expandButton = screen.getByRole("button")
 		fireEvent.click(expandButton)
 
+		// Find the git push pattern row
+		const gitPushPattern = screen.getByText("git push").closest(".ml-5")
+
 		// The deny button should have the active styling (we can check by aria-label)
-		const denyButton = screen.getByRole("button", { name: /chat:commandExecution.removeFromDenied/i })
+		const denyButton = gitPushPattern?.querySelector('button[aria-label*="removeFromDenied"]')
 		expect(denyButton).toBeInTheDocument()
 	})
 
-	it("should call onAllowCommandChange when allow button is clicked", () => {
-		const mockOnAllowCommandChange = vi.fn()
+	it("should call onAllowPatternChange when allow button is clicked", () => {
+		const mockOnAllowPatternChange = vi.fn()
 		const props = {
 			...defaultProps,
-			onAllowCommandChange: mockOnAllowCommandChange,
+			onAllowPatternChange: mockOnAllowPatternChange,
 		}
 
 		render(
@@ -127,22 +166,23 @@ describe("CommandPatternSelector", () => {
 		)
 
 		// Click to expand the component
-		const expandButton = screen.getByRole("button", { name: /chat:commandExecution.expandManagement/i })
+		const expandButton = screen.getByRole("button")
 		fireEvent.click(expandButton)
 
-		// Click the allow button
-		const allowButton = screen.getByRole("button", { name: /chat:commandExecution.addToAllowed/i })
-		fireEvent.click(allowButton)
+		// Find the full command pattern row and click allow
+		const fullCommandPattern = screen.getByText("npm install express").closest(".ml-5")
+		const allowButton = fullCommandPattern?.querySelector('button[aria-label*="addToAllowed"]')
+		fireEvent.click(allowButton!)
 
-		// Check that the callback was called with the command
-		expect(mockOnAllowCommandChange).toHaveBeenCalledWith("npm install express")
+		// Check that the callback was called with the pattern
+		expect(mockOnAllowPatternChange).toHaveBeenCalledWith("npm install express")
 	})
 
-	it("should call onDenyCommandChange when deny button is clicked", () => {
-		const mockOnDenyCommandChange = vi.fn()
+	it("should call onDenyPatternChange when deny button is clicked", () => {
+		const mockOnDenyPatternChange = vi.fn()
 		const props = {
 			...defaultProps,
-			onDenyCommandChange: mockOnDenyCommandChange,
+			onDenyPatternChange: mockOnDenyPatternChange,
 		}
 
 		render(
@@ -152,22 +192,23 @@ describe("CommandPatternSelector", () => {
 		)
 
 		// Click to expand the component
-		const expandButton = screen.getByRole("button", { name: /chat:commandExecution.expandManagement/i })
+		const expandButton = screen.getByRole("button")
 		fireEvent.click(expandButton)
 
-		// Click the deny button
-		const denyButton = screen.getByRole("button", { name: /chat:commandExecution.addToDenied/i })
-		fireEvent.click(denyButton)
+		// Find the full command pattern row and click deny
+		const fullCommandPattern = screen.getByText("npm install express").closest(".ml-5")
+		const denyButton = fullCommandPattern?.querySelector('button[aria-label*="addToDenied"]')
+		fireEvent.click(denyButton!)
 
-		// Check that the callback was called with the command
-		expect(mockOnDenyCommandChange).toHaveBeenCalledWith("npm install express")
+		// Check that the callback was called with the pattern
+		expect(mockOnDenyPatternChange).toHaveBeenCalledWith("npm install express")
 	})
 
-	it("should use edited command value when buttons are clicked", () => {
-		const mockOnAllowCommandChange = vi.fn()
+	it("should use edited pattern value when buttons are clicked", () => {
+		const mockOnAllowPatternChange = vi.fn()
 		const props = {
 			...defaultProps,
-			onAllowCommandChange: mockOnAllowCommandChange,
+			onAllowPatternChange: mockOnAllowPatternChange,
 		}
 
 		render(
@@ -177,18 +218,53 @@ describe("CommandPatternSelector", () => {
 		)
 
 		// Click to expand the component
-		const expandButton = screen.getByRole("button", { name: /chat:commandExecution.expandManagement/i })
+		const expandButton = screen.getByRole("button")
 		fireEvent.click(expandButton)
+
+		// Click on the full command pattern to edit
+		const fullCommandDiv = screen.getByText("npm install express").closest("div")
+		fireEvent.click(fullCommandDiv!)
 
 		// Edit the command
 		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
 		fireEvent.change(input, { target: { value: "npm install react" } })
 
-		// Click the allow button
-		const allowButton = screen.getByRole("button", { name: /chat:commandExecution.addToAllowed/i })
-		fireEvent.click(allowButton)
+		// Press Enter to confirm edit
+		fireEvent.keyDown(input, { key: "Enter" })
 
-		// Check that the callback was called with the edited command
-		expect(mockOnAllowCommandChange).toHaveBeenCalledWith("npm install react")
+		// Click the allow button
+		const fullCommandPattern = screen.getByText("npm install react").closest(".ml-5")
+		const allowButton = fullCommandPattern?.querySelector('button[aria-label*="addToAllowed"]')
+		fireEvent.click(allowButton!)
+
+		// Check that the callback was called with the edited pattern
+		expect(mockOnAllowPatternChange).toHaveBeenCalledWith("npm install react")
+	})
+
+	it("should cancel edit on Escape key", () => {
+		render(
+			<TestWrapper>
+				<CommandPatternSelector {...defaultProps} />
+			</TestWrapper>,
+		)
+
+		// Click to expand the component
+		const expandButton = screen.getByRole("button")
+		fireEvent.click(expandButton)
+
+		// Click on the full command pattern to edit
+		const fullCommandDiv = screen.getByText("npm install express").closest("div")
+		fireEvent.click(fullCommandDiv!)
+
+		// Edit the command
+		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
+		fireEvent.change(input, { target: { value: "npm install react" } })
+
+		// Press Escape to cancel
+		fireEvent.keyDown(input, { key: "Escape" })
+
+		// The original value should be restored
+		expect(screen.getByText("npm install express")).toBeInTheDocument()
+		expect(screen.queryByDisplayValue("npm install react")).not.toBeInTheDocument()
 	})
 })
