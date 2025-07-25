@@ -32,10 +32,14 @@ function getEditingInstructions(diffStrategy?: DiffStrategy): string {
 		"- The search_and_replace tool finds and replaces text or regex in files. This tool allows you to search for a specific regex pattern or text and replace it with another value. Be cautious when using this tool to ensure you are replacing the correct text. It can support multiple operations at once.",
 	)
 
-	if (availableTools.length > 1) {
+	if (diffStrategy) {
 		instructions.push(
 			"- CRITICAL: Use apply_diff for small, surgical edits to existing files. Do NOT use apply_diff to rewrite entire files - use write_to_file for that purpose.",
 			"- You should always prefer using apply_diff, insert_content, or search_and_replace over write_to_file when making changes to existing files since write_to_file is much slower and cannot handle large files.",
+		)
+	} else if (availableTools.length > 1) {
+		instructions.push(
+			"- You should always prefer using insert_content or search_and_replace over write_to_file when making changes to existing files since write_to_file is much slower and cannot handle large files.",
 		)
 	}
 
