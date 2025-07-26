@@ -707,6 +707,10 @@ export const webviewMessageHandler = async (
 				vscode.env.openExternal(vscode.Uri.parse(message.url))
 			}
 			break
+		case "reloadWindow":
+			// Reload the VS Code window to recover from crash
+			vscode.commands.executeCommand("workbench.action.reloadWindow")
+			break
 		case "checkpointDiff":
 			const result = checkoutDiffPayloadSchema.safeParse(message.payload)
 

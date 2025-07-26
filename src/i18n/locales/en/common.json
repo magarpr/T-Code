@@ -168,5 +168,20 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Prevent task completion when there are incomplete todos in the todo list"
 		}
+	},
+	"errorBoundary": {
+		"title": "Something went wrong",
+		"reportText": "Please help us improve by reporting this error on",
+		"githubText": "GitHub",
+		"copyInstructions": "Please copy and paste the following error message:",
+		"errorStack": "Error Stack",
+		"componentStack": "Component Stack",
+		"windowsNote": "This crash occurred on Windows. Your work has been automatically saved.",
+		"crashRecoveryText": "Don't worry! Your work has been saved and can be recovered.",
+		"restarting": "Restarting...",
+		"restartVSCode": "Restart VS Code",
+		"reportIssue": "Report Issue",
+		"technicalDetails": "Technical Details",
+		"helpText": "If the problem persists, please"
 	}
 }

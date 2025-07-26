@@ -182,6 +182,7 @@ export interface WebviewMessage {
 		| "profileThresholds"
 		| "setHistoryPreviewCollapsed"
 		| "openExternal"
+		| "reloadWindow"
 		| "filterMarketplaceItems"
 		| "marketplaceButtonClicked"
 		| "installMarketplaceItem"
