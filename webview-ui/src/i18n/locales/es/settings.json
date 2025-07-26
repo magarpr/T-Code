@@ -648,6 +648,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilitar ediciones de archivos concurrentes",
 			"description": "Cuando está habilitado, Roo puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Roo debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
+		},
+		"SPELL_CHECK": {
+			"name": "Enable spell check in chat",
+			"description": "When enabled, uses the browser's native spell check to underline misspelled words in the chat input. This helps catch typos before sending messages to Roo."
 		}
 	},
 	"promptCaching": {

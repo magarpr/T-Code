@@ -649,6 +649,10 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
 			"description": "Wanneer ingeschakeld, kan Roo meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Roo bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen."
+		},
+		"SPELL_CHECK": {
+			"name": "Enable spell check in chat",
+			"description": "When enabled, uses the browser's native spell check to underline misspelled words in the chat input. This helps catch typos before sending messages to Roo."
 		}
 	},
 	"promptCaching": {
