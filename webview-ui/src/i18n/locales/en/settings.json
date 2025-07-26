@@ -651,7 +651,7 @@
 		},
 		"SPELL_CHECK": {
 			"name": "Enable spell check in chat",
-			"description": "When enabled, misspelled words in the chat input will be underlined in red. This helps catch typos before sending messages to Roo."
+			"description": "When enabled, uses the browser's native spell check to underline misspelled words in the chat input. This helps catch typos before sending messages to Roo."
 		}
 	},
 	"promptCaching": {

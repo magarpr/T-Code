@@ -11,7 +11,6 @@ import { EXPERIMENT_IDS, experiments as experimentsLib } from "@roo/experiments"
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { checkSpelling, debounce, SpellCheckResult } from "@/utils/spellCheck"
 import {
 	ContextMenuOptionType,
 	getContextMenuOptions,
@@ -183,8 +182,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const contextMenuContainerRef = useRef<HTMLDivElement>(null)
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
 		const [isFocused, setIsFocused] = useState(false)
-		const [spellCheckResults, setSpellCheckResults] = useState<SpellCheckResult[]>([])
-		const spellCheckLayerRef = useRef<HTMLDivElement>(null)
 
 		// Use custom hook for prompt history navigation
 		const { handleHistoryNavigation, resetHistoryNavigation, resetOnInputChange } = usePromptHistory({
@@ -225,31 +222,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const isSpellCheckEnabled = useMemo(() => {
 			return experiments && experimentsLib.isEnabled(experiments, EXPERIMENT_IDS.SPELL_CHECK)
 		}, [experiments])
-
-		// Debounced spell check function
-		const performSpellCheck = useMemo(
-			() =>
-				debounce(async (text: string) => {
-					if (!isSpellCheckEnabled || !text.trim()) {
-						setSpellCheckResults([])
-						return
-					}
-
-					try {
-						const results = await checkSpelling(text)
-						setSpellCheckResults(results)
-					} catch (error) {
-						console.error("Spell check error:", error)
-						setSpellCheckResults([])
-					}
-				}, 300),
-			[isSpellCheckEnabled],
-		)
-
-		// Perform spell check when input changes
-		useEffect(() => {
-			performSpellCheck(inputValue)
-		}, [inputValue, performSpellCheck])
 
 		const allModes = useMemo(() => getAllModes(customModes), [customModes])
 
@@ -709,52 +681,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 		}, [])
 
-		const updateSpellCheckHighlights = useCallback(() => {
-			if (!spellCheckLayerRef.current || !isSpellCheckEnabled) return
-
-			const text = inputValue
-			let html = ""
-			let lastIndex = 0
-
-			// Sort spell check results by start index
-			const sortedResults = [...spellCheckResults].sort((a, b) => a.startIndex - b.startIndex)
-
-			sortedResults.forEach((result) => {
-				// Add text before the misspelled word
-				const beforeText = text.slice(lastIndex, result.startIndex)
-				html += beforeText
-					.replace(/\n$/, "\n\n")
-					.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)
-
-				// Add the misspelled word with highlighting
-				const misspelledWord = text.slice(result.startIndex, result.endIndex)
-				html += `<span class="spell-check-error">${misspelledWord.replace(
-					/[<>&]/g,
-					(c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c,
-				)}</span>`
-
-				lastIndex = result.endIndex
-			})
-
-			// Add remaining text
-			const remainingText = text.slice(lastIndex)
-			html += remainingText
-				.replace(/\n$/, "\n\n")
-				.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)
-
-			spellCheckLayerRef.current.innerHTML = html
-
-			// Sync scroll position
-			if (textAreaRef.current) {
-				spellCheckLayerRef.current.scrollTop = textAreaRef.current.scrollTop
-				spellCheckLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-			}
-		}, [inputValue, spellCheckResults, isSpellCheckEnabled])
-
-		useLayoutEffect(() => {
-			updateSpellCheckHighlights()
-		}, [inputValue, spellCheckResults, updateSpellCheckHighlights])
-
 		const handleKeyUp = useCallback(
 			(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
 				if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) {
@@ -1125,30 +1051,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						color: "transparent",
 					}}
 				/>
-				{isSpellCheckEnabled && (
-					<div
-						ref={spellCheckLayerRef}
-						className={cn(
-							"absolute",
-							"inset-0",
-							"pointer-events-none",
-							"whitespace-pre-wrap",
-							"break-words",
-							"text-transparent",
-							"overflow-hidden",
-							"font-vscode-font-family",
-							"text-vscode-editor-font-size",
-							"leading-vscode-editor-line-height",
-							"py-2",
-							"px-[9px]",
-							"z-[5]",
-							"forced-color-adjust-none",
-						)}
-						style={{
-							color: "transparent",
-						}}
-					/>
-				)}
 				<DynamicTextArea
 					ref={(el) => {
 						if (typeof ref === "function") {
@@ -1181,6 +1083,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					minRows={3}
 					maxRows={15}
 					autoFocus={true}
+					spellCheck={isSpellCheckEnabled}
 					className={cn(
 						"w-full",
 						"text-vscode-input-foreground",
@@ -1213,7 +1116,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					)}
 					onScroll={() => {
 						updateHighlights()
-						updateSpellCheckHighlights()
 					}}
 				/>
 

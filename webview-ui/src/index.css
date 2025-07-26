@@ -386,14 +386,6 @@ vscode-dropdown::part(listbox) {
 	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
 }
 
-/* Spell check styles */
-.spell-check-error {
-	text-decoration: underline;
-	text-decoration-color: #ff0000;
-	text-decoration-style: wavy;
-	text-underline-offset: 2px;
-}
-
 /**
  * vscrui Overrides / Hacks
  */
