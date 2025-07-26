@@ -1076,7 +1076,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					minRows={3}
 					maxRows={15}
 					autoFocus={true}
-					spellCheck={true}
+					// Note: spellCheck doesn't work in VSCode webviews due to platform limitations
+					// The native browser spell check functionality is disabled in VSCode's webview environment
+					// See: https://github.com/microsoft/vscode/issues/30180
 					className={cn(
 						"w-full",
 						"text-vscode-input-foreground",
