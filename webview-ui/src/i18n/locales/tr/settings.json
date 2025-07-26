@@ -649,10 +649,6 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
 			"description": "Etkinleştirildiğinde, Roo tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Roo dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
-		},
-		"SPELL_CHECK": {
-			"name": "Enable spell check in chat",
-			"description": "When enabled, uses the browser's native spell check to underline misspelled words in the chat input. This helps catch typos before sending messages to Roo."
 		}
 	},
 	"promptCaching": {

@@ -6,7 +6,6 @@ import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/context-m
 import { WebviewMessage } from "@roo/WebviewMessage"
 import { Mode, getAllModes } from "@roo/modes"
 import { ExtensionMessage } from "@roo/ExtensionMessage"
-import { EXPERIMENT_IDS, experiments as experimentsLib } from "@roo/experiments"
 
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -87,7 +86,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			togglePinnedApiConfig,
 			taskHistory,
 			clineMessages,
-			experiments,
 		} = useExtensionState()
 
 		// Find the ID and display text for the currently selected API configuration
@@ -217,11 +215,6 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setInputValue(t("chat:enhancePromptDescription"))
 			}
 		}, [inputValue, sendingDisabled, setInputValue, t])
-
-		// Check if spell check is enabled
-		const isSpellCheckEnabled = useMemo(() => {
-			return experiments && experimentsLib.isEnabled(experiments, EXPERIMENT_IDS.SPELL_CHECK)
-		}, [experiments])
 
 		const allModes = useMemo(() => getAllModes(customModes), [customModes])
 
@@ -1083,7 +1076,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					minRows={3}
 					maxRows={15}
 					autoFocus={true}
-					spellCheck={isSpellCheckEnabled}
+					spellCheck={true}
 					className={cn(
 						"w-full",
 						"text-vscode-input-foreground",

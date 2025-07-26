@@ -23,21 +23,11 @@ describe("experiments", () => {
 		})
 	})
 
-	describe("SPELL_CHECK", () => {
-		it("is configured correctly", () => {
-			expect(EXPERIMENT_IDS.SPELL_CHECK).toBe("spellCheck")
-			expect(experimentConfigsMap.SPELL_CHECK).toMatchObject({
-				enabled: false,
-			})
-		})
-	})
-
 	describe("isEnabled", () => {
 		it("returns false when POWER_STEERING experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				multiFileApplyDiff: false,
-				spellCheck: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})
@@ -46,7 +36,6 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: true,
 				multiFileApplyDiff: false,
-				spellCheck: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
 		})
@@ -55,7 +44,6 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				multiFileApplyDiff: false,
-				spellCheck: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})

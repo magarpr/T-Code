@@ -649,10 +649,6 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "啟用並行檔案編輯",
 			"description": "啟用後 Roo 可在單個請求中編輯多個檔案。停用後 Roo 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
-		},
-		"SPELL_CHECK": {
-			"name": "Enable spell check in chat",
-			"description": "When enabled, uses the browser's native spell check to underline misspelled words in the chat input. This helps catch typos before sending messages to Roo."
 		}
 	},
 	"promptCaching": {

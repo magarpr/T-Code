@@ -3,7 +3,6 @@ import type { AssertEqual, Equals, Keys, Values, ExperimentId, Experiments } fro
 export const EXPERIMENT_IDS = {
 	MULTI_FILE_APPLY_DIFF: "multiFileApplyDiff",
 	POWER_STEERING: "powerSteering",
-	SPELL_CHECK: "spellCheck",
 } as const satisfies Record<string, ExperimentId>
 
 type _AssertExperimentIds = AssertEqual<Equals<ExperimentId, Values<typeof EXPERIMENT_IDS>>>
@@ -17,7 +16,6 @@ interface ExperimentConfig {
 export const experimentConfigsMap: Record<ExperimentKey, ExperimentConfig> = {
 	MULTI_FILE_APPLY_DIFF: { enabled: false },
 	POWER_STEERING: { enabled: false },
-	SPELL_CHECK: { enabled: false },
 }
 
 export const experimentDefault = Object.fromEntries(
