@@ -533,6 +533,7 @@ describe("ClineProvider", () => {
 			showRooIgnoredFiles: true,
 			renderContext: "sidebar",
 			maxReadFileLine: 500,
+			maxReadFileTokens: 10000,
 			cloudUserInfo: null,
 			organizationAllowList: ORGANIZATION_ALLOW_ALL,
 			autoCondenseContext: true,
