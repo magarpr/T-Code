@@ -27,6 +27,10 @@ import {
 	getModesSection,
 	addCustomInstructions,
 	markdownFormattingSection,
+	getToneAndStyleSection,
+	getProactivenessSection,
+	getFollowingConventionsSection,
+	getTaskManagementSection,
 } from "./sections"
 
 // Helper function to get prompt component, filtering out empty objects
@@ -89,7 +93,15 @@ async function generatePrompt(
 
 	const basePrompt = `${roleDefinition}
 
+${getToneAndStyleSection()}
+
 ${markdownFormattingSection()}
+
+${getProactivenessSection()}
+
+${getFollowingConventionsSection()}
+
+${getTaskManagementSection()}
 
 ${getSharedToolUseSection()}
 
