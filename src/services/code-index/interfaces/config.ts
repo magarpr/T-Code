@@ -18,6 +18,10 @@ export interface CodeIndexConfig {
 	qdrantApiKey?: string
 	searchMinScore?: number
 	searchMaxResults?: number
+	// Memory optimization settings
+	useOnDiskStorage?: boolean // Enable on-disk storage for vectors and indexes
+	memoryMapThreshold?: number // Number of vectors before using memory-mapped files
+	hnswEfSearch?: number // HNSW search parameter (lower = less memory, faster)
 }
 
 /**
@@ -37,4 +41,8 @@ export type PreviousConfigSnapshot = {
 	mistralApiKey?: string
 	qdrantUrl?: string
 	qdrantApiKey?: string
+	// Memory optimization settings
+	useOnDiskStorage?: boolean
+	memoryMapThreshold?: number
+	hnswEfSearch?: number
 }

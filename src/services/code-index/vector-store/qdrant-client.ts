@@ -17,13 +17,31 @@ export class QdrantVectorStore implements IVectorStore {
 	private client: QdrantClient
 	private readonly collectionName: string
 	private readonly qdrantUrl: string = "http://localhost:6333"
+	private readonly memoryOptimization: {
+		useOnDiskStorage?: boolean
+		memoryMapThreshold?: number
+		hnswEfSearch?: number
+	}
 
 	/**
 	 * Creates a new Qdrant vector store
 	 * @param workspacePath Path to the workspace
 	 * @param url Optional URL to the Qdrant server
+	 * @param vectorSize Size of the vectors
+	 * @param apiKey Optional API key for authentication
+	 * @param memoryOptimization Optional memory optimization settings
 	 */
-	constructor(workspacePath: string, url: string, vectorSize: number, apiKey?: string) {
+	constructor(
+		workspacePath: string,
+		url: string,
+		vectorSize: number,
+		apiKey?: string,
+		memoryOptimization?: {
+			useOnDiskStorage?: boolean
+			memoryMapThreshold?: number
+			hnswEfSearch?: number
+		},
+	) {
 		// Parse the URL to determine the appropriate QdrantClient configuration
 		const parsedUrl = this.parseQdrantUrl(url)
 
@@ -79,6 +97,11 @@ export class QdrantVectorStore implements IVectorStore {
 		const hash = createHash("sha256").update(workspacePath).digest("hex")
 		this.vectorSize = vectorSize
 		this.collectionName = `ws-${hash.substring(0, 16)}`
+		this.memoryOptimization = memoryOptimization || {
+			useOnDiskStorage: true,
+			memoryMapThreshold: 50000,
+			hnswEfSearch: 64,
+		}
 	}
 
 	/**
@@ -155,6 +178,27 @@ export class QdrantVectorStore implements IVectorStore {
 					vectors: {
 						size: this.vectorSize,
 						distance: this.DISTANCE_METRIC,
+						on_disk: this.memoryOptimization.useOnDiskStorage ?? true, // Store vectors on disk instead of RAM
+					},
+					// Configure HNSW index for memory efficiency
+					hnsw_config: {
+						m: 16, // Number of bi-directional links created for each node
+						ef_construct: 100, // Size of the dynamic list during construction
+						full_scan_threshold: 10000, // Use full scan for small collections
+						max_indexing_threads: 0, // Use all available CPU cores
+						on_disk: this.memoryOptimization.useOnDiskStorage ?? true, // Store HNSW index on disk
+						payload_m: null, // Use default payload index
+					},
+					// Enable memory-mapped storage for better memory management
+					optimizers_config: {
+						deleted_threshold: 0.2, // Trigger optimization when 20% vectors are deleted
+						vacuum_min_vector_number: 1000, // Minimum vectors before vacuum
+						default_segment_number: 2, // Number of segments to create
+						max_segment_size: null, // No limit on segment size
+						memmap_threshold: this.memoryOptimization.memoryMapThreshold ?? 50000, // Use mmap for segments larger than this
+						indexing_threshold: 20000, // Start indexing after 20k vectors
+						flush_interval_sec: 5, // Flush to disk every 5 seconds
+						max_optimization_threads: 0, // Use all available CPU cores
 					},
 				})
 				created = true
@@ -244,6 +288,27 @@ export class QdrantVectorStore implements IVectorStore {
 				vectors: {
 					size: this.vectorSize,
 					distance: this.DISTANCE_METRIC,
+					on_disk: this.memoryOptimization.useOnDiskStorage ?? true, // Store vectors on disk instead of RAM
+				},
+				// Configure HNSW index for memory efficiency
+				hnsw_config: {
+					m: 16, // Number of bi-directional links created for each node
+					ef_construct: 100, // Size of the dynamic list during construction
+					full_scan_threshold: 10000, // Use full scan for small collections
+					max_indexing_threads: 0, // Use all available CPU cores
+					on_disk: this.memoryOptimization.useOnDiskStorage ?? true, // Store HNSW index on disk
+					payload_m: null, // Use default payload index
+				},
+				// Enable memory-mapped storage for better memory management
+				optimizers_config: {
+					deleted_threshold: 0.2, // Trigger optimization when 20% vectors are deleted
+					vacuum_min_vector_number: 1000, // Minimum vectors before vacuum
+					default_segment_number: 2, // Number of segments to create
+					max_segment_size: null, // No limit on segment size
+					memmap_threshold: this.memoryOptimization.memoryMapThreshold ?? 50000, // Use mmap for segments larger than this
+					indexing_threshold: 20000, // Start indexing after 20k vectors
+					flush_interval_sec: 5, // Flush to disk every 5 seconds
+					max_optimization_threads: 0, // Use all available CPU cores
 				},
 			})
 			console.log(`[QdrantVectorStore] Successfully created new collection ${this.collectionName}`)
@@ -391,8 +456,13 @@ export class QdrantVectorStore implements IVectorStore {
 				score_threshold: minScore ?? DEFAULT_SEARCH_MIN_SCORE,
 				limit: maxResults ?? DEFAULT_MAX_SEARCH_RESULTS,
 				params: {
-					hnsw_ef: 128,
+					hnsw_ef: this.memoryOptimization.hnswEfSearch ?? 64, // Use configured value or default
 					exact: false,
+					quantization: {
+						ignore: false, // Enable quantization for memory efficiency
+						rescore: true, // Rescore with original vectors for accuracy
+						oversampling: 2.0, // Oversample to maintain quality
+					},
 				},
 				with_payload: {
 					include: ["filePath", "codeChunk", "startLine", "endLine", "pathSegments"],

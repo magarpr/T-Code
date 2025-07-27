@@ -104,11 +104,18 @@ describe("CodeIndexConfigManager", () => {
 				isConfigured: false,
 				embedderProvider: "openai",
 				modelId: undefined,
+				modelDimension: undefined,
 				openAiOptions: { openAiNativeApiKey: "" },
 				ollamaOptions: { ollamaBaseUrl: "" },
+				openAiCompatibleOptions: undefined,
+				geminiOptions: undefined,
+				mistralOptions: undefined,
 				qdrantUrl: "http://localhost:6333",
 				qdrantApiKey: "",
 				searchMinScore: 0.4,
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 64,
 			})
 			expect(result.requiresRestart).toBe(false)
 		})
@@ -135,11 +142,18 @@ describe("CodeIndexConfigManager", () => {
 				isConfigured: true,
 				embedderProvider: "openai",
 				modelId: "text-embedding-3-large",
+				modelDimension: undefined,
 				openAiOptions: { openAiNativeApiKey: "test-openai-key" },
 				ollamaOptions: { ollamaBaseUrl: "" },
+				openAiCompatibleOptions: undefined,
+				geminiOptions: undefined,
+				mistralOptions: undefined,
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 64,
 			})
 		})
 
@@ -168,15 +182,21 @@ describe("CodeIndexConfigManager", () => {
 				isConfigured: true,
 				embedderProvider: "openai-compatible",
 				modelId: "text-embedding-3-large",
+				modelDimension: undefined,
 				openAiOptions: { openAiNativeApiKey: "" },
 				ollamaOptions: { ollamaBaseUrl: "" },
 				openAiCompatibleOptions: {
 					baseUrl: "https://api.example.com/v1",
 					apiKey: "test-openai-compatible-key",
 				},
+				geminiOptions: undefined,
+				mistralOptions: undefined,
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 64,
 			})
 		})
 
@@ -212,9 +232,14 @@ describe("CodeIndexConfigManager", () => {
 					baseUrl: "https://api.example.com/v1",
 					apiKey: "test-openai-compatible-key",
 				},
+				geminiOptions: undefined,
+				mistralOptions: undefined,
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 64,
 			})
 		})
 
@@ -243,6 +268,7 @@ describe("CodeIndexConfigManager", () => {
 				isConfigured: true,
 				embedderProvider: "openai-compatible",
 				modelId: "custom-model",
+				modelDimension: undefined,
 				openAiOptions: { openAiNativeApiKey: "" },
 				ollamaOptions: { ollamaBaseUrl: "" },
 				openAiCompatibleOptions: {
@@ -250,9 +276,14 @@ describe("CodeIndexConfigManager", () => {
 					apiKey: "test-openai-compatible-key",
 					// modelDimension is undefined when not set
 				},
+				geminiOptions: undefined,
+				mistralOptions: undefined,
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 64,
 			})
 		})
 
@@ -289,9 +320,13 @@ describe("CodeIndexConfigManager", () => {
 					apiKey: "test-openai-compatible-key",
 				},
 				geminiOptions: undefined,
+				mistralOptions: undefined,
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 64,
 			})
 		})
 
@@ -1292,14 +1327,19 @@ describe("CodeIndexConfigManager", () => {
 				isConfigured: true,
 				embedderProvider: "openai",
 				modelId: "text-embedding-3-large",
+				modelDimension: undefined,
 				openAiOptions: { openAiNativeApiKey: "test-openai-key" },
 				ollamaOptions: { ollamaBaseUrl: undefined },
 				geminiOptions: undefined,
 				openAiCompatibleOptions: undefined,
+				mistralOptions: undefined,
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
 				searchMaxResults: 50,
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 64,
 			})
 		})
 
