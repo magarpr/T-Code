@@ -68,6 +68,24 @@ describe("OpenRouterHandler", () => {
 		})
 	})
 
+	it("uses custom base URL when provided", () => {
+		const customBaseUrl = "https://custom.openrouter.ai/v1"
+		const handler = new OpenRouterHandler({
+			...mockOptions,
+			openRouterBaseUrl: customBaseUrl,
+		})
+
+		expect(OpenAI).toHaveBeenCalledWith({
+			baseURL: customBaseUrl,
+			apiKey: mockOptions.openRouterApiKey,
+			defaultHeaders: {
+				"HTTP-Referer": "https://github.com/RooVetGit/Roo-Cline",
+				"X-Title": "Roo Code",
+				"User-Agent": `RooCode/${Package.version}`,
+			},
+		})
+	})
+
 	describe("fetchModel", () => {
 		it("returns correct model info when options are provided", async () => {
 			const handler = new OpenRouterHandler(mockOptions)
