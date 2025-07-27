@@ -1493,5 +1493,331 @@ describe("Cline", () => {
 				expect(noModelTask.apiConfiguration.apiProvider).toBe("openai")
 			})
 		})
+
+		describe("deduplicateReadFileHistory", () => {
+			let mockProvider: any
+			let mockApiConfig: any
+
+			beforeEach(() => {
+				vi.clearAllMocks()
+
+				mockApiConfig = {
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+				}
+
+				mockProvider = {
+					context: {
+						globalStorageUri: { fsPath: "/test/storage" },
+					},
+					getState: vi.fn(),
+					postStateToWebview: vi.fn().mockResolvedValue(undefined),
+					postMessageToWebview: vi.fn().mockResolvedValue(undefined),
+					updateTaskHistory: vi.fn().mockResolvedValue(undefined),
+				}
+			})
+
+			it("should not deduplicate when feature is disabled", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: false,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add duplicate read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content1</content></file></files>",
+							},
+						],
+						ts: Date.now() - 10 * 60 * 1000, // 10 minutes ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: Date.now() - 8 * 60 * 1000, // 8 minutes ago
+					},
+				]
+
+				const originalLength = task.apiConversationHistory.length
+
+				await task.deduplicateReadFileHistory()
+
+				// Should not remove anything when feature is disabled
+				expect(task.apiConversationHistory.length).toBe(originalLength)
+			})
+
+			it("should deduplicate when feature is enabled", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add duplicate read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content1</content></file></files>",
+							},
+						],
+						ts: Date.now() - 10 * 60 * 1000, // 10 minutes ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: Date.now() - 8 * 60 * 1000, // 8 minutes ago
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should keep only the most recent read_file result
+				expect(task.apiConversationHistory.length).toBe(2)
+				expect(task.apiConversationHistory[0].content).toHaveLength(0) // First one should be empty
+				expect(task.apiConversationHistory[1].content).toHaveLength(1) // Second one should remain
+			})
+
+			it("should not deduplicate messages within cache window", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				const now = Date.now()
+
+				// Add duplicate read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content1</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000, // 10 minutes ago (outside cache window)
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: now - 2 * 60 * 1000, // 2 minutes ago (inside cache window)
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Both should remain because the second one is within cache window
+				expect(task.apiConversationHistory.length).toBe(2)
+				expect(task.apiConversationHistory[0].content).toHaveLength(1)
+				expect(task.apiConversationHistory[1].content).toHaveLength(1)
+			})
+
+			it("should handle multi-file read_file results", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add multi-file read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file] Result:\n<files><file><path>a.ts</path></file><file><path>b.ts</path></file></files>",
+							},
+						],
+						ts: Date.now() - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file] Result:\n<files><file><path>a.ts</path></file></files>",
+							},
+						],
+						ts: Date.now() - 8 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file] Result:\n<files><file><path>b.ts</path></file><file><path>c.ts</path></file></files>",
+							},
+						],
+						ts: Date.now() - 6 * 60 * 1000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// First result should be removed (both a.ts and b.ts have been read more recently)
+				expect(task.apiConversationHistory[0].content).toHaveLength(0)
+				// Second result should remain (most recent read of a.ts)
+				expect(task.apiConversationHistory[1].content).toHaveLength(1)
+				// Third result should remain (most recent read of b.ts and c.ts)
+				expect(task.apiConversationHistory[2].content).toHaveLength(1)
+			})
+
+			it("should preserve non-read_file content blocks", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add mixed content
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{ type: "text", text: "Regular user message" },
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path></file></files>",
+							},
+							{ type: "image", source: { type: "base64", media_type: "image/png", data: "base64data" } },
+						],
+						ts: Date.now() - 10 * 60 * 1000,
+					},
+					{
+						role: "assistant",
+						content: [{ type: "text", text: "Assistant response" }],
+						ts: Date.now() - 9 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path></file></files>",
+							},
+						],
+						ts: Date.now() - 8 * 60 * 1000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// First message should have read_file removed but other content preserved
+				expect(task.apiConversationHistory[0].content).toHaveLength(2)
+				const content0 = task.apiConversationHistory[0].content[0]
+				const content1 = task.apiConversationHistory[0].content[1]
+				expect(typeof content0 === "object" && content0 !== null && "type" in content0 && content0.type).toBe(
+					"text",
+				)
+				expect(typeof content0 === "object" && content0 !== null && "text" in content0 && content0.text).toBe(
+					"Regular user message",
+				)
+				expect(typeof content1 === "object" && content1 !== null && "type" in content1 && content1.type).toBe(
+					"image",
+				)
+
+				// Assistant message should remain unchanged
+				expect(task.apiConversationHistory[1].content).toHaveLength(1)
+
+				// Last read_file should remain
+				expect(task.apiConversationHistory[2].content).toHaveLength(1)
+			})
+
+			it("should handle legacy single-file format", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add legacy format read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [{ type: "text", text: "[read_file for 'test.ts'] Result:\nFile content here" }],
+						ts: Date.now() - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [{ type: "text", text: "[read_file for 'test.ts'] Result:\nUpdated file content" }],
+						ts: Date.now() - 8 * 60 * 1000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// First one should be removed
+				expect(task.apiConversationHistory[0].content).toHaveLength(0)
+				// Second one should remain
+				expect(task.apiConversationHistory[1].content).toHaveLength(1)
+			})
+		})
 	})
 })

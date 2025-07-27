@@ -609,5 +609,8 @@ export async function readFileTool(
 		const xmlResults = fileResults.filter((result) => result.xmlContent).map((result) => result.xmlContent)
 
 		pushToolResult(`<files>\n${xmlResults.join("\n")}\n</files>`)
+
+		// Deduplicate read_file history after successful reads
+		await cline.deduplicateReadFileHistory()
 	}
 }

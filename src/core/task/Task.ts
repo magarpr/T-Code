@@ -353,6 +353,100 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 	}
 
+	public async deduplicateReadFileHistory(): Promise<void> {
+		// Check if the experimental feature is enabled
+		const state = await this.providerRef.deref()?.getState()
+		const isDeduplicationEnabled = experiments.isEnabled(
+			state?.experiments ?? {},
+			EXPERIMENT_IDS.READ_FILE_DEDUPLICATION,
+		)
+
+		if (!isDeduplicationEnabled) {
+			return
+		}
+
+		// Track which files have been seen (most recent occurrence)
+		const seenFiles = new Set<string>()
+		const cacheWindowMs = 5 * 60 * 1000 // 5 minutes
+		const now = Date.now()
+
+		// Iterate through conversation history in reverse order (newest to oldest)
+		for (let i = this.apiConversationHistory.length - 1; i >= 0; i--) {
+			const message = this.apiConversationHistory[i]
+
+			// Skip if message is within cache window
+			if (message.ts && now - message.ts < cacheWindowMs) {
+				continue
+			}
+
+			// Only process user messages
+			if (message.role !== "user") {
+				continue
+			}
+
+			// Process content blocks
+			if (Array.isArray(message.content)) {
+				const newContent = message.content.filter((block) => {
+					if (block.type !== "text") {
+						return true // Keep non-text blocks
+					}
+
+					// Check if this is a read_file result
+					const readFileMatch = block.text.match(/^\[read_file.*?\] Result:/)
+					if (!readFileMatch) {
+						return true // Keep non-read_file blocks
+					}
+
+					// Extract file paths from the read_file result
+					// Handle both single file and multi-file formats
+					const filePaths: string[] = []
+
+					// Try to match file paths in XML format
+					const filePathMatches = block.text.matchAll(/<file><path>([^<]+)<\/path>/g)
+					for (const match of filePathMatches) {
+						filePaths.push(match[1])
+					}
+
+					// If no paths found in XML, try legacy format
+					if (filePaths.length === 0) {
+						const legacyMatch = block.text.match(/\[read_file for '([^']+)'/)
+						if (legacyMatch) {
+							filePaths.push(legacyMatch[1])
+						}
+					}
+
+					// Check if all files in this result have been seen more recently
+					if (filePaths.length > 0) {
+						const allFilesSeen = filePaths.every((path) => seenFiles.has(path))
+
+						if (allFilesSeen) {
+							// Remove this duplicate read_file result
+							return false
+						} else {
+							// Mark these files as seen
+							filePaths.forEach((path) => seenFiles.add(path))
+							return true
+						}
+					}
+
+					// Keep blocks we couldn't parse
+					return true
+				})
+
+				// Update message content if any blocks were removed
+				if (newContent.length !== message.content.length) {
+					this.apiConversationHistory[i] = {
+						...message,
+						content: newContent,
+					}
+				}
+			}
+		}
+
+		// Save the updated conversation history
+		await this.saveApiConversationHistory()
+	}
+
 	// Cline Messages
 
 	private async getSavedClineMessages(): Promise<ClineMessage[]> {
