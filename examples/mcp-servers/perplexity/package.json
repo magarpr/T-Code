@@ -1,0 +1,31 @@
+{
+	"name": "@roo-code/mcp-server-perplexity",
+	"version": "0.1.0",
+	"description": "MCP server for Perplexity API integration - enables web search and deep research capabilities",
+	"type": "module",
+	"main": "build/index.js",
+	"scripts": {
+		"build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+		"dev": "tsx src/index.ts",
+		"prepare": "npm run build"
+	},
+	"keywords": [
+		"mcp",
+		"perplexity",
+		"search",
+		"research",
+		"ai"
+	],
+	"author": "Roo Code",
+	"license": "MIT",
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.0.4",
+		"axios": "^1.7.9",
+		"zod": "^3.24.1"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.5",
+		"tsx": "^4.19.2",
+		"typescript": "^5.7.3"
+	}
+}
