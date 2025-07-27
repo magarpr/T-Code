@@ -589,6 +589,9 @@ export async function readFileTool(
 			// No status message, just push the files XML
 			pushToolResult(filesXml)
 		}
+
+		// Deduplicate read_file history after successful reads
+		await cline.deduplicateReadFileHistory()
 	} catch (error) {
 		// Handle all errors using per-file format for consistency
 		const relPath = fileEntries[0]?.path || "unknown"
@@ -609,8 +612,5 @@ export async function readFileTool(
 		const xmlResults = fileResults.filter((result) => result.xmlContent).map((result) => result.xmlContent)
 
 		pushToolResult(`<files>\n${xmlResults.join("\n")}\n</files>`)
-
-		// Deduplicate read_file history after successful reads
-		await cline.deduplicateReadFileHistory()
 	}
 }

@@ -126,6 +126,7 @@ describe("read_file tool with maxReadFileLine setting", () => {
 
 		mockCline.recordToolUsage = vi.fn().mockReturnValue(undefined)
 		mockCline.recordToolError = vi.fn().mockReturnValue(undefined)
+		mockCline.deduplicateReadFileHistory = vi.fn().mockResolvedValue(undefined)
 
 		toolResult = undefined
 	})
@@ -382,6 +383,7 @@ describe("read_file tool XML output structure", () => {
 		mockCline.recordToolUsage = vi.fn().mockReturnValue(undefined)
 		mockCline.recordToolError = vi.fn().mockReturnValue(undefined)
 		mockCline.didRejectTool = false
+		mockCline.deduplicateReadFileHistory = vi.fn().mockResolvedValue(undefined)
 
 		toolResult = undefined
 	})
