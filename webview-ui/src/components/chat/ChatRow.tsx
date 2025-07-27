@@ -60,6 +60,11 @@ interface ChatRowProps {
 	onFollowUpUnmount?: () => void
 	isFollowUpAnswered?: boolean
 	editable?: boolean
+	lastCheckpointInfo?: {
+		ts: number
+		commitHash: string
+		checkpoint?: Record<string, unknown>
+	} | null
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -74,7 +79,7 @@ const ChatRow = memo(
 
 		const [chatrow, { height }] = useSize(
 			<div className="px-[15px] py-[10px] pr-[6px]">
-				<ChatRowContent {...props} />
+				<ChatRowWithCheckpoint {...props} />
 			</div>,
 		)
 
@@ -112,9 +117,10 @@ export const ChatRowContent = ({
 	onBatchFileResponse,
 	isFollowUpAnswered,
 	editable,
+	lastCheckpointInfo: _lastCheckpointInfo,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
-	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode } = useExtensionState()
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint: _currentCheckpoint, mode } = useExtensionState()
 	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
@@ -1157,14 +1163,8 @@ export const ChatRowContent = ({
 				case "shell_integration_warning":
 					return <CommandExecutionError />
 				case "checkpoint_saved":
-					return (
-						<CheckpointSaved
-							ts={message.ts!}
-							commitHash={message.text!}
-							currentHash={currentCheckpoint}
-							checkpoint={message.checkpoint}
-						/>
-					)
+					// Don't render the checkpoint_saved message itself
+					return null
 				case "condense_context":
 					if (message.partial) {
 						return <CondensingContextRow />
@@ -1345,4 +1345,38 @@ export const ChatRowContent = ({
 					return null
 			}
 	}
+
+	// Default return for messages that don't match any case
+	return null
+}
+
+// Create a wrapper component to handle the checkpoint UI
+export const ChatRowWithCheckpoint: React.FC<ChatRowContentProps> = (props) => {
+	const { message, lastCheckpointInfo } = props
+	const { currentCheckpoint } = useExtensionState()
+
+	// Render the regular content
+	const content = <ChatRowContent {...props} lastCheckpointInfo={null} />
+
+	// Check if we should show checkpoint UI
+	const shouldShowCheckpoint =
+		lastCheckpointInfo && message.ts > lastCheckpointInfo.ts && message.say !== "checkpoint_saved"
+
+	if (shouldShowCheckpoint) {
+		return (
+			<>
+				{content}
+				<div className="mt-2">
+					<CheckpointSaved
+						ts={lastCheckpointInfo.ts}
+						commitHash={lastCheckpointInfo.commitHash}
+						currentHash={currentCheckpoint}
+						checkpoint={lastCheckpointInfo.checkpoint}
+					/>
+				</div>
+			</>
+		)
+	}
+
+	return content
 }
