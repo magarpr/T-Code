@@ -242,10 +242,10 @@ describe("OpenAiHandler", () => {
 			expect(callArgs.max_completion_tokens).toBeUndefined()
 		})
 
-		it("should not include max_tokens when includeMaxTokens is undefined", async () => {
+		it("should include max_completion_tokens when includeMaxTokens is undefined (default behavior)", async () => {
 			const optionsWithUndefinedMaxTokens: ApiHandlerOptions = {
 				...mockOptions,
-				// includeMaxTokens is not set, should not include max_tokens
+				// includeMaxTokens is not set, should default to including max_completion_tokens
 				openAiCustomModelInfo: {
 					contextWindow: 128_000,
 					maxTokens: 4096,
@@ -257,10 +257,10 @@ describe("OpenAiHandler", () => {
 			// Consume the stream to trigger the API call
 			for await (const _chunk of stream) {
 			}
-			// Assert the mockCreate was called without max_tokens
+			// Assert the mockCreate was called with max_completion_tokens (default behavior)
 			expect(mockCreate).toHaveBeenCalled()
 			const callArgs = mockCreate.mock.calls[0][0]
-			expect(callArgs.max_completion_tokens).toBeUndefined()
+			expect(callArgs.max_completion_tokens).toBe(4096)
 		})
 
 		it("should use user-configured modelMaxTokens instead of model default maxTokens", async () => {
@@ -305,6 +305,54 @@ describe("OpenAiHandler", () => {
 			expect(mockCreate).toHaveBeenCalled()
 			const callArgs = mockCreate.mock.calls[0][0]
 			expect(callArgs.max_completion_tokens).toBe(4096)
+		})
+
+		it("should include max_completion_tokens by default for OpenAI compatible providers", async () => {
+			const optionsForCompatibleProvider: ApiHandlerOptions = {
+				...mockOptions,
+				// includeMaxTokens is not set, simulating OpenAI compatible provider usage
+				openAiBaseUrl: "https://api.koboldcpp.example.com/v1",
+				openAiCustomModelInfo: {
+					contextWindow: 32_000,
+					maxTokens: 4096,
+					supportsPromptCache: false,
+				},
+			}
+			const compatibleHandler = new OpenAiHandler(optionsForCompatibleProvider)
+			const stream = compatibleHandler.createMessage(systemPrompt, messages)
+
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Verify max_completion_tokens is included by default
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs).toHaveProperty("max_completion_tokens", 4096)
+		})
+
+		it("should respect includeMaxTokens=false even for OpenAI compatible providers", async () => {
+			const optionsWithExplicitFalse: ApiHandlerOptions = {
+				...mockOptions,
+				includeMaxTokens: false, // Explicitly set to false
+				openAiBaseUrl: "https://api.koboldcpp.example.com/v1",
+				openAiCustomModelInfo: {
+					contextWindow: 32_000,
+					maxTokens: 4096,
+					supportsPromptCache: false,
+				},
+			}
+			const handlerWithExplicitFalse = new OpenAiHandler(optionsWithExplicitFalse)
+			const stream = handlerWithExplicitFalse.createMessage(systemPrompt, messages)
+
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Verify max_completion_tokens is NOT included when explicitly set to false
+			const callArgs = mockCreate.mock.calls[0][0]
+			expect(callArgs).not.toHaveProperty("max_completion_tokens")
 		})
 	})
 
@@ -402,6 +450,11 @@ describe("OpenAiHandler", () => {
 			openAiBaseUrl: "https://test.services.ai.azure.com",
 			openAiModelId: "deepseek-v3",
 			azureApiVersion: "2024-05-01-preview",
+			openAiCustomModelInfo: {
+				contextWindow: 128_000,
+				maxTokens: 4096,
+				supportsPromptCache: false,
+			},
 		}
 
 		it("should initialize with Azure AI Inference Service configuration", () => {
@@ -442,13 +495,14 @@ describe("OpenAiHandler", () => {
 					stream: true,
 					stream_options: { include_usage: true },
 					temperature: 0,
+					max_completion_tokens: 4096,
 				},
 				{ path: "/models/chat/completions" },
 			)
 
-			// Verify max_tokens is NOT included when includeMaxTokens is not set
+			// Verify max_completion_tokens IS included when includeMaxTokens is not set (default behavior)
 			const callArgs = mockCreate.mock.calls[0][0]
-			expect(callArgs).not.toHaveProperty("max_completion_tokens")
+			expect(callArgs).toHaveProperty("max_completion_tokens")
 		})
 
 		it("should handle non-streaming responses with Azure AI Inference Service", async () => {
@@ -488,13 +542,14 @@ describe("OpenAiHandler", () => {
 						{ role: "user", content: systemPrompt },
 						{ role: "user", content: "Hello!" },
 					],
+					max_completion_tokens: 4096,
 				},
 				{ path: "/models/chat/completions" },
 			)
 
-			// Verify max_tokens is NOT included when includeMaxTokens is not set
+			// Verify max_completion_tokens IS included when includeMaxTokens is not set (default behavior)
 			const callArgs = mockCreate.mock.calls[0][0]
-			expect(callArgs).not.toHaveProperty("max_completion_tokens")
+			expect(callArgs).toHaveProperty("max_completion_tokens")
 		})
 
 		it("should handle completePrompt with Azure AI Inference Service", async () => {
@@ -505,13 +560,14 @@ describe("OpenAiHandler", () => {
 				{
 					model: azureOptions.openAiModelId,
 					messages: [{ role: "user", content: "Test prompt" }],
+					max_completion_tokens: 4096,
 				},
 				{ path: "/models/chat/completions" },
 			)
 
-			// Verify max_tokens is NOT included when includeMaxTokens is not set
+			// Verify max_completion_tokens IS included when includeMaxTokens is not set (default behavior)
 			const callArgs = mockCreate.mock.calls[0][0]
-			expect(callArgs).not.toHaveProperty("max_completion_tokens")
+			expect(callArgs).toHaveProperty("max_completion_tokens")
 		})
 	})
 

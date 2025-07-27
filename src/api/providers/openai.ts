@@ -401,11 +401,18 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			| OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
 		modelInfo: ModelInfo,
 	): void {
-		// Only add max_completion_tokens if includeMaxTokens is true
-		if (this.options.includeMaxTokens === true) {
+		// For OpenAI compatible providers, always include max_completion_tokens to prevent
+		// fallback to provider's default (which may be too small, e.g., koboldcpp's 512 tokens)
+		// Only add max_completion_tokens if includeMaxTokens is explicitly true OR if it's undefined
+		// (treating undefined as true for backward compatibility with OpenAI compatible providers)
+		if (this.options.includeMaxTokens !== false) {
 			// Use user-configured modelMaxTokens if available, otherwise fall back to model's default maxTokens
 			// Using max_completion_tokens as max_tokens is deprecated
-			requestOptions.max_completion_tokens = this.options.modelMaxTokens || modelInfo.maxTokens
+			const maxTokens = this.options.modelMaxTokens || modelInfo.maxTokens
+			// Only set max_completion_tokens if we have a valid positive value
+			if (maxTokens && maxTokens > 0) {
+				requestOptions.max_completion_tokens = maxTokens
+			}
 		}
 	}
 }
