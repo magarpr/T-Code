@@ -14,11 +14,8 @@
 <div align="center">
   <h1>Roo Code (prev. Roo Cline)</h1>
   <p align="center">
-  <a href="https://github.com/RooCodeInc/Roo-Code#demo" target="_blank">
-    <img src="https://raw.githubusercontent.com/RooCodeInc/Roo-Code/main/src/assets/images/roo-logo.svg" width="200" alt="Roo Code Logo" />
-  </a>
+  <img src="https://media.githubusercontent.com/media/RooCodeInc/Roo-Code/main/src/assets/docs/demo.gif" width="100%" />
   </p>
-  <p><b>🎬 <a href="https://github.com/RooCodeInc/Roo-Code#demo" target="_blank">Click here to view the full demo animation</a></b></p>
   <p>Connect with developers, contribute ideas, and stay ahead with the latest AI-powered coding tools.</p>
   
   <a href="https://discord.gg/roocode" target="_blank"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord"></a>
