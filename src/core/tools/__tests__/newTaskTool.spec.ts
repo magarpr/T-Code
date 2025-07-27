@@ -93,6 +93,7 @@ describe("newTaskTool", () => {
 			"Review this: \\@file1.txt and also \\\\\\@file2.txt", // Unit Test Expectation: \\@ -> \@, \\\\@ -> \\\\@
 			undefined,
 			mockCline,
+			{ todos: undefined },
 		)
 
 		// Verify side effects
@@ -126,6 +127,7 @@ describe("newTaskTool", () => {
 			"This is already unescaped: \\@file1.txt", // Expected: \@ remains \@
 			undefined,
 			mockCline,
+			{ todos: undefined },
 		)
 	})
 
@@ -153,6 +155,7 @@ describe("newTaskTool", () => {
 			"A normal mention @file1.txt", // Expected: @ remains @
 			undefined,
 			mockCline,
+			{ todos: undefined },
 		)
 	})
 
@@ -180,7 +183,135 @@ describe("newTaskTool", () => {
 			"Mix: @file0.txt, \\@file1.txt, \\@file2.txt, \\\\\\@file3.txt", // Unit Test Expectation: @->@, \@->\@, \\@->\@, \\\\@->\\\\@
 			undefined,
 			mockCline,
+			{ todos: undefined },
 		)
+	})
+
+	it("should pass todos parameter to initClineWithTask when provided", async () => {
+		const block: ToolUse = {
+			type: "tool_use",
+			name: "new_task",
+			params: {
+				mode: "code",
+				message: "Implement a new feature",
+				todos: "[x] Design the architecture\n[-] Write the code\n[ ] Add tests\n[ ] Update documentation",
+			},
+			partial: false,
+		}
+
+		await newTaskTool(
+			mockCline as any,
+			block,
+			mockAskApproval,
+			mockHandleError,
+			mockPushToolResult,
+			mockRemoveClosingTag,
+		)
+
+		expect(mockInitClineWithTask).toHaveBeenCalledWith("Implement a new feature", undefined, mockCline, {
+			todos: "[x] Design the architecture\n[-] Write the code\n[ ] Add tests\n[ ] Update documentation",
+		})
+	})
+
+	it("should handle todos parameter with various markdown checklist formats", async () => {
+		const block: ToolUse = {
+			type: "tool_use",
+			name: "new_task",
+			params: {
+				mode: "code",
+				message: "Complex task",
+				todos: "[X] Completed uppercase\n[~] Alternative in-progress\n[ ] Pending with extra spaces\n[x]No space after bracket",
+			},
+			partial: false,
+		}
+
+		await newTaskTool(
+			mockCline as any,
+			block,
+			mockAskApproval,
+			mockHandleError,
+			mockPushToolResult,
+			mockRemoveClosingTag,
+		)
+
+		expect(mockInitClineWithTask).toHaveBeenCalledWith("Complex task", undefined, mockCline, {
+			todos: "[X] Completed uppercase\n[~] Alternative in-progress\n[ ] Pending with extra spaces\n[x]No space after bracket",
+		})
+	})
+
+	it("should work without todos parameter (backward compatibility)", async () => {
+		const block: ToolUse = {
+			type: "tool_use",
+			name: "new_task",
+			params: {
+				mode: "code",
+				message: "Task without todos",
+			},
+			partial: false,
+		}
+
+		await newTaskTool(
+			mockCline as any,
+			block,
+			mockAskApproval,
+			mockHandleError,
+			mockPushToolResult,
+			mockRemoveClosingTag,
+		)
+
+		// Should be called without the todos in options
+		expect(mockInitClineWithTask).toHaveBeenCalledWith("Task without todos", undefined, mockCline, {})
+	})
+
+	it("should handle empty todos parameter", async () => {
+		const block: ToolUse = {
+			type: "tool_use",
+			name: "new_task",
+			params: {
+				mode: "code",
+				message: "Task with empty todos",
+				todos: "",
+			},
+			partial: false,
+		}
+
+		await newTaskTool(
+			mockCline as any,
+			block,
+			mockAskApproval,
+			mockHandleError,
+			mockPushToolResult,
+			mockRemoveClosingTag,
+		)
+
+		// Empty string should still be passed
+		expect(mockInitClineWithTask).toHaveBeenCalledWith("Task with empty todos", undefined, mockCline, { todos: "" })
+	})
+
+	it("should handle todos with special characters and escaping", async () => {
+		const block: ToolUse = {
+			type: "tool_use",
+			name: "new_task",
+			params: {
+				mode: "code",
+				message: "Task with special todos",
+				todos: "[x] Handle \\@mentions in todos\n[ ] Support | pipes and \\\\ backslashes\n[-] Test \"quotes\" and 'apostrophes'",
+			},
+			partial: false,
+		}
+
+		await newTaskTool(
+			mockCline as any,
+			block,
+			mockAskApproval,
+			mockHandleError,
+			mockPushToolResult,
+			mockRemoveClosingTag,
+		)
+
+		expect(mockInitClineWithTask).toHaveBeenCalledWith("Task with special todos", undefined, mockCline, {
+			todos: "[x] Handle \\@mentions in todos\n[ ] Support | pipes and \\\\ backslashes\n[-] Test \"quotes\" and 'apostrophes'",
+		})
 	})
 
 	// Add more tests for error handling (missing params, invalid mode, approval denied) if needed

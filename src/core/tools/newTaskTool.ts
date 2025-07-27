@@ -16,6 +16,7 @@ export async function newTaskTool(
 ) {
 	const mode: string | undefined = block.params.mode
 	const message: string | undefined = block.params.message
+	const todos: string | undefined = block.params.todos
 
 	try {
 		if (block.partial) {
@@ -23,6 +24,7 @@ export async function newTaskTool(
 				tool: "newTask",
 				mode: removeClosingTag("mode", mode),
 				content: removeClosingTag("message", message),
+				todos: removeClosingTag("todos", todos),
 			})
 
 			await cline.ask("tool", partialMessage, block.partial).catch(() => {})
@@ -59,6 +61,7 @@ export async function newTaskTool(
 				tool: "newTask",
 				mode: targetMode.name,
 				content: message,
+				todos: todos,
 			})
 
 			const didApprove = await askApproval("tool", toolMessage)
@@ -86,7 +89,7 @@ export async function newTaskTool(
 			// Delay to allow mode change to take effect before next tool is executed.
 			await delay(500)
 
-			const newCline = await provider.initClineWithTask(unescapedMessage, undefined, cline)
+			const newCline = await provider.initClineWithTask(unescapedMessage, undefined, cline, { todos })
 			if (!newCline) {
 				pushToolResult(t("tools:newTask.errors.policy_restriction"))
 				return

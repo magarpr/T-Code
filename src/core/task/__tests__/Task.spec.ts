@@ -389,6 +389,157 @@ describe("Cline", () => {
 				new Task({ provider: mockProvider, apiConfiguration: mockApiConfig })
 			}).toThrow("Either historyItem or task/images must be provided")
 		})
+
+		it("should parse todos from markdown checklist when provided", () => {
+			const todosMarkdown = `[x] Design the architecture
+[-] Write the code
+[ ] Add tests
+[ ] Update documentation`
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				todos: todosMarkdown,
+				startTask: false,
+			})
+
+			expect(task.todoList).toBeDefined()
+			expect(task.todoList).toHaveLength(4)
+
+			expect(task.todoList![0].content).toBe("Design the architecture")
+			expect(task.todoList![0].status).toBe("completed")
+
+			expect(task.todoList![1].content).toBe("Write the code")
+			expect(task.todoList![1].status).toBe("in_progress")
+
+			expect(task.todoList![2].content).toBe("Add tests")
+			expect(task.todoList![2].status).toBe("pending")
+
+			expect(task.todoList![3].content).toBe("Update documentation")
+			expect(task.todoList![3].status).toBe("pending")
+		})
+
+		it("should handle various markdown checklist formats", () => {
+			const todosMarkdown = `[X] Uppercase completed
+[~] Alternative in-progress
+[ ]   Extra spaces
+[x]No space after bracket`
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				todos: todosMarkdown,
+				startTask: false,
+			})
+
+			expect(task.todoList).toBeDefined()
+			expect(task.todoList).toHaveLength(3) // "No space after bracket" won't match the regex
+
+			expect(task.todoList![0].content).toBe("Uppercase completed")
+			expect(task.todoList![0].status).toBe("completed")
+
+			expect(task.todoList![1].content).toBe("Alternative in-progress")
+			expect(task.todoList![1].status).toBe("in_progress")
+
+			expect(task.todoList![2].content).toBe("Extra spaces")
+			expect(task.todoList![2].status).toBe("pending")
+		})
+
+		it("should handle empty todos parameter", () => {
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				todos: "",
+				startTask: false,
+			})
+
+			expect(task.todoList).toBeDefined()
+			expect(task.todoList).toHaveLength(0)
+		})
+
+		it("should handle undefined todos parameter", () => {
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			})
+
+			expect(task.todoList).toBeUndefined()
+		})
+
+		it("should handle todos with special characters", () => {
+			const todosMarkdown = `[x] Handle @mentions and $variables
+[ ] Support | pipes and \\ backslashes
+[-] Test "quotes" and 'apostrophes'`
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				todos: todosMarkdown,
+				startTask: false,
+			})
+
+			expect(task.todoList).toBeDefined()
+			expect(task.todoList).toHaveLength(3)
+
+			expect(task.todoList![0].content).toBe("Handle @mentions and $variables")
+			expect(task.todoList![1].content).toBe("Support | pipes and \\ backslashes")
+			expect(task.todoList![2].content).toBe("Test \"quotes\" and 'apostrophes'")
+		})
+
+		it("should generate unique IDs for todos", () => {
+			const todosMarkdown = `[ ] First task
+[ ] Second task
+[ ] Third task`
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				todos: todosMarkdown,
+				startTask: false,
+			})
+
+			expect(task.todoList).toBeDefined()
+			expect(task.todoList).toHaveLength(3)
+
+			// Check that all IDs are unique
+			const ids = task.todoList!.map((todo) => todo.id)
+			const uniqueIds = new Set(ids)
+			expect(uniqueIds.size).toBe(3)
+
+			// Check that IDs are valid MD5 hashes (32 hex characters)
+			ids.forEach((id) => {
+				expect(id).toMatch(/^[a-f0-9]{32}$/)
+			})
+		})
+
+		it("should ignore invalid checklist lines", () => {
+			const todosMarkdown = `[x] Valid task
+This is not a checklist item
+- [ ] This format is not supported
+[x] Another valid task
+Random text`
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				todos: todosMarkdown,
+				startTask: false,
+			})
+
+			expect(task.todoList).toBeDefined()
+			expect(task.todoList).toHaveLength(2)
+
+			expect(task.todoList![0].content).toBe("Valid task")
+			expect(task.todoList![1].content).toBe("Another valid task")
+		})
 	})
 
 	describe("getEnvironmentDetails", () => {

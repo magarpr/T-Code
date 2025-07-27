@@ -534,7 +534,7 @@ export class ClineProvider
 				TaskOptions,
 				"enableDiff" | "enableCheckpoints" | "fuzzyMatchThreshold" | "consecutiveMistakeLimit" | "experiments"
 			>
-		> = {},
+		> & { todos?: string } = {},
 	) {
 		const {
 			apiConfiguration,
@@ -548,6 +548,8 @@ export class ClineProvider
 		if (!ProfileValidator.isProfileAllowed(apiConfiguration, organizationAllowList)) {
 			throw new OrganizationAllowListViolationError(t("common:errors.violated_organization_allowlist"))
 		}
+
+		const { todos, ...taskOptions } = options
 
 		const cline = new Task({
 			provider: this,
@@ -563,7 +565,8 @@ export class ClineProvider
 			parentTask,
 			taskNumber: this.clineStack.length + 1,
 			onCreated: (cline) => this.emit("clineCreated", cline),
-			...options,
+			todos,
+			...taskOptions,
 		})
 
 		await this.addClineToStack(cline)

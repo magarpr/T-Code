@@ -126,6 +126,7 @@ export type TaskOptions = {
 	parentTask?: Task
 	taskNumber?: number
 	onCreated?: (cline: Task) => void
+	todos?: string
 }
 
 export class Task extends EventEmitter<ClineEvents> {
@@ -228,6 +229,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		parentTask,
 		taskNumber = -1,
 		onCreated,
+		todos,
 	}: TaskOptions) {
 		super()
 
@@ -293,6 +295,11 @@ export class Task extends EventEmitter<ClineEvents> {
 		}
 
 		this.toolRepetitionDetector = new ToolRepetitionDetector(this.consecutiveMistakeLimit)
+
+		// Parse and initialize todos if provided
+		if (todos !== undefined) {
+			this.parseTodosFromMarkdown(todos)
+		}
 
 		onCreated?.(this)
 
@@ -1955,5 +1962,43 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	public get cwd() {
 		return this.workspacePath
+	}
+
+	// Todo parsing
+	private parseTodosFromMarkdown(todosMarkdown: string): void {
+		if (typeof todosMarkdown !== "string") {
+			return
+		}
+
+		this.todoList = []
+
+		if (!todosMarkdown) {
+			return
+		}
+
+		const lines = todosMarkdown
+			.split(/\r?\n/)
+			.map((l) => l.trim())
+			.filter(Boolean)
+
+		for (const line of lines) {
+			const match = line.match(/^\[\s*([ xX\-~])\s*\]\s+(.+)$/)
+			if (!match) continue
+
+			let status: "pending" | "in_progress" | "completed" = "pending"
+			if (match[1] === "x" || match[1] === "X") status = "completed"
+			else if (match[1] === "-" || match[1] === "~") status = "in_progress"
+
+			const id = crypto
+				.createHash("md5")
+				.update(match[2] + status)
+				.digest("hex")
+
+			this.todoList.push({
+				id,
+				content: match[2],
+				status,
+			})
+		}
 	}
 }
