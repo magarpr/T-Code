@@ -20,6 +20,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	maxWorkspaceFiles: number
 	showRooIgnoredFiles?: boolean
 	maxReadFileLine?: number
+	maxReadFileTokens?: number
 	maxConcurrentFileReads?: number
 	profileThresholds?: Record<string, number>
 	includeDiagnosticMessages?: boolean
@@ -32,6 +33,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "maxWorkspaceFiles"
 		| "showRooIgnoredFiles"
 		| "maxReadFileLine"
+		| "maxReadFileTokens"
 		| "maxConcurrentFileReads"
 		| "profileThresholds"
 		| "includeDiagnosticMessages"
@@ -49,6 +51,7 @@ export const ContextManagementSettings = ({
 	showRooIgnoredFiles,
 	setCachedStateField,
 	maxReadFileLine,
+	maxReadFileTokens,
 	maxConcurrentFileReads,
 	profileThresholds = {},
 	includeDiagnosticMessages,
@@ -172,37 +175,37 @@ export const ContextManagementSettings = ({
 
 				<div>
 					<div className="flex flex-col gap-2">
-						<span className="font-medium">{t("settings:contextManagement.maxReadFile.label")}</span>
+						<span className="font-medium">{t("settings:contextManagement.maxReadFileTokens.label")}</span>
 						<div className="flex items-center gap-4">
 							<Input
 								type="number"
 								pattern="-?[0-9]*"
 								className="w-24 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border px-2 py-1 rounded text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
-								value={maxReadFileLine ?? -1}
+								value={maxReadFileTokens ?? -1}
 								min={-1}
 								onChange={(e) => {
 									const newValue = parseInt(e.target.value, 10)
 									if (!isNaN(newValue) && newValue >= -1) {
-										setCachedStateField("maxReadFileLine", newValue)
+										setCachedStateField("maxReadFileTokens", newValue)
 									}
 								}}
 								onClick={(e) => e.currentTarget.select()}
-								data-testid="max-read-file-line-input"
-								disabled={maxReadFileLine === -1}
+								data-testid="max-read-file-tokens-input"
+								disabled={maxReadFileTokens === -1}
 							/>
-							<span>{t("settings:contextManagement.maxReadFile.lines")}</span>
+							<span>{t("settings:contextManagement.maxReadFileTokens.tokens")}</span>
 							<VSCodeCheckbox
-								checked={maxReadFileLine === -1}
+								checked={maxReadFileTokens === -1}
 								onChange={(e: any) =>
-									setCachedStateField("maxReadFileLine", e.target.checked ? -1 : 500)
+									setCachedStateField("maxReadFileTokens", e.target.checked ? -1 : 10000)
 								}
 								data-testid="max-read-file-always-full-checkbox">
-								{t("settings:contextManagement.maxReadFile.always_full_read")}
+								{t("settings:contextManagement.maxReadFileTokens.always_full_read")}
 							</VSCodeCheckbox>
 						</div>
 					</div>
 					<div className="text-vscode-descriptionForeground text-sm mt-2">
-						{t("settings:contextManagement.maxReadFile.description")}
+						{t("settings:contextManagement.maxReadFileTokens.description")}
 					</div>
 				</div>
 

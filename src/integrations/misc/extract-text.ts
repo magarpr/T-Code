@@ -7,6 +7,8 @@ import { isBinaryFile } from "isbinaryfile"
 import { extractTextFromXLSX } from "./extract-text-from-xlsx"
 import { countFileLines } from "./line-counter"
 import { readLines } from "./read-lines"
+import { Tiktoken } from "tiktoken/lite"
+import o200kBase from "tiktoken/encoders/o200k_base"
 
 async function extractTextFromPDF(filePath: string): Promise<string> {
 	const dataBuffer = await fs.readFile(filePath)
@@ -50,23 +52,61 @@ export function getSupportedBinaryFormats(): string[] {
 	return Object.keys(SUPPORTED_BINARY_FORMATS)
 }
 
+// Cache the encoder instance
+let encoder: Tiktoken | null = null
+
+/**
+ * Gets or creates a tiktoken encoder instance
+ */
+function getEncoder(): Tiktoken {
+	if (!encoder) {
+		encoder = new Tiktoken(o200kBase.bpe_ranks, o200kBase.special_tokens, o200kBase.pat_str)
+	}
+	return encoder
+}
+
+/**
+ * Counts tokens in a string using tiktoken
+ */
+function countStringTokens(text: string): number {
+	if (!text) return 0
+	const enc = getEncoder()
+	return enc.encode(text).length
+}
+
 /**
  * Extracts text content from a file, with support for various formats including PDF, DOCX, XLSX, and plain text.
- * For large text files, can limit the number of lines read to prevent context exhaustion.
+ * For large text files, can limit the number of lines or tokens read to prevent context exhaustion.
  *
  * @param filePath - Path to the file to extract text from
  * @param maxReadFileLine - Maximum number of lines to read from text files.
  *                          Use UNLIMITED_LINES (-1) or undefined for no limit.
  *                          Must be a positive integer or UNLIMITED_LINES.
+ * @param maxReadFileTokens - Maximum number of tokens to read from text files.
+ *                            Use -1 or undefined for no limit.
+ *                            Must be a positive integer or -1.
  * @returns Promise resolving to the extracted text content with line numbers
  * @throws {Error} If file not found, unsupported format, or invalid parameters
  */
-export async function extractTextFromFile(filePath: string, maxReadFileLine?: number): Promise<string> {
+export async function extractTextFromFile(
+	filePath: string,
+	maxReadFileLine?: number,
+	maxReadFileTokens?: number,
+): Promise<string> {
 	// Validate maxReadFileLine parameter
 	if (maxReadFileLine !== undefined && maxReadFileLine !== -1) {
 		if (!Number.isInteger(maxReadFileLine) || maxReadFileLine < 1) {
 			throw new Error(
 				`Invalid maxReadFileLine: ${maxReadFileLine}. Must be a positive integer or -1 for unlimited.`,
+			)
+		}
+	}
+
+	// Validate maxReadFileTokens parameter
+	if (maxReadFileTokens !== undefined && maxReadFileTokens !== -1) {
+		if (!Number.isInteger(maxReadFileTokens) || maxReadFileTokens < 1) {
+			throw new Error(
+				`Invalid maxReadFileTokens: ${maxReadFileTokens}. Must be a positive integer or -1 for unlimited.`,
 			)
 		}
 	}
@@ -89,8 +129,48 @@ export async function extractTextFromFile(filePath: string, maxReadFileLine?: nu
 	const isBinary = await isBinaryFile(filePath).catch(() => false)
 
 	if (!isBinary) {
-		// Check if we need to apply line limit
-		if (maxReadFileLine !== undefined && maxReadFileLine !== -1) {
+		// Check if we need to apply token limit first (takes precedence)
+		if (maxReadFileTokens !== undefined && maxReadFileTokens !== -1) {
+			const fullContent = await fs.readFile(filePath, "utf8")
+			const totalTokens = countStringTokens(fullContent)
+
+			if (totalTokens > maxReadFileTokens) {
+				// Need to truncate based on tokens
+				const lines = fullContent.split("\n")
+				let accumulatedContent = ""
+				let accumulatedTokens = 0
+				let lineCount = 0
+
+				// Add lines until we exceed the token limit
+				for (const line of lines) {
+					const lineWithNewline = line + "\n"
+					const lineTokens = countStringTokens(lineWithNewline)
+
+					if (accumulatedTokens + lineTokens > maxReadFileTokens && lineCount > 0) {
+						// Would exceed limit, stop here
+						break
+					}
+
+					accumulatedContent += lineWithNewline
+					accumulatedTokens += lineTokens
+					lineCount++
+				}
+
+				// Remove trailing newline if present
+				if (accumulatedContent.endsWith("\n")) {
+					accumulatedContent = accumulatedContent.slice(0, -1)
+				}
+
+				const numberedContent = addLineNumbers(accumulatedContent)
+				const totalLines = await countFileLines(filePath)
+				return (
+					numberedContent +
+					`\n\n[File truncated: showing ${lineCount} of ${totalLines} lines (${accumulatedTokens} of ~${totalTokens} tokens). The file is too large and may exhaust the context window if read in full.]`
+				)
+			}
+		}
+		// If no token limit or within token limit, check line limit
+		else if (maxReadFileLine !== undefined && maxReadFileLine !== -1) {
 			const totalLines = await countFileLines(filePath)
 			if (totalLines > maxReadFileLine) {
 				// Read only up to maxReadFileLine (endLine is 0-based and inclusive)
@@ -102,7 +182,7 @@ export async function extractTextFromFile(filePath: string, maxReadFileLine?: nu
 				)
 			}
 		}
-		// Read the entire file if no limit or file is within limit
+		// Read the entire file if no limit or file is within limits
 		return addLineNumbers(await fs.readFile(filePath, "utf8"))
 	} else {
 		throw new Error(`Cannot read text for file type: ${fileExtension}`)

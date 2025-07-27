@@ -253,7 +253,8 @@ export async function readFileTool(
 
 		// Handle batch approval if there are multiple files to approve
 		if (filesToApprove.length > 1) {
-			const { maxReadFileLine = -1 } = (await cline.providerRef.deref()?.getState()) ?? {}
+			const { maxReadFileLine = -1, maxReadFileTokens = 10000 } =
+				(await cline.providerRef.deref()?.getState()) ?? {}
 
 			// Prepare batch file data
 			const batchFiles = filesToApprove.map((fileResult) => {
@@ -368,7 +369,8 @@ export async function readFileTool(
 			const relPath = fileResult.path
 			const fullPath = path.resolve(cline.cwd, relPath)
 			const isOutsideWorkspace = isPathOutsideWorkspace(fullPath)
-			const { maxReadFileLine = -1 } = (await cline.providerRef.deref()?.getState()) ?? {}
+			const { maxReadFileLine = -1, maxReadFileTokens = 10000 } =
+				(await cline.providerRef.deref()?.getState()) ?? {}
 
 			// Create line snippet for approval message
 			let lineSnippet = ""
@@ -429,7 +431,8 @@ export async function readFileTool(
 
 			const relPath = fileResult.path
 			const fullPath = path.resolve(cline.cwd, relPath)
-			const { maxReadFileLine = -1 } = (await cline.providerRef.deref()?.getState()) ?? {}
+			const { maxReadFileLine = -1, maxReadFileTokens = 10000 } =
+				(await cline.providerRef.deref()?.getState()) ?? {}
 
 			// Process approved files
 			try {
@@ -517,7 +520,7 @@ export async function readFileTool(
 				}
 
 				// Handle normal file read
-				const content = await extractTextFromFile(fullPath)
+				const content = await extractTextFromFile(fullPath, maxReadFileTokens)
 				const lineRangeAttr = ` lines="1-${totalLines}"`
 				let xmlInfo = totalLines > 0 ? `<content${lineRangeAttr}>\n${content}</content>\n` : `<content/>`
 

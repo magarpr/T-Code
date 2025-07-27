@@ -94,6 +94,7 @@ export interface ExtensionMessage {
 		| "ttsStart"
 		| "ttsStop"
 		| "maxReadFileLine"
+		| "maxReadFileTokens"
 		| "fileSearchResults"
 		| "toggleApiConfigPin"
 		| "acceptInput"
@@ -230,6 +231,7 @@ export type ExtensionState = Pick<
 	// | "maxWorkspaceFiles" // Optional in GlobalSettings, required here.
 	// | "showRooIgnoredFiles" // Optional in GlobalSettings, required here.
 	// | "maxReadFileLine" // Optional in GlobalSettings, required here.
+	// | "maxReadFileTokens" // Optional in GlobalSettings, required here.
 	| "maxConcurrentFileReads" // Optional in GlobalSettings, required here.
 	| "terminalOutputLineLimit"
 	| "terminalOutputCharacterLimit"
@@ -281,6 +283,7 @@ export type ExtensionState = Pick<
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
 	showRooIgnoredFiles: boolean // Whether to show .rooignore'd files in listings
 	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
+	maxReadFileTokens: number // Maximum number of tokens to read from a file before truncating
 
 	experiments: Experiments // Map of experiment IDs to their enabled state
 

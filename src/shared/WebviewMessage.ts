@@ -162,6 +162,7 @@ export interface WebviewMessage {
 		| "remoteBrowserEnabled"
 		| "language"
 		| "maxReadFileLine"
+		| "maxReadFileTokens"
 		| "maxConcurrentFileReads"
 		| "includeDiagnosticMessages"
 		| "maxDiagnosticMessages"

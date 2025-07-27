@@ -168,6 +168,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		showRooIgnoredFiles,
 		remoteBrowserEnabled,
 		maxReadFileLine,
+		maxReadFileTokens,
 		terminalCompressProgressBar,
 		maxConcurrentFileReads,
 		condensingApiConfigId,
@@ -321,6 +322,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "maxWorkspaceFiles", value: maxWorkspaceFiles ?? 200 })
 			vscode.postMessage({ type: "showRooIgnoredFiles", bool: showRooIgnoredFiles })
 			vscode.postMessage({ type: "maxReadFileLine", value: maxReadFileLine ?? -1 })
+			vscode.postMessage({ type: "maxReadFileTokens", value: maxReadFileTokens ?? -1 })
 			vscode.postMessage({ type: "maxConcurrentFileReads", value: cachedState.maxConcurrentFileReads ?? 5 })
 			vscode.postMessage({ type: "includeDiagnosticMessages", bool: includeDiagnosticMessages })
 			vscode.postMessage({ type: "maxDiagnosticMessages", value: maxDiagnosticMessages ?? 50 })
@@ -667,6 +669,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							maxWorkspaceFiles={maxWorkspaceFiles ?? 200}
 							showRooIgnoredFiles={showRooIgnoredFiles}
 							maxReadFileLine={maxReadFileLine}
+							maxReadFileTokens={maxReadFileTokens}
 							maxConcurrentFileReads={maxConcurrentFileReads}
 							profileThresholds={profileThresholds}
 							includeDiagnosticMessages={includeDiagnosticMessages}
