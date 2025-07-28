@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " (baris {{start}}-{{end}})",
 		"definitionsOnly": " (hanya definisi)",
-		"maxLines": " (maks {{max}} baris)"
+		"maxLines": " (maks {{max}} baris)",
+		"safeguardNotice": "File ini berukuran {{fileSizeKB}}KB dan akan menggunakan sebagian besar jendela konteks. Hanya menampilkan {{actualLinesRead}} baris lengkap pertama ({{charactersRead}} karakter) untuk menjaga ruang konteks. Gunakan line_range jika Anda perlu membaca bagian tertentu."
 	},
 	"toolRepetitionLimitReached": "Roo tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda.",
 	"codebaseSearch": {

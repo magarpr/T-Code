@@ -5,6 +5,7 @@ import { stat } from "fs/promises"
 
 import { countFileLines } from "../../../integrations/misc/line-counter"
 import { readLines } from "../../../integrations/misc/read-lines"
+import { readLinesWithCharLimit } from "../../../integrations/misc/read-lines-char-limit"
 import { extractTextFromFile } from "../../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../../services/tree-sitter"
 import { isBinaryFile } from "isbinaryfile"
@@ -33,6 +34,7 @@ vi.mock("isbinaryfile")
 
 vi.mock("../../../integrations/misc/line-counter")
 vi.mock("../../../integrations/misc/read-lines")
+vi.mock("../../../integrations/misc/read-lines-char-limit")
 
 // Mock input content for tests
 let mockInputContent = ""
@@ -655,7 +657,15 @@ describe("read_file tool with large file safeguard", () => {
 			const partialContent = Array(2000).fill("This is a line of text").join("\n")
 
 			mockedExtractTextFromFile.mockResolvedValue(largeFileContent)
-			mockedReadLines.mockResolvedValue(partialContent)
+
+			// Mock readLinesWithCharLimit
+			const mockedReadLinesWithCharLimit = vi.mocked(readLinesWithCharLimit)
+			mockedReadLinesWithCharLimit.mockResolvedValue({
+				content: partialContent,
+				linesRead: 2000,
+				charactersRead: partialContent.length,
+				wasTruncated: true,
+			})
 
 			// Setup addLineNumbers mock for this test
 			addLineNumbersMock.mockImplementation((text: string) => {
@@ -685,11 +695,10 @@ describe("read_file tool with large file safeguard", () => {
 
 			// Verify safeguard was applied
 			expect(mockedTiktoken).toHaveBeenCalled()
-			expect(mockedReadLines).toHaveBeenCalledWith(absoluteFilePath, 1999, 0)
+			expect(mockedReadLinesWithCharLimit).toHaveBeenCalled()
 
 			// Verify the result contains the safeguard notice
-			expect(result).toContain("<notice>This file is 200KB and contains approximately 60,000 tokens")
-			expect(result).toContain("Showing only the first 2000 lines to preserve context space")
+			expect(result).toContain("<notice>readFile.safeguardNotice</notice>")
 			expect(result).toContain(`<content lines="1-2000">`)
 		})
 
@@ -725,7 +734,8 @@ describe("read_file tool with large file safeguard", () => {
 
 			// Verify safeguard was NOT applied
 			expect(mockedTiktoken).toHaveBeenCalled()
-			expect(mockedReadLines).not.toHaveBeenCalled()
+			const mockedReadLinesWithCharLimit = vi.mocked(readLinesWithCharLimit)
+			expect(mockedReadLinesWithCharLimit).not.toHaveBeenCalled()
 			expect(mockedExtractTextFromFile).toHaveBeenCalled()
 
 			// Verify no safeguard notice
@@ -765,7 +775,8 @@ describe("read_file tool with large file safeguard", () => {
 
 			// Verify tiktoken was NOT called (optimization)
 			expect(mockedTiktoken).not.toHaveBeenCalled()
-			expect(mockedReadLines).not.toHaveBeenCalled()
+			const mockedReadLinesWithCharLimit = vi.mocked(readLinesWithCharLimit)
+			expect(mockedReadLinesWithCharLimit).not.toHaveBeenCalled()
 			expect(mockedExtractTextFromFile).toHaveBeenCalled()
 
 			// Verify no safeguard notice
@@ -778,7 +789,15 @@ describe("read_file tool with large file safeguard", () => {
 			const partialContent = Array(2000).fill("This is a line of text").join("\n")
 
 			mockedExtractTextFromFile.mockResolvedValue("Large content")
-			mockedReadLines.mockResolvedValue(partialContent)
+
+			// Mock readLinesWithCharLimit
+			const mockedReadLinesWithCharLimit = vi.mocked(readLinesWithCharLimit)
+			mockedReadLinesWithCharLimit.mockResolvedValue({
+				content: partialContent,
+				linesRead: 2000,
+				charactersRead: partialContent.length,
+				wasTruncated: true,
+			})
 
 			// Setup addLineNumbers mock for partial content
 			addLineNumbersMock.mockImplementation((text: string) => {
@@ -825,11 +844,10 @@ describe("read_file tool with large file safeguard", () => {
 
 			// Verify safeguard was applied despite token counting failure
 			expect(mockedTiktoken).toHaveBeenCalled()
-			expect(mockedReadLines).toHaveBeenCalledWith(absoluteFilePath, 1999, 0)
+			expect(mockedReadLinesWithCharLimit).toHaveBeenCalled()
 
-			// Verify the result contains the safeguard notice (without token count)
-			expect(toolResult).toContain("<notice>This file is 2048KB")
-			expect(toolResult).toContain("Showing only the first 2000 lines to preserve context space")
+			// Verify the result contains the safeguard notice
+			expect(toolResult).toContain("<notice>readFile.safeguardNotice</notice>")
 			expect(toolResult).toContain(`<content lines="1-2000">`)
 		})
 
@@ -861,8 +879,10 @@ describe("read_file tool with large file safeguard", () => {
 			// Verify tiktoken was NOT called
 			expect(mockedTiktoken).not.toHaveBeenCalled()
 
-			// The normal maxReadFileLine logic should apply
+			// The normal maxReadFileLine logic should apply (using readLines, not readLinesWithCharLimit)
 			expect(mockedReadLines).toHaveBeenCalled()
+			const mockedReadLinesWithCharLimit = vi.mocked(readLinesWithCharLimit)
+			expect(mockedReadLinesWithCharLimit).not.toHaveBeenCalled()
 		})
 
 		it("should handle line ranges correctly with safeguard", async () => {
@@ -955,10 +975,16 @@ describe("read_file tool with large file safeguard", () => {
 				}),
 			}
 			mockedExtractTextFromFile.mockResolvedValue("content")
-			mockedReadLines.mockResolvedValue("partial content")
+			const mockedReadLinesWithCharLimit = vi.mocked(readLinesWithCharLimit)
+			mockedReadLinesWithCharLimit.mockResolvedValue({
+				content: "partial content",
+				linesRead: 2000,
+				charactersRead: 50000,
+				wasTruncated: true,
+			})
 			await executeReadFileTool({}, { fileSize: 100 * 1024 + 1, maxReadFileLine: -1, tokenCount: 50001 })
-			expect(mockedReadLines).toHaveBeenCalled()
-			expect(toolResult).toContain("preserve context space")
+			expect(mockedReadLinesWithCharLimit).toHaveBeenCalled()
+			expect(toolResult).toContain("<notice>readFile.safeguardNotice</notice>")
 		})
 	})
 })

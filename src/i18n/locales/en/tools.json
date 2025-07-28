@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " (lines {{start}}-{{end}})",
 		"definitionsOnly": " (definitions only)",
-		"maxLines": " (max {{max}} lines)"
+		"maxLines": " (max {{max}} lines)",
+		"safeguardNotice": "This file is {{fileSizeKB}}KB and would consume a significant portion of the context window. Showing only the first {{actualLinesRead}} complete lines ({{charactersRead}} characters) to preserve context space. Use line_range if you need to read specific sections."
 	},
 	"toolRepetitionLimitReached": "Roo appears to be stuck in a loop, attempting the same action ({{toolName}}) repeatedly. This might indicate a problem with its current strategy. Consider rephrasing the task, providing more specific instructions, or guiding it towards a different approach.",
 	"codebaseSearch": {

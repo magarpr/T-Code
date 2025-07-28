@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " (dòng {{start}}-{{end}})",
 		"definitionsOnly": " (chỉ định nghĩa)",
-		"maxLines": " (tối đa {{max}} dòng)"
+		"maxLines": " (tối đa {{max}} dòng)",
+		"safeguardNotice": "Tệp này có kích thước {{fileSizeKB}}KB và sẽ chiếm một phần đáng kể của cửa sổ ngữ cảnh. Chỉ hiển thị {{actualLinesRead}} dòng đầu tiên hoàn chỉnh ({{charactersRead}} ký tự) để bảo toàn không gian ngữ cảnh. Sử dụng line_range nếu bạn cần đọc các phần cụ thể."
 	},
 	"toolRepetitionLimitReached": "Roo dường như đang bị mắc kẹt trong một vòng lặp, liên tục cố gắng thực hiện cùng một hành động ({{toolName}}). Điều này có thể cho thấy vấn đề với chiến lược hiện tại. Hãy cân nhắc việc diễn đạt lại nhiệm vụ, cung cấp hướng dẫn cụ thể hơn, hoặc hướng Roo theo một cách tiếp cận khác.",
 	"codebaseSearch": {

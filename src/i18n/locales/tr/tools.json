@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " (satır {{start}}-{{end}})",
 		"definitionsOnly": " (sadece tanımlar)",
-		"maxLines": " (maks. {{max}} satır)"
+		"maxLines": " (maks. {{max}} satır)",
+		"safeguardNotice": "Bu dosya {{fileSizeKB}}KB boyutunda ve bağlam penceresinin önemli bir kısmını tüketecektir. Bağlam alanını korumak için yalnızca ilk {{actualLinesRead}} tam satır ({{charactersRead}} karakter) gösteriliyor. Belirli bölümleri okumanız gerekiyorsa line_range kullanın."
 	},
 	"toolRepetitionLimitReached": "Roo bir döngüye takılmış gibi görünüyor, aynı eylemi ({{toolName}}) tekrar tekrar deniyor. Bu, mevcut stratejisinde bir sorun olduğunu gösterebilir. Görevi yeniden ifade etmeyi, daha spesifik talimatlar vermeyi veya onu farklı bir yaklaşıma yönlendirmeyi düşünün.",
 	"codebaseSearch": {

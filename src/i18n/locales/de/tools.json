@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " (Zeilen {{start}}-{{end}})",
 		"definitionsOnly": " (nur Definitionen)",
-		"maxLines": " (maximal {{max}} Zeilen)"
+		"maxLines": " (maximal {{max}} Zeilen)",
+		"safeguardNotice": "Diese Datei ist {{fileSizeKB}}KB groß und würde einen erheblichen Teil des Kontextfensters verbrauchen. Es werden nur die ersten {{actualLinesRead}} vollständigen Zeilen ({{charactersRead}} Zeichen) angezeigt, um Kontextplatz zu sparen. Verwenden Sie line_range, wenn Sie bestimmte Abschnitte lesen müssen."
 	},
 	"toolRepetitionLimitReached": "Roo scheint in einer Schleife festzustecken und versucht wiederholt dieselbe Aktion ({{toolName}}). Dies könnte auf ein Problem mit der aktuellen Strategie hindeuten. Überlege dir, die Aufgabe umzuformulieren, genauere Anweisungen zu geben oder Roo zu einem anderen Ansatz zu führen.",
 	"codebaseSearch": {

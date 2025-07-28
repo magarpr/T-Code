@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " ({{start}}-{{end}}行目)",
 		"definitionsOnly": " (定義のみ)",
-		"maxLines": " (最大{{max}}行)"
+		"maxLines": " (最大{{max}}行)",
+		"safeguardNotice": "このファイルは{{fileSizeKB}}KBで、コンテキストウィンドウの大部分を消費します。コンテキストスペースを保持するため、最初の{{actualLinesRead}}行（{{charactersRead}}文字）のみを表示しています。特定のセクションを読む必要がある場合は、line_rangeを使用してください。"
 	},
 	"toolRepetitionLimitReached": "Rooが同じ操作（{{toolName}}）を繰り返し試みるループに陥っているようです。これは現在の方法に問題がある可能性を示しています。タスクの言い換え、より具体的な指示の提供、または別のアプローチへの誘導を検討してください。",
 	"codebaseSearch": {

@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " (regels {{start}}-{{end}})",
 		"definitionsOnly": " (alleen definities)",
-		"maxLines": " (max {{max}} regels)"
+		"maxLines": " (max {{max}} regels)",
+		"safeguardNotice": "Dit bestand is {{fileSizeKB}}KB en zou een aanzienlijk deel van het contextvenster gebruiken. Er worden alleen de eerste {{actualLinesRead}} volledige regels ({{charactersRead}} tekens) weergegeven om contextruimte te behouden. Gebruik line_range als u specifieke secties moet lezen."
 	},
 	"toolRepetitionLimitReached": "Roo lijkt vast te zitten in een lus, waarbij hij herhaaldelijk dezelfde actie ({{toolName}}) probeert. Dit kan duiden op een probleem met de huidige strategie. Overweeg de taak te herformuleren, specifiekere instructies te geven of Roo naar een andere aanpak te leiden.",
 	"codebaseSearch": {

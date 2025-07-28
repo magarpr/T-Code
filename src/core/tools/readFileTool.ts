@@ -16,6 +16,15 @@ import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
 import { tiktoken } from "../../utils/tiktoken"
+import {
+	LARGE_FILE_SIZE_THRESHOLD,
+	VERY_LARGE_FILE_SIZE,
+	FALLBACK_MAX_LINES,
+	CONTEXT_WINDOW_PERCENTAGE,
+	MAX_CHAR_LIMIT,
+	CHARS_PER_TOKEN_RATIO,
+} from "@roo-code/types"
+import { readLinesWithCharLimit } from "../../integrations/misc/read-lines-char-limit"
 
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
@@ -519,19 +528,16 @@ export async function readFileTool(
 				}
 
 				// Handle normal file read with safeguard for large files
-				// Define thresholds for the safeguard
-				const LARGE_FILE_SIZE_THRESHOLD = 100 * 1024 // 100KB - files larger than this will be checked for token count
-				const VERY_LARGE_FILE_SIZE = 1024 * 1024 // 1MB - apply safeguard automatically
-				const FALLBACK_MAX_LINES = 2000 // Default number of lines to read when applying safeguard
-
 				// Get the actual context window size from the model
 				const contextWindow = cline.api.getModel().info.contextWindow || 100000 // Default to 100k if not available
-				const MAX_TOKEN_THRESHOLD = Math.floor(contextWindow * 0.5) // Use 50% of the actual context window
+				const MAX_TOKEN_THRESHOLD = Math.floor(contextWindow * CONTEXT_WINDOW_PERCENTAGE)
+				const MAX_CHAR_THRESHOLD = MAX_TOKEN_THRESHOLD * CHARS_PER_TOKEN_RATIO
 
 				// Check if we should apply the safeguard
 				let shouldApplySafeguard = false
 				let safeguardNotice = ""
-				let linesToRead = totalLines
+				let fullContent: string | null = null
+				let actualLinesRead = totalLines
 
 				if (maxReadFileLine === -1) {
 					// Get file size
@@ -541,22 +547,22 @@ export async function readFileTool(
 					if (fileStats.size > LARGE_FILE_SIZE_THRESHOLD) {
 						// File is large enough to warrant token count check
 						try {
-							const fullContent = await extractTextFromFile(fullPath)
+							// Read the full content once
+							fullContent = await extractTextFromFile(fullPath)
 							const tokenCount = await tiktoken([{ type: "text", text: fullContent }])
 
 							if (tokenCount > MAX_TOKEN_THRESHOLD) {
 								shouldApplySafeguard = true
-								linesToRead = FALLBACK_MAX_LINES
-								safeguardNotice = `<notice>This file is ${fileSizeKB}KB and contains approximately ${tokenCount.toLocaleString()} tokens, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
+								// Clear fullContent to avoid using it when we need partial content
+								fullContent = null
 							}
+							// If tokenCount <= MAX_TOKEN_THRESHOLD, we keep fullContent to reuse it
 						} catch (error) {
 							// If token counting fails, apply safeguard based on file size alone
 							console.warn(`Failed to count tokens for large file ${relPath}:`, error)
 							if (fileStats.size > VERY_LARGE_FILE_SIZE) {
 								// For very large files (>1MB), apply safeguard anyway
 								shouldApplySafeguard = true
-								linesToRead = FALLBACK_MAX_LINES
-								safeguardNotice = `<notice>This file is ${fileSizeKB}KB, which could consume a significant portion of the context window. Showing only the first ${FALLBACK_MAX_LINES} lines to preserve context space. Use line_range if you need to read specific sections.</notice>\n`
 							}
 						}
 					}
@@ -566,12 +572,32 @@ export async function readFileTool(
 				let lineRangeAttr: string
 
 				if (shouldApplySafeguard) {
-					// Read partial file with safeguard
-					content = addLineNumbers(await readLines(fullPath, linesToRead - 1, 0))
-					lineRangeAttr = ` lines="1-${linesToRead}"`
+					// Read partial file with character-based safeguard
+					// Use the smaller of MAX_CHAR_LIMIT or the calculated character threshold
+					const charLimit = Math.min(MAX_CHAR_LIMIT, MAX_CHAR_THRESHOLD)
+					const result = await readLinesWithCharLimit(fullPath, charLimit)
+
+					content = addLineNumbers(result.content, 1)
+					actualLinesRead = result.linesRead
+					lineRangeAttr = ` lines="1-${actualLinesRead}"`
+
+					const fileStats = await stat(fullPath)
+					const fileSizeKB = Math.round(fileStats.size / 1024)
+
+					if (result.wasTruncated) {
+						safeguardNotice = `<notice>${t("tools:readFile.safeguardNotice", {
+							fileSizeKB,
+							actualLinesRead,
+							charactersRead: result.charactersRead.toLocaleString(),
+						})}</notice>\n`
+					}
 				} else {
-					// Read full file as normal
-					content = await extractTextFromFile(fullPath)
+					// Read full file - reuse fullContent if we already have it
+					if (fullContent !== null) {
+						content = fullContent
+					} else {
+						content = await extractTextFromFile(fullPath)
+					}
 					lineRangeAttr = ` lines="1-${totalLines}"`
 				}
 

@@ -2,7 +2,8 @@
 	"readFile": {
 		"linesRange": " (第 {{start}}-{{end}} 行)",
 		"definitionsOnly": " (僅定義)",
-		"maxLines": " (最多 {{max}} 行)"
+		"maxLines": " (最多 {{max}} 行)",
+		"safeguardNotice": "此檔案大小為 {{fileSizeKB}}KB，會佔用上下文視窗的大部分空間。為了保留上下文空間，僅顯示前 {{actualLinesRead}} 行完整內容（{{charactersRead}} 個字元）。如需讀取特定部分，請使用 line_range。"
 	},
 	"toolRepetitionLimitReached": "Roo 似乎陷入循環，反覆嘗試同一操作 ({{toolName}})。這可能表明目前策略存在問題。請考慮重新描述工作、提供更具體的指示或引導其嘗試不同的方法。",
 	"codebaseSearch": {
