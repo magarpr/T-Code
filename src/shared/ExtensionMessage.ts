@@ -281,7 +281,6 @@ export type ExtensionState = Pick<
 	maxWorkspaceFiles: number // Maximum number of files to include in current working directory details (0-500)
 	showRooIgnoredFiles: boolean // Whether to show .rooignore'd files in listings
 	maxReadFileLine: number // Maximum number of lines to read from a file before truncating
-	readFileDeduplicationCacheMinutes: number // Cache window in minutes for read_file deduplication (0 = no cache)
 
 	experiments: Experiments // Map of experiment IDs to their enabled state
 

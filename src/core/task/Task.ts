@@ -329,79 +329,6 @@ export class Task extends EventEmitter<ClineEvents> {
 		return readApiMessages({ taskId: this.taskId, globalStoragePath: this.globalStoragePath })
 	}
 
-	public async getRecentFileContent(filePath: string): Promise<string | null> {
-		// Check if the experimental feature is enabled
-		const state = await this.providerRef.deref()?.getState()
-		if (!state?.experiments || !experiments.isEnabled(state.experiments, EXPERIMENT_IDS.READ_FILE_DEDUPLICATION)) {
-			return null
-		}
-
-		// Get the cache window from settings
-		const cacheMinutes = state?.readFileDeduplicationCacheMinutes ?? 5
-		if (cacheMinutes === 0) {
-			// Cache is disabled
-			return null
-		}
-
-		const cacheWindowMs = cacheMinutes * 60 * 1000
-		const now = Date.now()
-
-		// Check recent conversation history for this file
-		for (let i = this.apiConversationHistory.length - 1; i >= 0; i--) {
-			const message = this.apiConversationHistory[i]
-
-			// Only process user messages
-			if (message.role !== "user") {
-				continue
-			}
-
-			// Skip messages outside the cache window
-			if (message.ts && now - message.ts > cacheWindowMs) {
-				break
-			}
-
-			// Process content blocks
-			if (Array.isArray(message.content)) {
-				for (const block of message.content) {
-					if (block.type === "text" && typeof block.text === "string") {
-						// Check for read_file results in text blocks
-						const readFileMatch = block.text.match(/\[read_file(?:\s+for\s+'([^']+)')?.*?\]\s*Result:/i)
-
-						if (readFileMatch) {
-							// Extract file paths from the result content
-							const resultContent = block.text.substring(block.text.indexOf("Result:") + 7).trim()
-
-							// Handle new XML format
-							const xmlFileMatches = resultContent.matchAll(
-								/<file>\s*<path>([^<]+)<\/path>[\s\S]*?<content[^>]*?>([\s\S]*?)<\/content>/g,
-							)
-							for (const match of xmlFileMatches) {
-								const matchedPath = match[1].trim()
-								const content = match[2].trim()
-								if (matchedPath === filePath) {
-									return content
-								}
-							}
-
-							// Handle legacy format (single file)
-							if (
-								readFileMatch[1] &&
-								readFileMatch[1] === filePath &&
-								!resultContent.includes("<files>")
-							) {
-								// For legacy format, the content is directly after "Result:"
-								// Remove any leading/trailing whitespace
-								return resultContent.trim()
-							}
-						}
-					}
-				}
-			}
-		}
-
-		return null
-	}
-
 	public async deduplicateReadFileHistory(): Promise<void> {
 		// Check if the experimental feature is enabled
 		const state = await this.providerRef.deref()?.getState()
@@ -409,10 +336,6 @@ export class Task extends EventEmitter<ClineEvents> {
 			return
 		}
 
-		// Get the cache window from settings, defaulting to 5 minutes if not set
-		const cacheMinutes = state?.readFileDeduplicationCacheMinutes ?? 5
-		const cacheWindowMs = cacheMinutes * 60 * 1000
-		const now = Date.now()
 		const seenFiles = new Map<string, { messageIndex: number; blockIndex: number }>()
 		const blocksToRemove = new Map<number, Set<number>>() // messageIndex -> Set of blockIndexes to remove
 
@@ -422,11 +345,6 @@ export class Task extends EventEmitter<ClineEvents> {
 
 			// Only process user messages
 			if (message.role !== "user") {
-				continue
-			}
-
-			// Skip messages within the cache window
-			if (message.ts && now - message.ts < cacheWindowMs) {
 				continue
 			}
 

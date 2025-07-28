@@ -130,9 +130,6 @@ describe("read_file tool with maxReadFileLine setting", () => {
 		// Add the deduplicateReadFileHistory method to the mock
 		mockCline.deduplicateReadFileHistory = vi.fn().mockReturnValue(undefined)
 
-		// Add the getRecentFileContent method to the mock
-		mockCline.getRecentFileContent = vi.fn().mockResolvedValue(null)
-
 		toolResult = undefined
 	})
 
@@ -391,9 +388,6 @@ describe("read_file tool XML output structure", () => {
 
 		// Add the deduplicateReadFileHistory method to the mock
 		mockCline.deduplicateReadFileHistory = vi.fn().mockReturnValue(undefined)
-
-		// Add the getRecentFileContent method to the mock
-		mockCline.getRecentFileContent = vi.fn().mockResolvedValue(null)
 
 		toolResult = undefined
 	})

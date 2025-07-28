@@ -431,45 +431,7 @@ export async function readFileTool(
 			const fullPath = path.resolve(cline.cwd, relPath)
 			const { maxReadFileLine = -1 } = (await cline.providerRef.deref()?.getState()) ?? {}
 
-			// Check if we have recent content for this file (deduplication)
-			const recentContent = await cline.getRecentFileContent(relPath)
-			if (recentContent !== null) {
-				// We have recent content, use it instead of reading the file again
-				const lines = recentContent.split("\n")
-				const totalLines = lines.length
-
-				// Handle range reads
-				if (fileResult.lineRanges && fileResult.lineRanges.length > 0) {
-					const rangeResults: string[] = []
-					for (const range of fileResult.lineRanges) {
-						const selectedLines = lines.slice(range.start - 1, range.end).join("\n")
-						const content = addLineNumbers(selectedLines, range.start)
-						const lineRangeAttr = ` lines="${range.start}-${range.end}"`
-						rangeResults.push(`<content${lineRangeAttr}>\n${content}</content>`)
-					}
-					updateFileResult(relPath, {
-						xmlContent: `<file><path>${relPath}</path>\n${rangeResults.join("\n")}\n<notice>Using cached content from recent read</notice>\n</file>`,
-					})
-					continue
-				}
-
-				// Handle normal file read with cached content
-				const lineRangeAttr = ` lines="1-${totalLines}"`
-				let xmlInfo = totalLines > 0 ? `<content${lineRangeAttr}>\n${recentContent}</content>\n` : `<content/>`
-
-				if (totalLines === 0) {
-					xmlInfo += `<notice>File is empty</notice>\n`
-				} else {
-					xmlInfo += `<notice>Using cached content from recent read</notice>\n`
-				}
-
-				updateFileResult(relPath, {
-					xmlContent: `<file><path>${relPath}</path>\n${xmlInfo}</file>`,
-				})
-				continue
-			}
-
-			// Process approved files (no cached content available)
+			// Process approved files
 			try {
 				const [totalLines, isBinary] = await Promise.all([countFileLines(fullPath), isBinaryFile(fullPath)])
 

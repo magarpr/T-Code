@@ -1444,9 +1444,6 @@ export class ClineProvider
 			maxDiagnosticMessages,
 		} = state
 
-		// Get readFileDeduplicationCacheMinutes with default value
-		const readFileDeduplicationCacheMinutes = state.readFileDeduplicationCacheMinutes ?? 5
-
 		const telemetryKey = process.env.POSTHOG_API_KEY
 		const machineId = vscode.env.machineId
 		const mergedAllowedCommands = this.mergeAllowedCommands(allowedCommands)
@@ -1536,7 +1533,6 @@ export class ClineProvider
 			language: language ?? formatLanguage(vscode.env.language),
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? -1,
-			readFileDeduplicationCacheMinutes: readFileDeduplicationCacheMinutes ?? 5,
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 			settingsImportedAt: this.settingsImportedAt,
 			terminalCompressProgressBar: terminalCompressProgressBar ?? true,
@@ -1707,7 +1703,6 @@ export class ClineProvider
 			telemetrySetting: stateValues.telemetrySetting || "unset",
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? true,
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
-			readFileDeduplicationCacheMinutes: stateValues.readFileDeduplicationCacheMinutes ?? 5,
 			maxConcurrentFileReads: stateValues.maxConcurrentFileReads ?? 5,
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,

@@ -542,7 +542,6 @@ describe("ClineProvider", () => {
 			profileThresholds: {},
 			hasOpenedModeSelector: false,
 			diagnosticsEnabled: true,
-			readFileDeduplicationCacheMinutes: 5,
 		}
 
 		const message: ExtensionMessage = {
