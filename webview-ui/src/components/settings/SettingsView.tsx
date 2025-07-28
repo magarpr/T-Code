@@ -337,10 +337,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
-			vscode.postMessage({
-				type: "readFileDeduplicationCacheMinutes",
-				value: cachedState.readFileDeduplicationCacheMinutes ?? 5,
-			})
 			setChangeDetected(false)
 		}
 	}
@@ -708,12 +704,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 					{/* Experimental Section */}
 					{activeTab === "experimental" && (
-						<ExperimentalSettings
-							setExperimentEnabled={setExperimentEnabled}
-							experiments={experiments}
-							readFileDeduplicationCacheMinutes={cachedState.readFileDeduplicationCacheMinutes}
-							setCachedStateField={setCachedStateField}
-						/>
+						<ExperimentalSettings setExperimentEnabled={setExperimentEnabled} experiments={experiments} />
 					)}
 
 					{/* Language Section */}

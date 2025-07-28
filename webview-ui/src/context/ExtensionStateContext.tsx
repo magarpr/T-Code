@@ -236,7 +236,6 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		alwaysAllowUpdateTodoList: true,
 		includeDiagnosticMessages: true,
 		maxDiagnosticMessages: 50,
-		readFileDeduplicationCacheMinutes: 5, // Default to 5 minutes
 	})
 
 	const [didHydrateState, setDidHydrateState] = useState(false)
