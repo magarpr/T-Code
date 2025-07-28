@@ -59,6 +59,19 @@ import { VsCodeLmHandler } from "../vscode-lm"
 import type { ApiHandlerOptions } from "../../../shared/api"
 import type { Anthropic } from "@anthropic-ai/sdk"
 
+// Mock the base provider's countTokens method
+vi.mock("../base-provider", async () => {
+	const actual = await vi.importActual("../base-provider")
+	return {
+		...actual,
+		BaseProvider: class MockBaseProvider {
+			async countTokens() {
+				return 100 // Mock tiktoken to return 100 tokens
+			}
+		},
+	}
+})
+
 const mockLanguageModelChat = {
 	id: "test-model",
 	name: "Test Model",
@@ -298,6 +311,151 @@ describe("VsCodeLmHandler", () => {
 
 			const promise = handler.completePrompt("Test prompt")
 			await expect(promise).rejects.toThrow("VSCode LM completion error: Completion failed")
+		})
+	})
+
+	describe("countTokens with tiktoken fallback", () => {
+		it("should fall back to tiktoken when VSCode API returns 0 for non-empty content", async () => {
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{
+					type: "text",
+					text: "Hello world",
+				},
+			]
+
+			// Mock VSCode API to return 0
+			mockLanguageModelChat.countTokens.mockResolvedValue(0)
+			handler["client"] = mockLanguageModelChat
+			handler["currentRequestCancellation"] = new vscode.CancellationTokenSource()
+
+			const result = await handler.countTokens(content)
+
+			// Should use tiktoken fallback which returns 100
+			expect(result).toBe(100)
+		})
+
+		it("should fall back to tiktoken when VSCode API throws an error", async () => {
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{
+					type: "text",
+					text: "Hello world",
+				},
+			]
+
+			// Mock VSCode API to throw an error
+			mockLanguageModelChat.countTokens.mockRejectedValue(new Error("API Error"))
+			handler["client"] = mockLanguageModelChat
+			handler["currentRequestCancellation"] = new vscode.CancellationTokenSource()
+
+			const result = await handler.countTokens(content)
+
+			// Should use tiktoken fallback which returns 100
+			expect(result).toBe(100)
+		})
+
+		it("should use VSCode API when it returns valid token count", async () => {
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{
+					type: "text",
+					text: "Hello world",
+				},
+			]
+
+			// Mock VSCode API to return valid count
+			mockLanguageModelChat.countTokens.mockResolvedValue(50)
+			handler["client"] = mockLanguageModelChat
+			handler["currentRequestCancellation"] = new vscode.CancellationTokenSource()
+
+			const result = await handler.countTokens(content)
+
+			// Should use VSCode API result
+			expect(result).toBe(50)
+		})
+
+		it("should fall back to tiktoken when no client is available", async () => {
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{
+					type: "text",
+					text: "Hello world",
+				},
+			]
+
+			// No client available
+			handler["client"] = null
+
+			const result = await handler.countTokens(content)
+
+			// Should use tiktoken fallback which returns 100
+			expect(result).toBe(100)
+		})
+
+		it("should fall back to tiktoken when VSCode API returns negative value", async () => {
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{
+					type: "text",
+					text: "Hello world",
+				},
+			]
+
+			// Mock VSCode API to return negative value
+			mockLanguageModelChat.countTokens.mockResolvedValue(-1)
+			handler["client"] = mockLanguageModelChat
+			handler["currentRequestCancellation"] = new vscode.CancellationTokenSource()
+
+			const result = await handler.countTokens(content)
+
+			// Should use tiktoken fallback which returns 100
+			expect(result).toBe(100)
+		})
+	})
+
+	describe("createMessage with frequent token updates", () => {
+		beforeEach(() => {
+			const mockModel = { ...mockLanguageModelChat }
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([mockModel])
+			mockLanguageModelChat.countTokens.mockResolvedValue(10)
+
+			// Override the default client with our test client
+			handler["client"] = mockLanguageModelChat
+		})
+
+		it("should provide token updates during streaming", async () => {
+			const systemPrompt = "You are a helpful assistant"
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user" as const,
+					content: "Hello",
+				},
+			]
+
+			// Create a long response to trigger intermediate token updates
+			const longResponse = "a".repeat(150) // 150 characters to trigger at least one update
+			mockLanguageModelChat.sendRequest.mockResolvedValueOnce({
+				stream: (async function* () {
+					// Send response in chunks
+					yield new vscode.LanguageModelTextPart(longResponse.slice(0, 50))
+					yield new vscode.LanguageModelTextPart(longResponse.slice(50, 100))
+					yield new vscode.LanguageModelTextPart(longResponse.slice(100))
+					return
+				})(),
+				text: (async function* () {
+					yield longResponse
+					return
+				})(),
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Should have text chunks and multiple usage updates
+			const textChunks = chunks.filter((c) => c.type === "text")
+			const usageChunks = chunks.filter((c) => c.type === "usage")
+
+			expect(textChunks).toHaveLength(3) // 3 text chunks
+			expect(usageChunks.length).toBeGreaterThan(1) // At least 2 usage updates (intermediate + final)
 		})
 	})
 })

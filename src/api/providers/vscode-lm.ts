@@ -183,19 +183,32 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 	 * @returns A promise resolving to the token count
 	 */
 	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
-		// Convert Anthropic content blocks to a string for VSCode LM token counting
-		let textContent = ""
+		try {
+			// Convert Anthropic content blocks to a string for VSCode LM token counting
+			let textContent = ""
 
-		for (const block of content) {
-			if (block.type === "text") {
-				textContent += block.text || ""
-			} else if (block.type === "image") {
-				// VSCode LM doesn't support images directly, so we'll just use a placeholder
-				textContent += "[IMAGE]"
+			for (const block of content) {
+				if (block.type === "text") {
+					textContent += block.text || ""
+				} else if (block.type === "image") {
+					// VSCode LM doesn't support images directly, so we'll just use a placeholder
+					textContent += "[IMAGE]"
+				}
 			}
-		}
 
-		return this.internalCountTokens(textContent)
+			const tokenCount = await this.internalCountTokens(textContent)
+
+			// If VSCode API returns 0 or fails, fall back to tiktoken
+			if (tokenCount === 0 && textContent.length > 0) {
+				console.debug("Roo Code <Language Model API>: Falling back to tiktoken for token counting")
+				return super.countTokens(content)
+			}
+
+			return tokenCount
+		} catch (error) {
+			console.warn("Roo Code <Language Model API>: Error in countTokens, falling back to tiktoken:", error)
+			return super.countTokens(content)
+		}
 	}
 
 	/**
@@ -204,12 +217,24 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 	private async internalCountTokens(text: string | vscode.LanguageModelChatMessage): Promise<number> {
 		// Check for required dependencies
 		if (!this.client) {
-			console.warn("Roo Code <Language Model API>: No client available for token counting")
+			console.warn(
+				"Roo Code <Language Model API>: No client available for token counting, using tiktoken fallback",
+			)
+			// Fall back to tiktoken for string inputs
+			if (typeof text === "string") {
+				return this.fallbackToTiktoken(text)
+			}
 			return 0
 		}
 
 		if (!this.currentRequestCancellation) {
-			console.warn("Roo Code <Language Model API>: No cancellation token available for token counting")
+			console.warn(
+				"Roo Code <Language Model API>: No cancellation token available for token counting, using tiktoken fallback",
+			)
+			// Fall back to tiktoken for string inputs
+			if (typeof text === "string") {
+				return this.fallbackToTiktoken(text)
+			}
 			return 0
 		}
 
@@ -240,12 +265,28 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			// Validate the result
 			if (typeof tokenCount !== "number") {
 				console.warn("Roo Code <Language Model API>: Non-numeric token count received:", tokenCount)
+				// Fall back to tiktoken for string inputs
+				if (typeof text === "string") {
+					return this.fallbackToTiktoken(text)
+				}
 				return 0
 			}
 
 			if (tokenCount < 0) {
 				console.warn("Roo Code <Language Model API>: Negative token count received:", tokenCount)
+				// Fall back to tiktoken for string inputs
+				if (typeof text === "string") {
+					return this.fallbackToTiktoken(text)
+				}
 				return 0
+			}
+
+			// If we get 0 tokens but have content, fall back to tiktoken
+			if (tokenCount === 0 && typeof text === "string" && text.length > 0) {
+				console.debug(
+					"Roo Code <Language Model API>: VSCode API returned 0 tokens for non-empty text, using tiktoken fallback",
+				)
+				return this.fallbackToTiktoken(text)
 			}
 
 			return tokenCount
@@ -257,14 +298,39 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			}
 
 			const errorMessage = error instanceof Error ? error.message : "Unknown error"
-			console.warn("Roo Code <Language Model API>: Token counting failed:", errorMessage)
+			console.warn("Roo Code <Language Model API>: Token counting failed, using tiktoken fallback:", errorMessage)
 
 			// Log additional error details if available
 			if (error instanceof Error && error.stack) {
 				console.debug("Token counting error stack:", error.stack)
 			}
 
+			// Fall back to tiktoken for string inputs
+			if (typeof text === "string") {
+				return this.fallbackToTiktoken(text)
+			}
+
 			return 0 // Fallback to prevent stream interruption
+		}
+	}
+
+	/**
+	 * Fallback to tiktoken for token counting when VSCode API is unavailable or returns invalid results
+	 */
+	private async fallbackToTiktoken(text: string): Promise<number> {
+		try {
+			// Convert text to Anthropic content blocks format for base provider
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{
+					type: "text",
+					text: text,
+				},
+			]
+			return super.countTokens(content)
+		} catch (error) {
+			console.error("Roo Code <Language Model API>: Tiktoken fallback failed:", error)
+			// Last resort: estimate based on character count (rough approximation)
+			return Math.ceil(text.length / 4)
 		}
 	}
 
@@ -363,6 +429,8 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 
 		// Accumulate the text and count at the end of the stream to reduce token counting overhead.
 		let accumulatedText: string = ""
+		let lastTokenUpdateLength: number = 0
+		const TOKEN_UPDATE_INTERVAL = 100 // Update tokens every 100 characters for more responsive UI
 
 		try {
 			// Create the response stream with minimal required options
@@ -392,6 +460,17 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 					yield {
 						type: "text",
 						text: chunk.value,
+					}
+
+					// Provide more frequent token updates during streaming
+					if (accumulatedText.length - lastTokenUpdateLength >= TOKEN_UPDATE_INTERVAL) {
+						const currentOutputTokens = await this.internalCountTokens(accumulatedText)
+						yield {
+							type: "usage",
+							inputTokens: totalInputTokens,
+							outputTokens: currentOutputTokens,
+						}
+						lastTokenUpdateLength = accumulatedText.length
 					}
 				} else if (chunk instanceof vscode.LanguageModelToolCallPart) {
 					try {
