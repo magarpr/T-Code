@@ -125,15 +125,16 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		yield* this.handleStreamResponse(stream, model)
 	}
 
-	private async *handleCodexMiniMessage(
-		model: OpenAiNativeModel,
-		systemPrompt: string,
-		messages: Anthropic.Messages.MessageParam[],
-	): ApiStream {
-		// Convert messages to a single input string
-		const input = this.convertMessagesToInput(messages)
-
-		// Make direct API call to v1/responses endpoint
+	/**
+	 * Makes a request to the OpenAI Responses API endpoint
+	 * Used by codex-mini-latest model which requires the v1/responses endpoint
+	 */
+	private async makeResponsesApiRequest(
+		modelId: string,
+		instructions: string,
+		input: string,
+		stream: boolean = true,
+	): Promise<Response> {
 		// Note: Using fetch() instead of OpenAI client because the OpenAI SDK v5.0.0
 		// does not support the v1/responses endpoint used by codex-mini-latest model.
 		// This is a special endpoint that requires a different request/response format.
@@ -148,10 +149,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 					Authorization: `Bearer ${apiKey}`,
 				},
 				body: JSON.stringify({
-					model: model.id,
-					instructions: systemPrompt,
+					model: modelId,
+					instructions: instructions,
 					input: input,
-					stream: true,
+					stream: stream,
 				}),
 			})
 
@@ -160,7 +161,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 				throw new Error(`OpenAI Responses API error: ${response.status} ${response.statusText} - ${errorText}`)
 			}
 
-			yield* this.handleResponsesStreamResponse(response.body, model, systemPrompt, input)
+			return response
 		} catch (error) {
 			// Handle network failures and other errors
 			if (error instanceof TypeError && error.message.includes("fetch")) {
@@ -171,6 +172,19 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			}
 			throw new Error("Unknown error occurred while calling OpenAI Responses API")
 		}
+	}
+
+	private async *handleCodexMiniMessage(
+		model: OpenAiNativeModel,
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+	): ApiStream {
+		// Convert messages to a single input string
+		const input = this.convertMessagesToInput(messages)
+
+		// Make API call using shared helper
+		const response = await this.makeResponsesApiRequest(model.id, systemPrompt, input, true)
+		yield* this.handleResponsesStreamResponse(response.body, model, systemPrompt, input)
 	}
 
 	private convertMessagesToInput(messages: Anthropic.Messages.MessageParam[]): string {
@@ -334,47 +348,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 			const { id, temperature, reasoning } = this.getModel()
 
 			if (id === "codex-mini-latest") {
-				// Make direct API call to v1/responses endpoint
-				// Note: Using fetch() instead of OpenAI client because the OpenAI SDK v5.0.0
-				// does not support the v1/responses endpoint used by codex-mini-latest model.
-				// This is a special endpoint that requires a different request/response format.
-				const apiKey = this.options.openAiNativeApiKey ?? "not-provided"
-				const baseURL = this.options.openAiNativeBaseUrl ?? "https://api.openai.com/v1"
-
-				try {
-					const response = await fetch(`${baseURL}/responses`, {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							Authorization: `Bearer ${apiKey}`,
-						},
-						body: JSON.stringify({
-							model: id,
-							instructions: "Complete the following prompt:",
-							input: prompt,
-							stream: false,
-						}),
-					})
-
-					if (!response.ok) {
-						const errorText = await response.text()
-						throw new Error(
-							`OpenAI Responses API error: ${response.status} ${response.statusText} - ${errorText}`,
-						)
-					}
-
-					const data = await response.json()
-					return data.output_text || ""
-				} catch (error) {
-					// Handle network failures and other errors
-					if (error instanceof TypeError && error.message.includes("fetch")) {
-						throw new Error(`Network error while calling OpenAI Responses API: ${error.message}`)
-					}
-					if (error instanceof Error) {
-						throw new Error(`OpenAI Responses API error: ${error.message}`)
-					}
-					throw new Error("Unknown error occurred while calling OpenAI Responses API")
-				}
+				// Make API call using shared helper
+				const response = await this.makeResponsesApiRequest(id, "Complete the following prompt:", prompt, false)
+				const data = await response.json()
+				return data.output_text || ""
 			}
 
 			const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
