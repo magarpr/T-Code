@@ -7,6 +7,10 @@ import { ApiHandlerOptions } from "../../../shared/api"
 
 // Mock OpenAI client
 const mockCreate = vitest.fn()
+const mockFetch = vitest.fn()
+
+// Mock global fetch
+global.fetch = mockFetch as any
 
 vitest.mock("openai", () => {
 	return {
@@ -84,6 +88,7 @@ describe("OpenAiNativeHandler", () => {
 		}
 		handler = new OpenAiNativeHandler(mockOptions)
 		mockCreate.mockClear()
+		mockFetch.mockClear()
 	})
 
 	describe("constructor", () => {
@@ -441,6 +446,109 @@ describe("OpenAiNativeHandler", () => {
 		})
 	})
 
+	describe("codex-mini-latest model", () => {
+		beforeEach(() => {
+			handler = new OpenAiNativeHandler({
+				...mockOptions,
+				apiModelId: "codex-mini-latest",
+			})
+		})
+
+		it("should handle streaming responses via v1/responses", async () => {
+			const mockStreamData = [
+				'data: {"type": "response.output_text.delta", "delta": "Hello"}\n',
+				'data: {"type": "response.output_text.delta", "delta": " world"}\n',
+				'data: {"type": "response.completed"}\n',
+				"data: [DONE]\n",
+			]
+
+			const encoder = new TextEncoder()
+			const stream = new ReadableStream({
+				start(controller) {
+					for (const data of mockStreamData) {
+						controller.enqueue(encoder.encode(data))
+					}
+					controller.close()
+				},
+			})
+
+			mockFetch.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				body: stream,
+			})
+
+			const responseStream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of responseStream) {
+				chunks.push(chunk)
+			}
+
+			expect(mockFetch).toHaveBeenCalledWith("https://api.openai.com/v1/responses", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Bearer test-api-key",
+				},
+				body: JSON.stringify({
+					model: "codex-mini-latest",
+					instructions: systemPrompt,
+					input: "Hello!",
+					stream: true,
+				}),
+			})
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			expect(textChunks).toHaveLength(2)
+			expect(textChunks[0].text).toBe("Hello")
+			expect(textChunks[1].text).toBe(" world")
+		})
+
+		it("should handle non-streaming completion via v1/responses", async () => {
+			mockFetch.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				json: async () => ({ output_text: "Test response" }),
+			})
+
+			const result = await handler.completePrompt("Test prompt")
+
+			expect(mockFetch).toHaveBeenCalledWith("https://api.openai.com/v1/responses", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: "Bearer test-api-key",
+				},
+				body: JSON.stringify({
+					model: "codex-mini-latest",
+					instructions: "Complete the following prompt:",
+					input: "Test prompt",
+					stream: false,
+				}),
+			})
+
+			expect(result).toBe("Test response")
+		})
+
+		it("should handle API errors", async () => {
+			mockFetch.mockResolvedValueOnce({
+				ok: false,
+				status: 404,
+				statusText: "Not Found",
+				text: async () => "This model is only supported in v1/responses",
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			await expect(async () => {
+				for await (const _chunk of stream) {
+					// Should not reach here
+				}
+			}).rejects.toThrow(
+				"OpenAI Responses API error: 404 Not Found - This model is only supported in v1/responses",
+			)
+		})
+	})
+
 	describe("getModel", () => {
 		it("should return model info", () => {
 			const modelInfo = handler.getModel()
@@ -457,6 +565,19 @@ describe("OpenAiNativeHandler", () => {
 			const modelInfo = handlerWithoutModel.getModel()
 			expect(modelInfo.id).toBe("gpt-4.1") // Default model
 			expect(modelInfo.info).toBeDefined()
+		})
+
+		it("should return correct info for codex-mini-latest", () => {
+			const codexHandler = new OpenAiNativeHandler({
+				apiModelId: "codex-mini-latest",
+				openAiNativeApiKey: "test-api-key",
+			})
+			const modelInfo = codexHandler.getModel()
+			expect(modelInfo.id).toBe("codex-mini-latest")
+			expect(modelInfo.info.maxTokens).toBe(16_384) // Updated to standard max tokens
+			expect(modelInfo.info.contextWindow).toBe(200_000)
+			expect(modelInfo.info.supportsImages).toBe(false)
+			expect(modelInfo.info.supportsPromptCache).toBe(false)
 		})
 	})
 })
