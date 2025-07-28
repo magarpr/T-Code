@@ -1,0 +1,31 @@
+{
+	"prNumber": "6279",
+	"repository": "RooCodeInc/Roo-Code",
+	"reviewStartTime": "2025-01-28T18:37:08.391Z",
+	"calledByMode": null,
+	"prMetadata": {
+		"title": "Implement read_file history deduplication",
+		"description": "Removes older duplicate read_file results from conversation history"
+	},
+	"linkedIssue": {
+		"number": "6279"
+	},
+	"existingComments": [],
+	"existingReviews": [],
+	"filesChanged": [
+		"src/shared/experiments.ts",
+		"packages/types/src/experiment.ts",
+		"src/core/task/Task.ts",
+		"src/core/tools/readFileTool.ts",
+		"src/core/task/__tests__/Task.spec.ts"
+	],
+	"delegatedTasks": [],
+	"findings": {
+		"critical": [],
+		"patterns": [],
+		"redundancy": [],
+		"architecture": [],
+		"tests": []
+	},
+	"reviewStatus": "initialized"
+}

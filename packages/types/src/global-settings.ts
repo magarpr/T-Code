@@ -120,6 +120,7 @@ export const globalSettingsSchema = z.object({
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	experiments: experimentsSchema.optional(),
+	readFileDeduplicationCacheMinutes: z.number().optional(),
 
 	codebaseIndexModels: codebaseIndexModelsSchema.optional(),
 	codebaseIndexConfig: codebaseIndexConfigSchema.optional(),

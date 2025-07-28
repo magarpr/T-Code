@@ -209,6 +209,7 @@ describe("mergeExtensionState", () => {
 			sharingEnabled: false,
 			profileThresholds: {},
 			hasOpenedModeSelector: false, // Add the new required property
+			readFileDeduplicationCacheMinutes: 5, // Add the new required property
 		}
 
 		const prevState: ExtensionState = {

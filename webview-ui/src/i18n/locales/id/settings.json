@@ -689,6 +689,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Aktifkan edit file bersamaan",
 			"description": "Ketika diaktifkan, Roo dapat mengedit beberapa file dalam satu permintaan. Ketika dinonaktifkan, Roo harus mengedit file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap modifikasi file."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Aktifkan deduplikasi pembacaan file",
+			"description": "Saat diaktifkan, Roo akan menghindari membaca file yang sama beberapa kali dalam rentang waktu yang dapat dikonfigurasi. Ini membantu mengurangi pembacaan file yang berulang dan meningkatkan kinerja.",
+			"cacheTimeLabel": "Waktu cache",
+			"minutes": "menit",
+			"cacheTimeDescription": "File yang dibaca dalam rentang waktu ini akan diduplikasi. Atur ke 0 untuk menonaktifkan deduplikasi berbasis waktu."
 		}
 	},
 	"promptCaching": {

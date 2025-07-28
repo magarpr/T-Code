@@ -660,6 +660,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "啟用並行檔案編輯",
 			"description": "啟用後 Roo 可在單個請求中編輯多個檔案。停用後 Roo 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "啟用讀取檔案去重",
+			"description": "啟用後，Roo 將避免在可設定的時間範圍內多次讀取同一個檔案。這有助於減少多餘的檔案讀取並提高效能。",
+			"cacheTimeLabel": "快取時間",
+			"minutes": "分鐘",
+			"cacheTimeDescription": "在此時間範圍內讀取的檔案將會去重。設為 0 以停用基於時間的去重。"
 		}
 	},
 	"promptCaching": {

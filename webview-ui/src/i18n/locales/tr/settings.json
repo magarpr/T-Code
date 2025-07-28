@@ -660,6 +660,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
 			"description": "Etkinleştirildiğinde, Roo tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Roo dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Dosya okuma tekilleştirmeyi etkinleştir",
+			"description": "Etkinleştirildiğinde, Roo aynı dosyayı yapılandırılabilir bir zaman aralığında birden çok kez okumaktan kaçınacaktır. Bu, gereksiz dosya okumalarını azaltmaya ve performansı artırmaya yardımcı olur.",
+			"cacheTimeLabel": "Önbellek süresi",
+			"minutes": "dakika",
+			"cacheTimeDescription": "Bu zaman aralığında okunan dosyalar tekilleştirilecektir. Zaman tabanlı tekilleştirmeyi devre dışı bırakmak için 0 olarak ayarlayın."
 		}
 	},
 	"promptCaching": {

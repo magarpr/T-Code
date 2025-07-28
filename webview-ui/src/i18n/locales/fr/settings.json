@@ -659,6 +659,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Activer les éditions de fichiers concurrentes",
 			"description": "Lorsque cette option est activée, Roo peut éditer plusieurs fichiers en une seule requête. Lorsqu'elle est désactivée, Roo doit éditer les fichiers un par un. Désactiver cette option peut aider lorsque tu travailles avec des modèles moins capables ou lorsque tu veux plus de contrôle sur les modifications de fichiers."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Activer la déduplication de la lecture de fichiers",
+			"description": "Lorsque cette option est activée, Roo évitera de lire le même fichier plusieurs fois dans une fenêtre de temps configurable. Cela permet de réduire les lectures de fichiers redondantes et d'améliorer les performances.",
+			"cacheTimeLabel": "Temps de cache",
+			"minutes": "minutes",
+			"cacheTimeDescription": "Les fichiers lus dans cette fenêtre de temps seront dédupliqués. Mettez la valeur à 0 pour désactiver la déduplication basée sur le temps."
 		}
 	},
 	"promptCaching": {

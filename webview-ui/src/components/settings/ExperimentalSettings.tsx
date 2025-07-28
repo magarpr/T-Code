@@ -7,8 +7,9 @@ import { EXPERIMENT_IDS, experimentConfigsMap } from "@roo/experiments"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
+import { Input } from "@src/components/ui"
 
-import { SetExperimentEnabled } from "./types"
+import { SetExperimentEnabled, SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
@@ -16,11 +17,15 @@ import { ExperimentalFeature } from "./ExperimentalFeature"
 type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	experiments: Experiments
 	setExperimentEnabled: SetExperimentEnabled
+	readFileDeduplicationCacheMinutes?: number
+	setCachedStateField?: SetCachedStateField<"readFileDeduplicationCacheMinutes">
 }
 
 export const ExperimentalSettings = ({
 	experiments,
 	setExperimentEnabled,
+	readFileDeduplicationCacheMinutes,
+	setCachedStateField,
 	className,
 	...props
 }: ExperimentalSettingsProps) => {
@@ -65,6 +70,40 @@ export const ExperimentalSettings = ({
 							/>
 						)
 					})}
+
+				{/* Show cache time setting when READ_FILE_DEDUPLICATION is enabled */}
+				{experiments[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION] && (
+					<div className="mt-4 pl-8">
+						<div className="flex flex-col gap-2">
+							<span className="font-medium text-sm">
+								{t("settings:experimental.READ_FILE_DEDUPLICATION.cacheTimeLabel")}
+							</span>
+							<div className="flex items-center gap-4">
+								<Input
+									type="number"
+									pattern="[0-9]*"
+									className="w-24 bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border px-2 py-1 rounded text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+									value={readFileDeduplicationCacheMinutes ?? 5}
+									min={0}
+									onChange={(e) => {
+										const newValue = parseInt(e.target.value, 10)
+										if (!isNaN(newValue) && newValue >= 0 && setCachedStateField) {
+											setCachedStateField("readFileDeduplicationCacheMinutes", newValue)
+										}
+									}}
+									onClick={(e) => e.currentTarget.select()}
+									data-testid="read-file-deduplication-cache-minutes-input"
+								/>
+								<span className="text-sm">
+									{t("settings:experimental.READ_FILE_DEDUPLICATION.minutes")}
+								</span>
+							</div>
+							<div className="text-vscode-descriptionForeground text-xs mt-1">
+								{t("settings:experimental.READ_FILE_DEDUPLICATION.cacheTimeDescription")}
+							</div>
+						</div>
+					</div>
+				)}
 			</Section>
 		</div>
 	)

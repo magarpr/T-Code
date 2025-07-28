@@ -658,6 +658,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Enable concurrent file edits",
 			"description": "When enabled, Roo can edit multiple files in a single request. When disabled, Roo must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Enable read file deduplication",
+			"description": "When enabled, Roo will avoid reading the same file multiple times within a configurable time window. This helps reduce redundant file reads and improves performance.",
+			"cacheTimeLabel": "Cache time",
+			"minutes": "minutes",
+			"cacheTimeDescription": "Files read within this time window will be deduplicated. Set to 0 to disable time-based deduplication."
 		}
 	},
 	"promptCaching": {

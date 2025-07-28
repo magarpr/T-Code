@@ -1944,6 +1944,166 @@ describe("Cline", () => {
 					expect(content[0].text).toContain("new2")
 				}
 			})
+
+			it("should use configurable cache time limit", async () => {
+				// Test with 0 minutes (no cache window)
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+					readFileDeduplicationCacheMinutes: 0,
+				})
+
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 1000, // 1 second ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>new content</content></file></files>",
+							},
+						],
+						ts: now - 500, // 0.5 seconds ago
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// With 0 cache window, should deduplicate even very recent reads
+				expect(cline.apiConversationHistory).toHaveLength(1)
+				const content = cline.apiConversationHistory[0].content
+				if (Array.isArray(content) && content[0]?.type === "text") {
+					expect(content[0].text).toContain("new content")
+				}
+			})
+
+			it("should use custom cache time limit from settings", async () => {
+				// Test with 10 minutes cache window
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+					readFileDeduplicationCacheMinutes: 10,
+				})
+
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 15 * 60 * 1000, // 15 minutes ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>recent content</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000, // 8 minutes ago (within 10 minute window)
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep both messages (recent one is within 10 minute cache window)
+				expect(cline.apiConversationHistory).toHaveLength(2)
+			})
+
+			it("should default to 5 minutes when setting is undefined", async () => {
+				// Test with undefined setting (should default to 5 minutes)
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+					// readFileDeduplicationCacheMinutes is undefined
+				})
+
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000, // 10 minutes ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>recent content</content></file></files>",
+							},
+						],
+						ts: now - 3 * 60 * 1000, // 3 minutes ago (within default 5 minute window)
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep both messages (recent one is within default 5 minute cache window)
+				expect(cline.apiConversationHistory).toHaveLength(2)
+			})
+
+			it("should handle large cache time limits", async () => {
+				// Test with 60 minutes (1 hour) cache window
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+					readFileDeduplicationCacheMinutes: 60,
+				})
+
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 2 * 60 * 60 * 1000, // 2 hours ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>recent content</content></file></files>",
+							},
+						],
+						ts: now - 30 * 60 * 1000, // 30 minutes ago (within 60 minute window)
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep both messages (recent one is within 60 minute cache window)
+				expect(cline.apiConversationHistory).toHaveLength(2)
+			})
 		})
 	})
 })

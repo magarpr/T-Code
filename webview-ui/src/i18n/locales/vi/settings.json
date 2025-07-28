@@ -660,6 +660,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Bật chỉnh sửa tệp đồng thời",
 			"description": "Khi được bật, Roo có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Roo phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Bật tính năng chống trùng lặp khi đọc tệp",
+			"description": "Khi được bật, Roo sẽ tránh đọc cùng một tệp nhiều lần trong một khoảng thời gian có thể định cấu hình. Điều này giúp giảm việc đọc tệp thừa và cải thiện hiệu suất.",
+			"cacheTimeLabel": "Thời gian lưu vào bộ nhớ đệm",
+			"minutes": "phút",
+			"cacheTimeDescription": "Các tệp được đọc trong khoảng thời gian này sẽ được chống trùng lặp. Đặt thành 0 để tắt tính năng chống trùng lặp dựa trên thời gian."
 		}
 	},
 	"promptCaching": {

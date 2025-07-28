@@ -659,6 +659,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gleichzeitige Dateibearbeitungen aktivieren",
 			"description": "Wenn aktiviert, kann Roo mehrere Dateien in einer einzigen Anfrage bearbeiten. Wenn deaktiviert, muss Roo Dateien einzeln bearbeiten. Das Deaktivieren kann hilfreich sein, wenn mit weniger fähigen Modellen gearbeitet wird oder wenn du mehr Kontrolle über Dateiänderungen haben möchtest."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Deduplizierung von gelesenen Dateien aktivieren",
+			"description": "Wenn aktiviert, vermeidet Roo das mehrfache Lesen derselben Datei innerhalb eines konfigurierbaren Zeitfensters. Dies hilft, redundante Dateilesevorgänge zu reduzieren und die Leistung zu verbessern.",
+			"cacheTimeLabel": "Cache-Zeit",
+			"minutes": "Minuten",
+			"cacheTimeDescription": "Innerhalb dieses Zeitfensters gelesene Dateien werden dedupliziert. Setze den Wert auf 0, um die zeitbasierte Deduplizierung zu deaktivieren."
 		}
 	},
 	"promptCaching": {

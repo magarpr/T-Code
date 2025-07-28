@@ -660,6 +660,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilitar edições de arquivos concorrentes",
 			"description": "Quando habilitado, o Roo pode editar múltiplos arquivos em uma única solicitação. Quando desabilitado, o Roo deve editar arquivos um de cada vez. Desabilitar isso pode ajudar ao trabalhar com modelos menos capazes ou quando você quer mais controle sobre modificações de arquivos."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Ativar a desduplicação de leitura de arquivos",
+			"description": "Quando ativado, o Roo evitará a leitura do mesmo arquivo várias vezes dentro de uma janela de tempo configurável. Isso ajuda a reduzir as leituras de arquivos redundantes e melhora o desempenho.",
+			"cacheTimeLabel": "Tempo de cache",
+			"minutes": "minutos",
+			"cacheTimeDescription": "Os arquivos lidos dentro desta janela de tempo serão desduplicados. Defina como 0 para desativar a desduplicação baseada no tempo."
 		}
 	},
 	"promptCaching": {

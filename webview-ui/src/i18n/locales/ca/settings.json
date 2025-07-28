@@ -659,6 +659,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilita edicions de fitxers concurrents",
 			"description": "Quan està activat, Roo pot editar múltiples fitxers en una sola petició. Quan està desactivat, Roo ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Activar la desduplicació de la lectura de fitxers",
+			"description": "Quan estigui activat, Roo evitarà llegir el mateix fitxer diverses vegades dins d'una finestra de temps configurable. Això ajuda a reduir les lectures de fitxers redundants i millora el rendiment.",
+			"cacheTimeLabel": "Temps de memòria cau",
+			"minutes": "minuts",
+			"cacheTimeDescription": "Els fitxers llegits dins d'aquesta finestra de temps es desduplicaran. Establiu a 0 per desactivar la desduplicació basada en el temps."
 		}
 	},
 	"promptCaching": {

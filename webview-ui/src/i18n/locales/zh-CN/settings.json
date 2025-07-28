@@ -660,6 +660,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "启用并发文件编辑",
 			"description": "启用后 Roo 可在单个请求中编辑多个文件。禁用后 Roo 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "启用读取文件去重",
+			"description": "启用后，Roo 将避免在可配置的时间窗口内多次读取同一文件。这有助于减少冗余的文件读取并提高性能。",
+			"cacheTimeLabel": "缓存时间",
+			"minutes": "分钟",
+			"cacheTimeDescription": "在此时间窗口内读取的文件将被去重。设置为 0 可禁用基于时间的去重。"
 		}
 	},
 	"promptCaching": {

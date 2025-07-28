@@ -336,7 +336,9 @@ export class Task extends EventEmitter<ClineEvents> {
 			return
 		}
 
-		const cacheWindowMs = 5 * 60 * 1000 // 5 minutes
+		// Get the cache window from settings, defaulting to 5 minutes if not set
+		const cacheMinutes = state?.readFileDeduplicationCacheMinutes ?? 5
+		const cacheWindowMs = cacheMinutes * 60 * 1000
 		const now = Date.now()
 		const seenFiles = new Map<string, { messageIndex: number; blockIndex: number }>()
 		const blocksToRemove = new Map<number, Set<number>>() // messageIndex -> Set of blockIndexes to remove

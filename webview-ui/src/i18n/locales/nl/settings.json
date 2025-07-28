@@ -660,6 +660,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
 			"description": "Wanneer ingeschakeld, kan Roo meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Roo bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Bestandsleesdeduplicatie inschakelen",
+			"description": "Indien ingeschakeld, voorkomt Roo dat hetzelfde bestand meerdere keren wordt gelezen binnen een configureerbaar tijdvenster. Dit helpt redundante bestandslezingen te verminderen en de prestaties te verbeteren.",
+			"cacheTimeLabel": "Cachetijd",
+			"minutes": "minuten",
+			"cacheTimeDescription": "Bestanden die binnen dit tijdvenster worden gelezen, worden gededupliceerd. Stel in op 0 om op tijd gebaseerde deduplicatie uit te schakelen."
 		}
 	},
 	"promptCaching": {

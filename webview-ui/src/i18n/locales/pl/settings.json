@@ -660,6 +660,13 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Włącz równoczesne edycje plików",
 			"description": "Gdy włączone, Roo może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Roo musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików."
+		},
+		"READ_FILE_DEDUPLICATION": {
+			"name": "Włącz deduplikację odczytu plików",
+			"description": "Gdy włączone, Roo unika wielokrotnego odczytywania tego samego pliku w konfigurowalnym oknie czasowym. Pomaga to zredukować zbędne odczyty plików i poprawia wydajność.",
+			"cacheTimeLabel": "Czas pamięci podręcznej",
+			"minutes": "minuty",
+			"cacheTimeDescription": "Pliki odczytane w tym oknie czasowym zostaną poddane deduplikacji. Ustaw na 0, aby wyłączyć deduplikację opartą na czasie."
 		}
 	},
 	"promptCaching": {
