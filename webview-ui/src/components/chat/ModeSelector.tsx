@@ -1,8 +1,8 @@
 import React from "react"
-import { ChevronUp, Check, X } from "lucide-react"
+import { ChevronUp, Check, X, Upload, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRooPortal } from "@/components/ui/hooks/useRooPortal"
-import { Popover, PopoverContent, PopoverTrigger, StandardTooltip } from "@/components/ui"
+import { Popover, PopoverContent, PopoverTrigger, StandardTooltip, Button } from "@/components/ui"
 import { IconButton } from "./IconButton"
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -45,6 +45,11 @@ export const ModeSelector = ({
 	const portalContainer = useRooPortal("roo-portal")
 	const { hasOpenedModeSelector, setHasOpenedModeSelector } = useExtensionState()
 	const { t } = useAppTranslation()
+
+	// Export/Import state
+	const [isExporting, setIsExporting] = React.useState<string | null>(null)
+	const [isImporting, setIsImporting] = React.useState(false)
+	const [showImportDialog, setShowImportDialog] = React.useState(false)
 
 	const trackModeSelectorOpened = React.useCallback(() => {
 		// Track telemetry every time the mode selector is opened
@@ -146,6 +151,56 @@ export const ModeSelector = ({
 		[trackModeSelectorOpened],
 	)
 
+	// Handle export mode
+	const handleExportMode = React.useCallback(
+		(slug: string) => {
+			if (!isExporting) {
+				setIsExporting(slug)
+				vscode.postMessage({
+					type: "exportMode",
+					slug: slug,
+				})
+			}
+		},
+		[isExporting],
+	)
+
+	// Handle import mode
+	const handleImportMode = React.useCallback(
+		(source: "global" | "project") => {
+			if (!isImporting) {
+				setIsImporting(true)
+				vscode.postMessage({
+					type: "importMode",
+					source: source,
+				})
+			}
+		},
+		[isImporting],
+	)
+
+	// Listen for export/import results
+	React.useEffect(() => {
+		const handler = (event: MessageEvent) => {
+			const message = event.data
+			if (message.type === "exportModeResult") {
+				setIsExporting(null)
+				if (!message.success) {
+					console.error("Failed to export mode:", message.error)
+				}
+			} else if (message.type === "importModeResult") {
+				setIsImporting(false)
+				setShowImportDialog(false)
+				if (!message.success && message.error !== "cancelled") {
+					console.error("Failed to import mode:", message.error)
+				}
+			}
+		}
+
+		window.addEventListener("message", handler)
+		return () => window.removeEventListener("message", handler)
+	}, [])
+
 	// Auto-focus search input when popover opens
 	React.useEffect(() => {
 		if (open && searchInputRef.current) {
@@ -181,123 +236,213 @@ export const ModeSelector = ({
 	)
 
 	return (
-		<Popover open={open} onOpenChange={onOpenChange} data-testid="mode-selector-root">
-			{title ? <StandardTooltip content={title}>{trigger}</StandardTooltip> : trigger}
+		<>
+			<Popover open={open} onOpenChange={onOpenChange} data-testid="mode-selector-root">
+				{title ? <StandardTooltip content={title}>{trigger}</StandardTooltip> : trigger}
 
-			<PopoverContent
-				align="start"
-				sideOffset={4}
-				container={portalContainer}
-				className="p-0 overflow-hidden min-w-80 max-w-9/10">
-				<div className="flex flex-col w-full">
-					{/* Show search bar only when there are more than SEARCH_THRESHOLD items, otherwise show info blurb */}
-					{showSearch ? (
-						<div className="relative p-2 border-b border-vscode-dropdown-border">
-							<input
-								aria-label="Search modes"
-								ref={searchInputRef}
-								value={searchValue}
-								onChange={(e) => setSearchValue(e.target.value)}
-								placeholder={t("chat:modeSelector.searchPlaceholder")}
-								className="w-full h-8 px-2 py-1 text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-0"
-								data-testid="mode-search-input"
-							/>
-							{searchValue.length > 0 && (
-								<div className="absolute right-4 top-0 bottom-0 flex items-center justify-center">
-									<X
-										className="text-vscode-input-foreground opacity-50 hover:opacity-100 size-4 p-0.5 cursor-pointer"
-										onClick={onClearSearch}
-									/>
+				<PopoverContent
+					align="start"
+					sideOffset={4}
+					container={portalContainer}
+					className="p-0 overflow-hidden min-w-80 max-w-9/10">
+					<div className="flex flex-col w-full">
+						{/* Show search bar only when there are more than SEARCH_THRESHOLD items, otherwise show info blurb */}
+						{showSearch ? (
+							<div className="relative p-2 border-b border-vscode-dropdown-border">
+								<input
+									aria-label="Search modes"
+									ref={searchInputRef}
+									value={searchValue}
+									onChange={(e) => setSearchValue(e.target.value)}
+									placeholder={t("chat:modeSelector.searchPlaceholder")}
+									className="w-full h-8 px-2 py-1 text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-0"
+									data-testid="mode-search-input"
+								/>
+								{searchValue.length > 0 && (
+									<div className="absolute right-4 top-0 bottom-0 flex items-center justify-center">
+										<X
+											className="text-vscode-input-foreground opacity-50 hover:opacity-100 size-4 p-0.5 cursor-pointer"
+											onClick={onClearSearch}
+										/>
+									</div>
+								)}
+							</div>
+						) : (
+							<div className="p-3 border-b border-vscode-dropdown-border">
+								<p className="m-0 text-xs text-vscode-descriptionForeground">{instructionText}</p>
+							</div>
+						)}
+
+						{/* Mode List */}
+						<div className="max-h-[300px] overflow-y-auto">
+							{filteredModes.length === 0 && searchValue ? (
+								<div className="py-2 px-3 text-sm text-vscode-foreground/70">
+									{t("chat:modeSelector.noResults")}
+								</div>
+							) : (
+								<div className="py-1">
+									{filteredModes.map((mode) => (
+										<div
+											key={mode.slug}
+											className={cn(
+												"px-3 py-1.5 text-sm flex items-center group",
+												"hover:bg-vscode-list-hoverBackground",
+												mode.slug === value
+													? "bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground"
+													: "",
+											)}
+											data-testid="mode-selector-item">
+											<div
+												className="flex-1 min-w-0 cursor-pointer"
+												onClick={() => handleSelect(mode.slug)}>
+												<div className="font-bold truncate">{mode.name}</div>
+												{mode.description && (
+													<div className="text-xs text-vscode-descriptionForeground truncate">
+														{mode.description}
+													</div>
+												)}
+											</div>
+											<div className="flex items-center gap-1 ml-2">
+												{mode.slug === value && <Check className="size-4 p-0.5" />}
+												<StandardTooltip content={t("prompts:exportMode.title")}>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="opacity-0 group-hover:opacity-100 transition-opacity h-5 w-5"
+														onClick={(e) => {
+															e.stopPropagation()
+															handleExportMode(mode.slug)
+														}}
+														disabled={isExporting === mode.slug}>
+														{isExporting === mode.slug ? (
+															<span className="codicon codicon-loading codicon-modifier-spin text-xs" />
+														) : (
+															<Upload className="h-3 w-3" />
+														)}
+													</Button>
+												</StandardTooltip>
+											</div>
+										</div>
+									))}
 								</div>
 							)}
 						</div>
-					) : (
-						<div className="p-3 border-b border-vscode-dropdown-border">
-							<p className="m-0 text-xs text-vscode-descriptionForeground">{instructionText}</p>
-						</div>
-					)}
 
-					{/* Mode List */}
-					<div className="max-h-[300px] overflow-y-auto">
-						{filteredModes.length === 0 && searchValue ? (
-							<div className="py-2 px-3 text-sm text-vscode-foreground/70">
-								{t("chat:modeSelector.noResults")}
-							</div>
-						) : (
-							<div className="py-1">
-								{filteredModes.map((mode) => (
-									<div
-										key={mode.slug}
-										onClick={() => handleSelect(mode.slug)}
-										className={cn(
-											"px-3 py-1.5 text-sm cursor-pointer flex items-center",
-											"hover:bg-vscode-list-hoverBackground",
-											mode.slug === value
-												? "bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground"
-												: "",
+						{/* Bottom bar with buttons on left and title on right */}
+						<div className="flex flex-row items-center justify-between px-2 py-2 border-t border-vscode-dropdown-border">
+							<div className="flex flex-row gap-1">
+								<StandardTooltip content={t("prompts:modes.importMode")}>
+									<Button
+										variant="ghost"
+										size="icon"
+										onClick={() => setShowImportDialog(true)}
+										disabled={isImporting}
+										className="h-6 w-6">
+										{isImporting ? (
+											<span className="codicon codicon-loading codicon-modifier-spin text-xs" />
+										) : (
+											<Download className="h-3.5 w-3.5" />
 										)}
-										data-testid="mode-selector-item">
-										<div className="flex-1 min-w-0">
-											<div className="font-bold truncate">{mode.name}</div>
-											{mode.description && (
-												<div className="text-xs text-vscode-descriptionForeground truncate">
-													{mode.description}
-												</div>
-											)}
-										</div>
-										{mode.slug === value && <Check className="ml-auto size-4 p-0.5" />}
-									</div>
-								))}
-							</div>
-						)}
-					</div>
-
-					{/* Bottom bar with buttons on left and title on right */}
-					<div className="flex flex-row items-center justify-between px-2 py-2 border-t border-vscode-dropdown-border">
-						<div className="flex flex-row gap-1">
-							<IconButton
-								iconClass="codicon-extensions"
-								title={t("chat:modeSelector.marketplace")}
-								onClick={() => {
-									window.postMessage(
-										{
-											type: "action",
-											action: "marketplaceButtonClicked",
-											values: { marketplaceTab: "mode" },
-										},
-										"*",
-									)
-									setOpen(false)
-								}}
-							/>
-							<IconButton
-								iconClass="codicon-settings-gear"
-								title={t("chat:modeSelector.settings")}
-								onClick={() => {
-									vscode.postMessage({
-										type: "switchTab",
-										tab: "modes",
-									})
-									setOpen(false)
-								}}
-							/>
-						</div>
-
-						{/* Info icon and title on the right - only show info icon when search bar is visible */}
-						<div className="flex items-center gap-1 pr-1">
-							{showSearch && (
-								<StandardTooltip content={instructionText}>
-									<span className="codicon codicon-info text-xs text-vscode-descriptionForeground opacity-70 hover:opacity-100 cursor-help" />
+									</Button>
 								</StandardTooltip>
-							)}
-							<h4 className="m-0 font-medium text-sm text-vscode-descriptionForeground">
-								{t("chat:modeSelector.title")}
-							</h4>
+								<IconButton
+									iconClass="codicon-extensions"
+									title={t("chat:modeSelector.marketplace")}
+									onClick={() => {
+										window.postMessage(
+											{
+												type: "action",
+												action: "marketplaceButtonClicked",
+												values: { marketplaceTab: "mode" },
+											},
+											"*",
+										)
+										setOpen(false)
+									}}
+								/>
+								<IconButton
+									iconClass="codicon-settings-gear"
+									title={t("chat:modeSelector.settings")}
+									onClick={() => {
+										vscode.postMessage({
+											type: "switchTab",
+											tab: "modes",
+										})
+										setOpen(false)
+									}}
+								/>
+							</div>
+
+							{/* Info icon and title on the right - only show info icon when search bar is visible */}
+							<div className="flex items-center gap-1 pr-1">
+								{showSearch && (
+									<StandardTooltip content={instructionText}>
+										<span className="codicon codicon-info text-xs text-vscode-descriptionForeground opacity-70 hover:opacity-100 cursor-help" />
+									</StandardTooltip>
+								)}
+								<h4 className="m-0 font-medium text-sm text-vscode-descriptionForeground">
+									{t("chat:modeSelector.title")}
+								</h4>
+							</div>
+						</div>
+					</div>
+				</PopoverContent>
+			</Popover>
+
+			{/* Import Mode Dialog */}
+			{showImportDialog && (
+				<div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[1000]">
+					<div className="bg-vscode-editor-background border border-vscode-editor-lineHighlightBorder rounded-lg shadow-lg p-6 max-w-md w-full">
+						<h3 className="text-lg font-semibold mb-4">{t("prompts:modes.importMode")}</h3>
+						<p className="text-sm text-vscode-descriptionForeground mb-4">
+							{t("prompts:importMode.selectLevel")}
+						</p>
+						<div className="space-y-3 mb-6">
+							<label className="flex items-start gap-2 cursor-pointer">
+								<input
+									type="radio"
+									name="importLevel"
+									value="project"
+									className="mt-1"
+									defaultChecked
+								/>
+								<div>
+									<div className="font-medium">{t("prompts:importMode.project.label")}</div>
+									<div className="text-xs text-vscode-descriptionForeground">
+										{t("prompts:importMode.project.description")}
+									</div>
+								</div>
+							</label>
+							<label className="flex items-start gap-2 cursor-pointer">
+								<input type="radio" name="importLevel" value="global" className="mt-1" />
+								<div>
+									<div className="font-medium">{t("prompts:importMode.global.label")}</div>
+									<div className="text-xs text-vscode-descriptionForeground">
+										{t("prompts:importMode.global.description")}
+									</div>
+								</div>
+							</label>
+						</div>
+						<div className="flex justify-end gap-2">
+							<Button variant="secondary" onClick={() => setShowImportDialog(false)}>
+								{t("prompts:createModeDialog.buttons.cancel")}
+							</Button>
+							<Button
+								variant="default"
+								onClick={() => {
+									const selectedLevel = (
+										document.querySelector('input[name="importLevel"]:checked') as HTMLInputElement
+									)?.value as "global" | "project"
+									handleImportMode(selectedLevel || "project")
+								}}
+								disabled={isImporting}>
+								{isImporting ? t("prompts:importMode.importing") : t("prompts:importMode.import")}
+							</Button>
 						</div>
 					</div>
 				</div>
-			</PopoverContent>
-		</Popover>
+			)}
+		</>
 	)
 }
 
