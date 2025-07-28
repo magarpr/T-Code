@@ -1,9 +1,10 @@
 import React from "react"
-import { render, screen, fireEvent } from "@/utils/test-utils"
-import { describe, test, expect, vi } from "vitest"
+import { render, screen, fireEvent, waitFor } from "@/utils/test-utils"
+import { describe, test, expect, vi, beforeEach } from "vitest"
 import ModeSelector from "../ModeSelector"
 import { Mode } from "@roo/modes"
 import { ModeConfig } from "@roo-code/types"
+import { vscode } from "@/utils/vscode"
 
 // Mock the dependencies
 vi.mock("@/utils/vscode", () => ({
@@ -11,6 +12,9 @@ vi.mock("@/utils/vscode", () => ({
 		postMessage: vi.fn(),
 	},
 }))
+
+// Spy on window.postMessage
+const windowPostMessageSpy = vi.spyOn(window, "postMessage")
 
 vi.mock("@/context/ExtensionStateContext", () => ({
 	useExtensionState: () => ({
@@ -47,6 +51,12 @@ vi.mock("@roo/modes", async () => {
 })
 
 describe("ModeSelector", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		// Reset mock modes
+		mockModes = []
+	})
+
 	test("shows custom description from customModePrompts", () => {
 		const customModePrompts = {
 			code: {
@@ -198,5 +208,260 @@ describe("ModeSelector", () => {
 		// Info icon should be visible
 		const infoIcon = document.querySelector(".codicon-info")
 		expect(infoIcon).toBeInTheDocument()
+	})
+
+	describe("Export functionality", () => {
+		test("export button triggers export message", () => {
+			// Set up mock to return a few modes
+			mockModes = Array.from({ length: 3 }, (_, i) => ({
+				slug: `mode-${i}`,
+				name: `Mode ${i}`,
+				description: `Description for mode ${i}`,
+				roleDefinition: "Role definition",
+				groups: ["read", "edit"],
+			}))
+
+			render(<ModeSelector value={"mode-0" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Click to open the popover
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+
+			// Find and click the export button
+			const exportButton = screen.getByLabelText("prompts:exportMode.title")
+			fireEvent.click(exportButton)
+
+			// Should have sent export message
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "exportMode",
+				slug: "mode-0",
+			})
+		})
+
+		test("export error is displayed when export fails", async () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Simulate export error message
+			const errorEvent = new MessageEvent("message", {
+				data: {
+					type: "exportModeResult",
+					success: false,
+					error: "Failed to export mode",
+				},
+			})
+			window.dispatchEvent(errorEvent)
+
+			// Error notification should be displayed
+			await waitFor(() => {
+				expect(screen.getByText("prompts:exportMode.errorTitle")).toBeInTheDocument()
+				expect(screen.getByText("Failed to export mode")).toBeInTheDocument()
+			})
+		})
+	})
+
+	describe("Import functionality", () => {
+		test("import button opens import dialog", () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Click to open the popover
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+
+			// Find and click the import button
+			const importButton = screen.getByLabelText("prompts:modes.importMode")
+			fireEvent.click(importButton)
+
+			// Import dialog should be displayed
+			expect(screen.getByText("prompts:modes.importMode")).toBeInTheDocument()
+			expect(screen.getByText("prompts:importMode.selectLevel")).toBeInTheDocument()
+		})
+
+		test("import dialog allows selection between project and global", () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Open popover and click import
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+			const importButton = screen.getByLabelText("prompts:modes.importMode")
+			fireEvent.click(importButton)
+
+			// Check radio buttons are present
+			const projectRadio = screen.getByLabelText(/prompts:importMode.project.label/)
+			const globalRadio = screen.getByLabelText(/prompts:importMode.global.label/)
+
+			expect(projectRadio).toBeInTheDocument()
+			expect(globalRadio).toBeInTheDocument()
+			expect(projectRadio).toBeChecked()
+			expect(globalRadio).not.toBeChecked()
+		})
+
+		test("import dialog cancel button closes dialog", () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Open import dialog
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+			fireEvent.click(screen.getByLabelText("prompts:modes.importMode"))
+
+			// Click cancel
+			const cancelButton = screen.getByText("prompts:createModeDialog.buttons.cancel")
+			fireEvent.click(cancelButton)
+
+			// Dialog should be closed
+			expect(screen.queryByText("prompts:importMode.selectLevel")).not.toBeInTheDocument()
+		})
+
+		test("import dialog import button triggers import message", () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Open import dialog
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+			fireEvent.click(screen.getByLabelText("prompts:modes.importMode"))
+
+			// Select global option
+			const globalRadio = screen.getByLabelText(/prompts:importMode.global.label/)
+			fireEvent.click(globalRadio)
+
+			// Click import
+			const importButton = screen.getByText("prompts:importMode.import")
+			fireEvent.click(importButton)
+
+			// Should have sent import message
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "importMode",
+				source: "global",
+			})
+		})
+
+		test("import error is displayed when import fails", async () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Simulate import error message
+			const errorEvent = new MessageEvent("message", {
+				data: {
+					type: "importModeResult",
+					success: false,
+					error: "Failed to import mode",
+				},
+			})
+			window.dispatchEvent(errorEvent)
+
+			// Error notification should be displayed
+			await waitFor(() => {
+				expect(screen.getByText("prompts:importMode.errorTitle")).toBeInTheDocument()
+				expect(screen.getByText("Failed to import mode")).toBeInTheDocument()
+			})
+		})
+
+		test("import dialog closes on successful import", async () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Open import dialog
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+			fireEvent.click(screen.getByLabelText("prompts:modes.importMode"))
+
+			// Dialog should be open
+			expect(screen.getByText("prompts:importMode.selectLevel")).toBeInTheDocument()
+
+			// Simulate successful import message
+			const successEvent = new MessageEvent("message", {
+				data: {
+					type: "importModeResult",
+					success: true,
+				},
+			})
+			window.dispatchEvent(successEvent)
+
+			// Dialog should be closed
+			await waitFor(() => {
+				expect(screen.queryByText("prompts:importMode.selectLevel")).not.toBeInTheDocument()
+			})
+		})
+
+		test("cancelled import does not show error", async () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Simulate cancelled import message
+			const cancelEvent = new MessageEvent("message", {
+				data: {
+					type: "importModeResult",
+					success: false,
+					error: "cancelled",
+				},
+			})
+			window.dispatchEvent(cancelEvent)
+
+			// No error notification should be displayed
+			await waitFor(() => {
+				expect(screen.queryByText("prompts:importMode.errorTitle")).not.toBeInTheDocument()
+			})
+		})
+	})
+
+	describe("Bottom bar buttons", () => {
+		test("marketplace button sends correct message", () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Click to open the popover
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+
+			// Find and click the marketplace button
+			const marketplaceButton = screen.getByLabelText("chat:modeSelector.marketplace")
+			fireEvent.click(marketplaceButton)
+
+			// Should have sent marketplace message
+			expect(windowPostMessageSpy).toHaveBeenCalledWith(
+				{
+					type: "action",
+					action: "marketplaceButtonClicked",
+					values: { marketplaceTab: "mode" },
+				},
+				"*",
+			)
+		})
+
+		test("settings button sends correct message", () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Click to open the popover
+			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
+
+			// Find and click the settings button
+			const settingsButton = screen.getByLabelText("chat:modeSelector.settings")
+			fireEvent.click(settingsButton)
+
+			// Should have sent switch tab message
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "switchTab",
+				tab: "modes",
+			})
+		})
+	})
+
+	describe("Error notification behavior", () => {
+		test("error notification can be closed manually", async () => {
+			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
+
+			// Simulate export error
+			const errorEvent = new MessageEvent("message", {
+				data: {
+					type: "exportModeResult",
+					success: false,
+					error: "Test error",
+				},
+			})
+			window.dispatchEvent(errorEvent)
+
+			// Error should be displayed
+			await waitFor(() => {
+				expect(screen.getByText("Test error")).toBeInTheDocument()
+			})
+
+			// Click close button - find the button with X icon inside the error notification
+			const errorNotification = screen.getByText("Test error").closest("div")?.parentElement?.parentElement
+			const closeButton = errorNotification?.querySelector("button:last-child")
+			if (closeButton) {
+				fireEvent.click(closeButton)
+			}
+
+			// Error should be gone
+			expect(screen.queryByText("Test error")).not.toBeInTheDocument()
+		})
 	})
 })
