@@ -340,6 +340,140 @@ export class Task extends EventEmitter<ClineEvents> {
 		await this.saveApiConversationHistory()
 	}
 
+	public async deduplicateReadFileHistory(): Promise<void> {
+		// Check if the experimental feature is enabled
+		const state = await this.providerRef.deref()?.getState()
+		if (!state?.experiments || !experiments.isEnabled(state.experiments, EXPERIMENT_IDS.READ_FILE_DEDUPLICATION)) {
+			return
+		}
+
+		// Track files we've seen and their most recent location
+		const fileLastSeen = new Map<string, { messageIndex: number; blockIndex: number }>()
+		const blocksToRemove = new Map<number, Set<number>>() // messageIndex -> Set of blockIndices to remove
+
+		// Iterate through messages in reverse order (newest first)
+		for (let i = this.apiConversationHistory.length - 1; i >= 0; i--) {
+			const message = this.apiConversationHistory[i]
+
+			// Only process user messages
+			if (message.role !== "user") continue
+
+			const content = Array.isArray(message.content) ? message.content : [{ type: "text", text: message.content }]
+
+			// Track blocks to remove within this message
+			const blockIndicesToRemove = new Set<number>()
+
+			// Iterate through blocks in reverse order within the message
+			for (let j = content.length - 1; j >= 0; j--) {
+				const block = content[j]
+				if (block.type !== "text") continue
+
+				const text = block.text
+
+				// Check if this is a read_file result
+				if (!text.startsWith("[read_file") || !text.includes("Result:")) continue
+
+				// Extract file paths from the result
+				const filePaths = this.extractFilePathsFromReadResult(text)
+
+				// For each file path, check if we've seen it before
+				for (const filePath of filePaths) {
+					const lastSeen = fileLastSeen.get(filePath)
+					if (lastSeen) {
+						// We've seen this file before
+						if (lastSeen.messageIndex === i) {
+							// It's in the same message, mark the older block for removal
+							blockIndicesToRemove.add(j)
+						} else {
+							// It's in a different message, mark this specific block for removal
+							if (!blocksToRemove.has(i)) {
+								blocksToRemove.set(i, new Set())
+							}
+							blocksToRemove.get(i)!.add(j)
+						}
+					} else {
+						// First time seeing this file (going backwards), record it
+						fileLastSeen.set(filePath, { messageIndex: i, blockIndex: j })
+					}
+				}
+			}
+
+			// If we have blocks to remove from this message, add them to the map
+			if (blockIndicesToRemove.size > 0) {
+				if (!blocksToRemove.has(i)) {
+					blocksToRemove.set(i, new Set())
+				}
+				blockIndicesToRemove.forEach((idx) => blocksToRemove.get(i)!.add(idx))
+			}
+		}
+
+		// Apply the removals
+		if (blocksToRemove.size > 0) {
+			let modified = false
+
+			// Create a new conversation history with duplicates removed
+			this.apiConversationHistory = this.apiConversationHistory
+				.map((message, messageIndex) => {
+					const blocksToRemoveForMessage = blocksToRemove.get(messageIndex)
+					if (!blocksToRemoveForMessage || blocksToRemoveForMessage.size === 0) {
+						return message
+					}
+
+					// This message has blocks to remove
+					const content = Array.isArray(message.content)
+						? message.content
+						: [{ type: "text", text: message.content }]
+
+					// Check if this is a string content (legacy format)
+					if (!Array.isArray(message.content)) {
+						// For string content, we can only remove the entire message if it's a duplicate
+						if (blocksToRemoveForMessage.has(0)) {
+							modified = true
+							return null
+						}
+						return message
+					}
+
+					const newContent = content.filter((_, blockIndex) => !blocksToRemoveForMessage.has(blockIndex))
+
+					// If all content was removed, filter out this message entirely
+					if (newContent.length === 0) {
+						modified = true
+						return null
+					}
+
+					modified = true
+					return { ...message, content: newContent }
+				})
+				.filter((message) => message !== null) as ApiMessage[]
+
+			if (modified) {
+				await this.saveApiConversationHistory()
+			}
+		}
+	}
+
+	private extractFilePathsFromReadResult(text: string): string[] {
+		const paths: string[] = []
+
+		// Match file paths in the XML structure
+		// Handles both single file and multi-file formats
+		const filePathRegex = /<file>\s*<path>([^<]+)<\/path>/g
+		let match
+
+		while ((match = filePathRegex.exec(text)) !== null) {
+			paths.push(match[1].trim())
+		}
+
+		// Also handle legacy format where path might be in the header
+		const headerMatch = text.match(/\[read_file for '([^']+)'\]/)
+		if (headerMatch && paths.length === 0) {
+			paths.push(headerMatch[1])
+		}
+
+		return paths
+	}
+
 	private async saveApiConversationHistory() {
 		try {
 			await saveApiMessages({
@@ -1253,6 +1387,9 @@ export class Task extends EventEmitter<ClineEvents> {
 
 		await this.addToApiConversationHistory({ role: "user", content: finalUserContent })
 		TelemetryService.instance.captureConversationMessage(this.taskId, "user")
+
+		// Deduplicate read_file history after adding new content
+		await this.deduplicateReadFileHistory()
 
 		// Since we sent off a placeholder api_req_started message to update the
 		// webview while waiting to actually start the API request (to load

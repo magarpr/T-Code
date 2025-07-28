@@ -1493,5 +1493,523 @@ describe("Cline", () => {
 				expect(noModelTask.apiConfiguration.apiProvider).toBe("openai")
 			})
 		})
+
+		describe("deduplicateReadFileHistory", () => {
+			let mockProvider: any
+			let mockApiConfig: any
+
+			beforeEach(() => {
+				vi.clearAllMocks()
+
+				mockApiConfig = {
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+				}
+
+				mockProvider = {
+					context: {
+						globalStorageUri: { fsPath: "/test/storage" },
+					},
+					getState: vi.fn(),
+					postStateToWebview: vi.fn().mockResolvedValue(undefined),
+					postMessageToWebview: vi.fn().mockResolvedValue(undefined),
+					updateTaskHistory: vi.fn().mockResolvedValue(undefined),
+				}
+			})
+
+			it("should not deduplicate when experiment is disabled", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: false,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add duplicate read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content1</content></file></files>",
+							},
+						],
+						ts: Date.now(),
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: Date.now(),
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should not remove any messages when experiment is disabled
+				expect(task.apiConversationHistory.length).toBe(2)
+			})
+
+			it("should deduplicate single file reads keeping the most recent", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add duplicate read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: Date.now() - 10000,
+					},
+					{
+						role: "assistant",
+						content: [{ type: "text", text: "I see the file content." }],
+						ts: Date.now() - 9000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>new content</content></file></files>",
+							},
+						],
+						ts: Date.now() - 5000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should remove the older duplicate
+				expect(task.apiConversationHistory.length).toBe(2)
+				expect(task.apiConversationHistory[0].role).toBe("assistant")
+				const content = task.apiConversationHistory[1].content
+				if (Array.isArray(content)) {
+					expect((content[0] as any).text).toContain("new content")
+				}
+			})
+
+			it("should handle multi-file reads correctly", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add multi-file read results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'file1.ts', 'file2.ts'] Result:\n<files><file><path>file1.ts</path><content>content1</content></file><file><path>file2.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: Date.now() - 10000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'file1.ts'] Result:\n<files><file><path>file1.ts</path><content>new content1</content></file></files>",
+							},
+						],
+						ts: Date.now() - 5000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should remove the older multi-file read that contains file1.ts
+				expect(task.apiConversationHistory.length).toBe(1)
+				const content = task.apiConversationHistory[0].content
+				if (Array.isArray(content)) {
+					expect((content[0] as any).text).toContain("new content1")
+				}
+			})
+
+			it("should handle legacy read_file format", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add legacy format read_file results
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'legacy.ts'] Result:\nFile content without XML wrapper",
+							},
+						],
+						ts: Date.now() - 10000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'legacy.ts'] Result:\n<files><file><path>legacy.ts</path><content>new content</content></file></files>",
+							},
+						],
+						ts: Date.now() - 5000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should remove the older legacy format
+				expect(task.apiConversationHistory.length).toBe(1)
+				const content = task.apiConversationHistory[0].content
+				if (Array.isArray(content)) {
+					expect((content[0] as any).text).toContain("new content")
+				}
+			})
+
+			it("should preserve non-read_file messages", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add mixed messages
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [{ type: "text", text: "Regular user message" }],
+						ts: Date.now() - 10000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path></file></files>",
+							},
+							{ type: "image", source: { type: "base64", media_type: "image/png", data: "base64data" } },
+						],
+						ts: Date.now() - 9000,
+					},
+					{
+						role: "assistant",
+						content: [{ type: "text", text: "Assistant response" }],
+						ts: Date.now() - 8000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path></file></files>",
+							},
+						],
+						ts: Date.now() - 7000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should preserve all messages but remove only the older duplicate read_file block
+				expect(task.apiConversationHistory.length).toBe(4)
+
+				// First message should be unchanged
+				const content0 = task.apiConversationHistory[0].content
+				if (Array.isArray(content0)) {
+					expect((content0[0] as any).text).toBe("Regular user message")
+				}
+
+				// Second message should only have the image block (read_file removed)
+				const content1 = task.apiConversationHistory[1].content
+				if (Array.isArray(content1)) {
+					expect(content1.length).toBe(1)
+					expect((content1[0] as any).type).toBe("image")
+				}
+
+				// Third message (assistant) should be unchanged
+				expect(task.apiConversationHistory[2].role).toBe("assistant")
+
+				// Fourth message should have the most recent read_file
+				const content3 = task.apiConversationHistory[3].content
+				if (Array.isArray(content3)) {
+					expect((content3[0] as any).text).toContain("[read_file for 'test.ts']")
+				}
+			})
+
+			it("should handle multiple different files without deduplication", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add different file reads
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'file1.ts'] Result:\n<files><file><path>file1.ts</path><content>content1</content></file></files>",
+							},
+						],
+						ts: Date.now() - 10000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'file2.ts'] Result:\n<files><file><path>file2.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: Date.now() - 5000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'file3.ts'] Result:\n<files><file><path>file3.ts</path><content>content3</content></file></files>",
+							},
+						],
+						ts: Date.now() - 1000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should not remove any messages as they are all different files
+				expect(task.apiConversationHistory.length).toBe(3)
+			})
+
+			it("should handle empty conversation history", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				task.apiConversationHistory = []
+
+				await task.deduplicateReadFileHistory()
+
+				// Should not throw and history should remain empty
+				expect(task.apiConversationHistory.length).toBe(0)
+			})
+
+			it("should handle messages with string content", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add messages with string content (legacy format)
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content:
+							"[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old</content></file></files>",
+						ts: Date.now() - 10000,
+					},
+					{
+						role: "user",
+						content:
+							"[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>new</content></file></files>",
+						ts: Date.now() - 5000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should handle string content and remove the older duplicate
+				expect(task.apiConversationHistory.length).toBe(1)
+				expect(task.apiConversationHistory[0].content).toContain("new")
+			})
+
+			it("should handle multiple read_file results in the same message", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add a message with multiple read_file results for the same file
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content1</content></file></files>",
+							},
+							{
+								type: "text",
+								text: "Some other content",
+							},
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content2</content></file></files>",
+							},
+							{
+								type: "text",
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content3</content></file></files>",
+							},
+						],
+						ts: Date.now(),
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should keep only the most recent read (last one) and the non-read_file content
+				expect(task.apiConversationHistory.length).toBe(1)
+				const content = task.apiConversationHistory[0].content
+				if (Array.isArray(content)) {
+					expect(content.length).toBe(2) // "Some other content" and the last read_file
+					expect((content[0] as any).text).toBe("Some other content")
+					expect((content[1] as any).text).toContain("content3")
+				}
+			})
+
+			it("should handle duplicates across different messages and within same message", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+				})
+
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+
+				// Add messages with duplicates both across messages and within a message
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'file1.ts'] Result:\n<files><file><path>file1.ts</path><content>old1</content></file></files>",
+							},
+						],
+						ts: Date.now() - 10000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text",
+								text: "[read_file for 'file1.ts'] Result:\n<files><file><path>file1.ts</path><content>old2</content></file></files>",
+							},
+							{
+								type: "text",
+								text: "[read_file for 'file2.ts'] Result:\n<files><file><path>file2.ts</path><content>content2</content></file></files>",
+							},
+							{
+								type: "text",
+								text: "[read_file for 'file1.ts'] Result:\n<files><file><path>file1.ts</path><content>newest</content></file></files>",
+							},
+						],
+						ts: Date.now() - 5000,
+					},
+				]
+
+				await task.deduplicateReadFileHistory()
+
+				// Should remove the first message entirely and keep only the last read of file1.ts in the second message
+				expect(task.apiConversationHistory.length).toBe(1)
+				const content = task.apiConversationHistory[0].content
+				if (Array.isArray(content)) {
+					expect(content.length).toBe(2) // file2.ts and the newest file1.ts
+					expect((content[0] as any).text).toContain("file2.ts")
+					expect((content[1] as any).text).toContain("newest")
+				}
+			})
+		})
 	})
 })
