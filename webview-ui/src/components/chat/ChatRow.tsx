@@ -115,7 +115,8 @@ export const ChatRowContent = ({
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode } = useExtensionState()
-	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
+	// Initialize reasoning block as expanded if it's the last message and is a reasoning message
+	const [reasoningCollapsed, setReasoningCollapsed] = useState(!(isLast && message.say === "reasoning"))
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
 	const [isEditing, setIsEditing] = useState(false)
@@ -123,6 +124,13 @@ export const ChatRowContent = ({
 	const [editMode, setEditMode] = useState<Mode>(mode || "code")
 	const [editImages, setEditImages] = useState<string[]>([])
 	const { copyWithFeedback } = useCopyToClipboard()
+
+	// Auto-collapse reasoning blocks when they're no longer the last message
+	useEffect(() => {
+		if (message.say === "reasoning" && !isLast) {
+			setReasoningCollapsed(true)
+		}
+	}, [isLast, message.say])
 
 	// Handle message events for image selection during edit mode
 	useEffect(() => {
