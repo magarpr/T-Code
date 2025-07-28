@@ -31,7 +31,8 @@
 		"prompts": "Prompts",
 		"experimental": "Experimental",
 		"language": "Language",
-		"about": "About Roo Code"
+		"about": "About Roo Code",
+		"ui": "UI"
 	},
 	"prompts": {
 		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Roo provide better assistance for common development tasks."
@@ -653,6 +654,38 @@
 			"name": "Show enhance prompt button",
 			"description": "When enabled, displays the enhance prompt button in the chat input area. This button allows you to improve your prompts using AI assistance."
 		}
+	},
+	"ui": {
+		"description": "Customize the user interface elements and visibility settings",
+		"showEnhancePromptButton": {
+			"label": "Show enhance prompt button",
+			"description": "Display the wand icon button in the chat input area that helps improve your prompts using AI assistance"
+		},
+		"showCodebaseIndexing": {
+			"label": "Show codebase indexing status",
+			"description": "Display the codebase indexing status indicator in the chat interface"
+		},
+		"showAddImagesToPrompt": {
+			"label": "Show add images button",
+			"description": "Display the image button that allows adding images to your prompts"
+		},
+		"showApiConfiguration": {
+			"label": "Show API configuration selector",
+			"description": "Display the dropdown for selecting different API configurations"
+		},
+		"showAutoApprove": {
+			"label": "Show auto-approve toggle",
+			"description": "Display the auto-approve toggle in the chat interface"
+		},
+		"showHelperText": {
+			"label": "Show helper text",
+			"description": "Display the helper text '(@ to add context, / to switch modes...)' below the chat input"
+		},
+		"showSendButton": {
+			"label": "Show send button",
+			"description": "Display the send button in the chat input area"
+		},
+		"comingSoon": "Additional UI customization options are coming soon. The settings above are placeholders for future functionality."
 	},
 	"promptCaching": {
 		"label": "Disable prompt caching",

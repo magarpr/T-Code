@@ -23,6 +23,7 @@ import {
 	Info,
 	MessageSquare,
 	LucideIcon,
+	Palette,
 } from "lucide-react"
 
 import type { ProviderSettings, ExperimentId } from "@roo-code/types"
@@ -63,6 +64,7 @@ import { TerminalSettings } from "./TerminalSettings"
 import { ExperimentalSettings } from "./ExperimentalSettings"
 import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
+import { UISettings } from "./UISettings"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
 import { cn } from "@/lib/utils"
@@ -87,6 +89,7 @@ const sectionNames = [
 	"contextManagement",
 	"terminal",
 	"prompts",
+	"ui",
 	"experimental",
 	"language",
 	"about",
@@ -414,6 +417,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
 			{ id: "prompts", icon: MessageSquare },
+			{ id: "ui", icon: Palette },
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
 			{ id: "about", icon: Info },
@@ -700,6 +704,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							customSupportPrompts={customSupportPrompts || {}}
 							setCustomSupportPrompts={setCustomSupportPromptsField}
 						/>
+					)}
+
+					{/* UI Section */}
+					{activeTab === "ui" && (
+						<UISettings setExperimentEnabled={setExperimentEnabled} experiments={experiments} />
 					)}
 
 					{/* Experimental Section */}

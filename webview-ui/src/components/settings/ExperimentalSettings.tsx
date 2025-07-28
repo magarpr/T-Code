@@ -37,7 +37,7 @@ export const ExperimentalSettings = ({
 
 			<Section>
 				{Object.entries(experimentConfigsMap)
-					.filter(([key]) => key in EXPERIMENT_IDS)
+					.filter(([key]) => key in EXPERIMENT_IDS && key !== "SHOW_ENHANCE_PROMPT_BUTTON")
 					.map((config) => {
 						const experimentKey = config[0] as keyof typeof EXPERIMENT_IDS
 						const experimentId = EXPERIMENT_IDS[experimentKey]
