@@ -24,6 +24,7 @@ import { askFollowupQuestionTool } from "../tools/askFollowupQuestionTool"
 import { switchModeTool } from "../tools/switchModeTool"
 import { attemptCompletionTool } from "../tools/attemptCompletionTool"
 import { newTaskTool } from "../tools/newTaskTool"
+import { executeWorkflowTool } from "../tools/executeWorkflowTool"
 
 import { checkpointSave } from "../checkpoints"
 import { updateTodoListTool } from "../tools/updateTodoListTool"
@@ -214,6 +215,8 @@ export async function presentAssistantMessage(cline: Task) {
 						const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
+					case "execute_workflow":
+						return `[${block.name} for '${block.params.path || "inline workflow"}']`
 				}
 			}
 
@@ -521,6 +524,9 @@ export async function presentAssistantMessage(cline: Task) {
 						toolDescription,
 						askFinishSubTaskApproval,
 					)
+					break
+				case "execute_workflow":
+					await executeWorkflowTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 			}
 

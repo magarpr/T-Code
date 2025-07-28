@@ -1,0 +1,155 @@
+name: "Web App Development Workflow"
+description: "A comprehensive workflow for developing a web application with frontend and backend components"
+version: "1.0.0"
+
+# Define all participating agents
+agents:
+  - id: project_manager
+    mode: architect
+    description: "Analyzes requirements and creates project plan"
+  
+  - id: dev_team_lead
+    mode: orchestrator
+    description: "Coordinates development tasks and makes architectural decisions"
+  
+  - id: frontend_dev
+    mode: code
+    description: "Implements frontend features using React/Vue/Angular"
+  
+  - id: backend_dev
+    mode: code
+    description: "Implements backend API and business logic"
+  
+  - id: code_reviewer
+    mode: pr-reviewer
+    description: "Reviews code quality, patterns, and standards"
+  
+  - id: tester
+    mode: test
+    description: "Writes and executes tests"
+  
+  - id: debugger
+    mode: debug
+    description: "Investigates and fixes issues"
+
+# Define the workflow stages
+workflow:
+  # Initial planning phase
+  - name: requirement_analysis
+    agent: project_manager
+    description: "Analyze project requirements and create initial plan"
+    on_success: development_planning
+    strategy: fixed
+    timeout: 1800  # 30 minutes
+
+  # Development planning with dynamic orchestration
+  - name: development_planning
+    agent: dev_team_lead
+    description: "Break down tasks and decide development approach"
+    next_steps: 
+      - frontend_development
+      - backend_development
+      - database_design
+    strategy: orchestrate  # AI decides which tasks to execute
+
+  # Parallel development tasks
+  - name: frontend_development
+    agent: frontend_dev
+    description: "Implement user interface components"
+    on_success: frontend_review
+    on_failure: frontend_debugging
+    retry_count: 2
+    parallel: true  # Can run in parallel with backend
+
+  - name: backend_development
+    agent: backend_dev
+    description: "Implement API endpoints and business logic"
+    on_success: backend_review
+    on_failure: backend_debugging
+    retry_count: 2
+    parallel: true
+
+  - name: database_design
+    agent: backend_dev
+    description: "Design and implement database schema"
+    on_success: integration_planning
+    parallel: true
+
+  # Code review stages
+  - name: frontend_review
+    agent: code_reviewer
+    description: "Review frontend code for quality and standards"
+    on_success: frontend_testing
+    on_failure: frontend_development  # Send back for fixes
+
+  - name: backend_review
+    agent: code_reviewer
+    description: "Review backend code for quality and standards"
+    on_success: backend_testing
+    on_failure: backend_development
+
+  # Testing stages
+  - name: frontend_testing
+    agent: tester
+    description: "Write and run frontend unit and integration tests"
+    on_success: integration_planning
+    on_failure: frontend_debugging
+
+  - name: backend_testing
+    agent: tester
+    description: "Write and run backend unit and API tests"
+    on_success: integration_planning
+    on_failure: backend_debugging
+
+  # Debugging stages (only executed on failure)
+  - name: frontend_debugging
+    agent: debugger
+    description: "Debug and fix frontend issues"
+    on_success: frontend_review
+    on_failure: escalate_to_lead
+
+  - name: backend_debugging
+    agent: debugger
+    description: "Debug and fix backend issues"
+    on_success: backend_review
+    on_failure: escalate_to_lead
+
+  # Integration and deployment planning
+  - name: integration_planning
+    agent: dev_team_lead
+    description: "Plan integration of all components"
+    next_steps:
+      - integration_testing
+      - deployment_preparation
+    strategy: orchestrate
+
+  - name: integration_testing
+    agent: tester
+    description: "Test integrated system end-to-end"
+    on_success: deployment_preparation
+    on_failure: integration_debugging
+
+  - name: integration_debugging
+    agent: debugger
+    description: "Fix integration issues"
+    on_success: integration_testing
+    retry_count: 3
+
+  - name: deployment_preparation
+    agent: dev_team_lead
+    description: "Prepare for deployment"
+    on_success: end
+
+  # Escalation path
+  - name: escalate_to_lead
+    agent: dev_team_lead
+    description: "Handle complex issues that couldn't be resolved"
+    next_steps:
+      - frontend_development
+      - backend_development
+    strategy: orchestrate
+
+# Global workflow settings
+max_parallel_stages: 3
+default_timeout: 3600  # 1 hour default
+enable_checkpoints: true

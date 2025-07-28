@@ -97,6 +97,37 @@ Roo Code comes with powerful [tools](https://docs.roocode.com/basic-usage/how-to
 
 MCP extends Roo Code's capabilities by allowing you to add unlimited custom tools. Integrate with external APIs, connect to databases, or create specialized development tools - MCP provides the framework to expand Roo Code's functionality to meet your specific needs.
 
+### Workflow Engine
+
+Roo Code includes a powerful [workflow engine](src/core/workflow/README.md) that enables:
+
+- **Hierarchical Orchestration:** Multi-level AI agent management where high-level orchestrators delegate to specialized agents
+- **Hybrid Workflows:** Combine deterministic rules with dynamic AI-driven decisions
+- **YAML Configuration:** Define complex workflows using simple YAML files
+- **State Management:** Persistent workflow state tracking with automatic recovery
+- **Parallel Execution:** Run multiple stages concurrently for faster completion
+
+Example workflow:
+
+```yaml
+name: "Web App Development"
+agents:
+    architect:
+        mode: architect
+        description: "Technical architect for system design"
+    developer:
+        mode: code
+        description: "Full-stack developer"
+workflow:
+    - name: design
+      agent: architect
+      task: "Design the application architecture"
+      on_success: implement
+    - name: implement
+      agent: developer
+      task: "Implement the designed architecture"
+```
+
 ### Customization
 
 Make Roo Code work your way with:

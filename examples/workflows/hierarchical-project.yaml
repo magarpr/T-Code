@@ -1,0 +1,273 @@
+name: "Hierarchical E-commerce Platform Development"
+description: "Multi-level orchestration workflow for building a complete e-commerce platform"
+version: "1.0.0"
+
+# High-level orchestrators and specialized agents
+agents:
+  # Executive level
+  - id: cto
+    mode: orchestrator
+    description: "Chief Technology Officer - makes high-level architectural decisions"
+  
+  # Department leads (middle management)
+  - id: frontend_lead
+    mode: orchestrator
+    description: "Frontend team lead - coordinates UI/UX development"
+  
+  - id: backend_lead
+    mode: orchestrator
+    description: "Backend team lead - coordinates API and services"
+  
+  - id: infrastructure_lead
+    mode: orchestrator
+    description: "Infrastructure lead - manages deployment and scaling"
+  
+  # Individual contributors
+  - id: ui_developer
+    mode: code
+    description: "Implements user interface components"
+  
+  - id: ux_designer
+    mode: architect
+    description: "Designs user experience and workflows"
+  
+  - id: api_developer
+    mode: code
+    description: "Develops REST/GraphQL APIs"
+  
+  - id: database_engineer
+    mode: code
+    description: "Designs and optimizes database schemas"
+  
+  - id: devops_engineer
+    mode: code
+    description: "Sets up CI/CD and infrastructure"
+  
+  - id: security_engineer
+    mode: debug
+    description: "Implements security measures and audits"
+  
+  - id: qa_engineer
+    mode: test
+    description: "Ensures quality through comprehensive testing"
+
+workflow:
+  # Executive planning
+  - name: strategic_planning
+    agent: cto
+    description: "Define overall architecture and delegate to department leads"
+    next_steps:
+      - frontend_team_planning
+      - backend_team_planning
+      - infrastructure_planning
+    strategy: orchestrate
+    timeout: 2400  # 40 minutes
+
+  # Department-level planning (parallel)
+  - name: frontend_team_planning
+    agent: frontend_lead
+    description: "Plan frontend architecture and assign tasks"
+    next_steps:
+      - ui_component_development
+      - ux_design_phase
+      - frontend_state_management
+    strategy: orchestrate
+    parallel: true
+
+  - name: backend_team_planning
+    agent: backend_lead
+    description: "Plan backend services and assign tasks"
+    next_steps:
+      - api_development
+      - database_design
+      - authentication_service
+      - payment_integration
+    strategy: orchestrate
+    parallel: true
+
+  - name: infrastructure_planning
+    agent: infrastructure_lead
+    description: "Plan deployment strategy and infrastructure"
+    next_steps:
+      - ci_cd_setup
+      - kubernetes_configuration
+      - monitoring_setup
+    strategy: orchestrate
+    parallel: true
+
+  # Frontend team tasks
+  - name: ux_design_phase
+    agent: ux_designer
+    description: "Create wireframes and user flow diagrams"
+    on_success: ui_component_development
+    retry_count: 1
+
+  - name: ui_component_development
+    agent: ui_developer
+    description: "Build reusable UI components"
+    on_success: frontend_integration
+    on_failure: frontend_team_review
+
+  - name: frontend_state_management
+    agent: ui_developer
+    description: "Implement Redux/MobX state management"
+    on_success: frontend_integration
+    parallel: true
+
+  # Backend team tasks
+  - name: database_design
+    agent: database_engineer
+    description: "Design normalized database schema"
+    on_success: api_development
+
+  - name: api_development
+    agent: api_developer
+    description: "Develop RESTful API endpoints"
+    on_success: api_testing
+    on_failure: backend_team_review
+    retry_count: 2
+
+  - name: authentication_service
+    agent: api_developer
+    description: "Implement JWT authentication"
+    on_success: security_audit
+    parallel: true
+
+  - name: payment_integration
+    agent: api_developer
+    description: "Integrate payment gateway"
+    on_success: payment_testing
+    parallel: true
+
+  # Infrastructure tasks
+  - name: ci_cd_setup
+    agent: devops_engineer
+    description: "Configure GitHub Actions/Jenkins pipeline"
+    on_success: deployment_ready
+
+  - name: kubernetes_configuration
+    agent: devops_engineer
+    description: "Set up K8s clusters and deployments"
+    on_success: deployment_ready
+    parallel: true
+
+  - name: monitoring_setup
+    agent: devops_engineer
+    description: "Configure Prometheus and Grafana"
+    on_success: deployment_ready
+    parallel: true
+
+  # Integration and testing phases
+  - name: frontend_integration
+    agent: frontend_lead
+    description: "Integrate all frontend components"
+    on_success: frontend_testing
+    on_failure: frontend_team_planning
+
+  - name: frontend_team_review
+    agent: frontend_lead
+    description: "Review and reassign frontend tasks"
+    next_steps:
+      - ui_component_development
+      - frontend_state_management
+    strategy: orchestrate
+
+  - name: backend_team_review
+    agent: backend_lead
+    description: "Review and reassign backend tasks"
+    next_steps:
+      - api_development
+      - database_design
+    strategy: orchestrate
+
+  - name: api_testing
+    agent: qa_engineer
+    description: "Test API endpoints and performance"
+    on_success: backend_integration
+    on_failure: api_development
+
+  - name: payment_testing
+    agent: qa_engineer
+    description: "Test payment flow end-to-end"
+    on_success: backend_integration
+    on_failure: payment_integration
+
+  - name: frontend_testing
+    agent: qa_engineer
+    description: "Run UI tests and accessibility checks"
+    on_success: full_integration
+    on_failure: frontend_integration
+
+  - name: backend_integration
+    agent: backend_lead
+    description: "Integrate all backend services"
+    on_success: full_integration
+    on_failure: backend_team_planning
+
+  - name: security_audit
+    agent: security_engineer
+    description: "Perform security vulnerability assessment"
+    on_success: security_fixes
+    on_failure: security_fixes
+
+  - name: security_fixes
+    agent: security_engineer
+    description: "Fix identified security issues"
+    on_success: full_integration
+    retry_count: 3
+
+  # Final integration and deployment
+  - name: full_integration
+    agent: cto
+    description: "Oversee full system integration"
+    next_steps:
+      - system_testing
+      - performance_testing
+      - deployment_preparation
+    strategy: orchestrate
+
+  - name: system_testing
+    agent: qa_engineer
+    description: "Comprehensive end-to-end testing"
+    on_success: deployment_ready
+    on_failure: cto_review
+
+  - name: performance_testing
+    agent: qa_engineer
+    description: "Load testing and optimization"
+    on_success: deployment_ready
+    on_failure: performance_optimization
+    parallel: true
+
+  - name: performance_optimization
+    agent: infrastructure_lead
+    description: "Optimize system performance"
+    next_steps:
+      - api_development
+      - database_design
+      - kubernetes_configuration
+    strategy: orchestrate
+
+  - name: deployment_preparation
+    agent: infrastructure_lead
+    description: "Prepare production deployment"
+    on_success: deployment_ready
+
+  - name: deployment_ready
+    agent: cto
+    description: "Final review and deployment approval"
+    on_success: end
+
+  - name: cto_review
+    agent: cto
+    description: "Executive review of blockers"
+    next_steps:
+      - frontend_team_planning
+      - backend_team_planning
+      - infrastructure_planning
+    strategy: orchestrate
+
+# Workflow configuration
+max_parallel_stages: 5  # Allow more parallel execution
+default_timeout: 7200   # 2 hours for complex tasks
+enable_checkpoints: true
