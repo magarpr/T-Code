@@ -1,5 +1,5 @@
 import React from "react"
-import { ChevronUp, Check, X, Upload, Download } from "lucide-react"
+import { ChevronUp, Check, X, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRooPortal } from "@/components/ui/hooks/useRooPortal"
 import { Popover, PopoverContent, PopoverTrigger, StandardTooltip, Button } from "@/components/ui"
@@ -50,6 +50,8 @@ export const ModeSelector = ({
 	const [isExporting, setIsExporting] = React.useState<string | null>(null)
 	const [isImporting, setIsImporting] = React.useState(false)
 	const [showImportDialog, setShowImportDialog] = React.useState(false)
+	const [exportError, setExportError] = React.useState<string | null>(null)
+	const [importError, setImportError] = React.useState<string | null>(null)
 
 	const trackModeSelectorOpened = React.useCallback(() => {
 		// Track telemetry every time the mode selector is opened
@@ -166,22 +168,31 @@ export const ModeSelector = ({
 				setIsExporting(null)
 				if (!message.success) {
 					console.error("Failed to export mode:", message.error)
+					setExportError(message.error || t("prompts:exportMode.error"))
+					// Clear error after 5 seconds
+					setTimeout(() => setExportError(null), 5000)
+				} else {
+					setExportError(null)
 				}
 			} else if (message.type === "importModeResult") {
 				setIsImporting(false)
-				setShowImportDialog(false)
 				if (!message.success && message.error !== "cancelled") {
 					console.error("Failed to import mode:", message.error)
+					setImportError(message.error || t("prompts:importMode.error"))
+				} else {
+					setImportError(null)
+					setShowImportDialog(false)
 				}
 			}
 		}
 		window.addEventListener("message", handler)
 		return () => window.removeEventListener("message", handler)
-	}, [])
+	}, [t])
 
 	// Handle export mode
 	const handleExportMode = React.useCallback((modeSlug: string) => {
 		setIsExporting(modeSlug)
+		setExportError(null)
 		vscode.postMessage({
 			type: "exportMode",
 			slug: modeSlug,
@@ -193,6 +204,7 @@ export const ModeSelector = ({
 		const selectedLevel = (document.querySelector('input[name="importLevel"]:checked') as HTMLInputElement)
 			?.value as "global" | "project"
 		setIsImporting(true)
+		setImportError(null)
 		vscode.postMessage({
 			type: "importMode",
 			source: selectedLevel || "project",
@@ -309,6 +321,7 @@ export const ModeSelector = ({
 														handleExportMode(mode.slug)
 													}}
 													disabled={isExporting === mode.slug}
+													aria-label={t("prompts:exportMode.title")}
 													title={t("prompts:exportMode.title")}>
 													<Upload className="h-3.5 w-3.5" />
 												</Button>
@@ -319,6 +332,13 @@ export const ModeSelector = ({
 								</div>
 							)}
 						</div>
+
+						{/* Export error message */}
+						{exportError && (
+							<div className="px-3 py-2 text-xs text-vscode-errorForeground border-t border-vscode-dropdown-border">
+								{exportError}
+							</div>
+						)}
 
 						{/* Bottom bar with buttons on left and title on right */}
 						<div className="flex flex-row items-center justify-between px-2 py-2 border-t border-vscode-dropdown-border">
@@ -349,28 +369,14 @@ export const ModeSelector = ({
 										setOpen(false)
 									}}
 								/>
-								{/* Import button - matching IconButton dimensions */}
-								<StandardTooltip content={t("prompts:modes.importMode")}>
-									<button
-										onClick={() => setShowImportDialog(true)}
-										disabled={isImporting}
-										className={cn(
-											"relative inline-flex items-center justify-center",
-											"bg-transparent border-none p-1.5",
-											"rounded-md min-w-[28px] min-h-[28px]",
-											"text-vscode-foreground opacity-85",
-											"transition-all duration-150",
-											"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
-											"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-											"active:bg-[rgba(255,255,255,0.1)]",
-											!isImporting && "cursor-pointer",
-											isImporting &&
-												"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
-										)}
-										style={{ fontSize: 16.5 }}>
-										<Download className="h-4 w-4" />
-									</button>
-								</StandardTooltip>
+								{/* Import button - using IconButton for consistency */}
+								<IconButton
+									iconClass="codicon-cloud-download"
+									title={t("prompts:modes.importMode")}
+									onClick={() => setShowImportDialog(true)}
+									disabled={isImporting}
+									isLoading={isImporting}
+								/>
 							</div>
 
 							{/* Info icon and title on the right - only show info icon when search bar is visible */}
@@ -398,11 +404,12 @@ export const ModeSelector = ({
 							{t("prompts:importMode.selectLevel")}
 						</p>
 						<div className="space-y-3 mb-6">
-							<label className="flex items-start gap-2 cursor-pointer">
+							<label className="flex items-start gap-2 cursor-pointer" htmlFor="import-level-project">
 								<input
 									type="radio"
 									name="importLevel"
 									value="project"
+									id="import-level-project"
 									className="mt-1"
 									defaultChecked
 								/>
@@ -413,8 +420,14 @@ export const ModeSelector = ({
 									</div>
 								</div>
 							</label>
-							<label className="flex items-start gap-2 cursor-pointer">
-								<input type="radio" name="importLevel" value="global" className="mt-1" />
+							<label className="flex items-start gap-2 cursor-pointer" htmlFor="import-level-global">
+								<input
+									type="radio"
+									name="importLevel"
+									value="global"
+									id="import-level-global"
+									className="mt-1"
+								/>
 								<div>
 									<div className="font-medium">{t("prompts:importMode.global.label")}</div>
 									<div className="text-xs text-vscode-descriptionForeground">
@@ -423,8 +436,15 @@ export const ModeSelector = ({
 								</div>
 							</label>
 						</div>
+						{/* Import error message */}
+						{importError && <div className="text-xs text-vscode-errorForeground mb-4">{importError}</div>}
 						<div className="flex justify-end gap-2">
-							<Button variant="secondary" onClick={() => setShowImportDialog(false)}>
+							<Button
+								variant="secondary"
+								onClick={() => {
+									setShowImportDialog(false)
+									setImportError(null)
+								}}>
 								{t("prompts:createModeDialog.buttons.cancel")}
 							</Button>
 							<Button variant="default" onClick={handleImportMode} disabled={isImporting}>
