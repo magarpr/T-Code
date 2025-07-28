@@ -435,9 +435,10 @@ describe("getContextMenuOptions", () => {
 
 		const result = getContextMenuOptions("/co", "/co", null, [], [], mockModes)
 
-		// Verify mode results are returned
-		expect(result[0].type).toBe(ContextMenuOptionType.Mode)
-		expect(result[0].value).toBe("code")
+		// Should have section header first, then mode results
+		expect(result[0].type).toBe(ContextMenuOptionType.SectionHeader)
+		expect(result[1].type).toBe(ContextMenuOptionType.Mode)
+		expect(result[1].value).toBe("code")
 	})
 
 	it("should not process slash commands when query starts with slash but inputValue doesn't", () => {
