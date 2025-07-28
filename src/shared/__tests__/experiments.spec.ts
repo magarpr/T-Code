@@ -23,11 +23,21 @@ describe("experiments", () => {
 		})
 	})
 
+	describe("READ_FILE_DEDUPLICATION", () => {
+		it("is configured correctly", () => {
+			expect(EXPERIMENT_IDS.READ_FILE_DEDUPLICATION).toBe("readFileDeduplication")
+			expect(experimentConfigsMap.READ_FILE_DEDUPLICATION).toMatchObject({
+				enabled: false,
+			})
+		})
+	})
+
 	describe("isEnabled", () => {
 		it("returns false when POWER_STEERING experiment is not enabled", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				multiFileApplyDiff: false,
+				readFileDeduplication: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})
@@ -36,6 +46,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: true,
 				multiFileApplyDiff: false,
+				readFileDeduplication: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
 		})
@@ -44,6 +55,7 @@ describe("experiments", () => {
 			const experiments: Record<ExperimentId, boolean> = {
 				powerSteering: false,
 				multiFileApplyDiff: false,
+				readFileDeduplication: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})

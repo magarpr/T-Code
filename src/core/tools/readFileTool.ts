@@ -589,6 +589,9 @@ export async function readFileTool(
 			// No status message, just push the files XML
 			pushToolResult(filesXml)
 		}
+
+		// Call deduplication after successful file reads
+		await cline.deduplicateReadFileHistory()
 	} catch (error) {
 		// Handle all errors using per-file format for consistency
 		const relPath = fileEntries[0]?.path || "unknown"

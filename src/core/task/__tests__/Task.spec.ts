@@ -17,6 +17,7 @@ import { processUserContentMentions } from "../../mentions/processUserContentMen
 import { MultiSearchReplaceDiffStrategy } from "../../diff/strategies/multi-search-replace"
 import { MultiFileSearchReplaceDiffStrategy } from "../../diff/strategies/multi-file-search-replace"
 import { EXPERIMENT_IDS } from "../../../shared/experiments"
+import { ApiMessage } from "../../task-persistence/apiMessages"
 
 // Mock delay before any imports that might use it
 vi.mock("delay", () => ({
@@ -1491,6 +1492,457 @@ describe("Cline", () => {
 					startTask: false,
 				})
 				expect(noModelTask.apiConfiguration.apiProvider).toBe("openai")
+			})
+		})
+
+		describe("deduplicateReadFileHistory", () => {
+			let mockProvider: any
+			let mockApiConfig: any
+			let cline: Task
+
+			beforeEach(() => {
+				vi.clearAllMocks()
+
+				mockApiConfig = {
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+				}
+
+				mockProvider = {
+					context: {
+						globalStorageUri: { fsPath: "/test/storage" },
+					},
+					getState: vi.fn().mockResolvedValue({
+						experiments: {
+							[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+						},
+					}),
+					postStateToWebview: vi.fn().mockResolvedValue(undefined),
+					postMessageToWebview: vi.fn().mockResolvedValue(undefined),
+					updateTaskHistory: vi.fn().mockResolvedValue(undefined),
+				}
+
+				cline = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+			})
+
+			it("should not deduplicate when feature is disabled", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: false,
+					},
+				})
+
+				const originalHistory: ApiMessage[] = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>test content</content></file></files>",
+							},
+						],
+						ts: Date.now() - 10 * 60 * 1000, // 10 minutes ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>test content</content></file></files>",
+							},
+						],
+						ts: Date.now() - 8 * 60 * 1000, // 8 minutes ago
+					},
+				]
+
+				cline.apiConversationHistory = [...originalHistory]
+				await cline.deduplicateReadFileHistory()
+
+				// Should not change when disabled
+				expect(cline.apiConversationHistory).toEqual(originalHistory)
+			})
+
+			it("should deduplicate duplicate file reads", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000, // 10 minutes ago
+					},
+					{
+						role: "assistant",
+						content: [{ type: "text" as const, text: "I read the file" }],
+						ts: now - 9 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>new content</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000, // 8 minutes ago
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep only the most recent read of test.ts
+				expect(cline.apiConversationHistory).toHaveLength(2)
+				const content0 = cline.apiConversationHistory[0].content
+				const content1 = cline.apiConversationHistory[1].content
+				if (Array.isArray(content0) && content0[0]?.type === "text") {
+					expect(content0[0].text).not.toContain("old content")
+				}
+				if (Array.isArray(content1) && content1[0]?.type === "text") {
+					expect(content1[0].text).toContain("new content")
+				}
+			})
+
+			it("should preserve messages within cache window", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000, // 10 minutes ago
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>recent content</content></file></files>",
+							},
+						],
+						ts: now - 2 * 60 * 1000, // 2 minutes ago (within 5 minute cache window)
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep both messages (recent one is within cache window)
+				expect(cline.apiConversationHistory).toHaveLength(2)
+			})
+
+			it("should handle multi-file reads", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file1.ts', 'file2.ts'] Result:\n<files><file><path>file1.ts</path><content>content1</content></file><file><path>file2.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file1.ts', 'file2.ts'] Result:\n<files><file><path>file1.ts</path><content>new content1</content></file><file><path>file2.ts</path><content>new content2</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000,
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep only the most recent multi-file read
+				expect(cline.apiConversationHistory).toHaveLength(1)
+				const content = cline.apiConversationHistory[0].content
+				if (Array.isArray(content) && content[0]?.type === "text") {
+					expect(content[0].text).toContain("new content1")
+					expect(content[0].text).toContain("new content2")
+				}
+			})
+
+			it("should preserve non-read_file content blocks", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{ type: "text" as const, text: "Please read the file" },
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content</content></file></files>",
+							},
+							{ type: "text" as const, text: "And then do something with it" },
+						],
+						ts: now - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>new content</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000,
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should preserve non-read_file blocks in the first message
+				expect(cline.apiConversationHistory).toHaveLength(2)
+				const firstContent = cline.apiConversationHistory[0].content
+				if (Array.isArray(firstContent)) {
+					expect(firstContent).toHaveLength(2) // Two non-read_file blocks
+					if (firstContent[0]?.type === "text") {
+						expect(firstContent[0].text).toBe("Please read the file")
+					}
+					if (firstContent[1]?.type === "text") {
+						expect(firstContent[1].text).toBe("And then do something with it")
+					}
+				}
+			})
+
+			it("should handle legacy read_file format", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'legacy.ts'] Result:\nFile content without XML wrapper",
+							},
+						],
+						ts: now - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'legacy.ts'] Result:\nNew file content without XML wrapper",
+							},
+						],
+						ts: now - 8 * 60 * 1000,
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should deduplicate legacy format
+				expect(cline.apiConversationHistory).toHaveLength(1)
+				const legacyContent = cline.apiConversationHistory[0].content
+				if (Array.isArray(legacyContent) && legacyContent[0]?.type === "text") {
+					expect(legacyContent[0].text).toContain("New file content")
+				}
+			})
+
+			it("should handle messages without timestamps", async () => {
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content</content></file></files>",
+							},
+						],
+						// No ts property
+					},
+					{
+						role: "assistant",
+						content: [{ type: "text" as const, text: "Processing..." }],
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should handle gracefully
+				expect(cline.apiConversationHistory).toHaveLength(2)
+			})
+
+			it("should only process user messages", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "assistant",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000,
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep both (assistant messages are not processed)
+				expect(cline.apiConversationHistory).toHaveLength(2)
+			})
+
+			it("should handle empty conversation history", async () => {
+				cline.apiConversationHistory = []
+				await cline.deduplicateReadFileHistory()
+				expect(cline.apiConversationHistory).toEqual([])
+			})
+
+			it("should handle malformed content", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: "string content instead of array", // Invalid format
+						ts: now - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "image" as const,
+								source: { type: "base64" as const, media_type: "image/png", data: "..." },
+							},
+						], // Non-text block
+						ts: now - 8 * 60 * 1000,
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should handle gracefully
+				expect(cline.apiConversationHistory).toHaveLength(2)
+			})
+
+			it("should not deduplicate multi-file reads that include new files", async () => {
+				const now = Date.now()
+				// Scenario: file1.ts and file3.ts read separately, then file1.ts + file2.ts together
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file1.ts'] Result:\n<files><file><path>file1.ts</path><content>content1</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file3.ts'] Result:\n<files><file><path>file3.ts</path><content>content3</content></file></files>",
+							},
+						],
+						ts: now - 9 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file1.ts', 'file2.ts'] Result:\n<files><file><path>file1.ts</path><content>content1</content></file><file><path>file2.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000,
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should keep file3.ts read and the multi-file read (which includes new file2.ts)
+				// The first read of just file1.ts should be removed
+				expect(cline.apiConversationHistory).toHaveLength(2)
+
+				// Verify file3.ts is still there
+				const hasFile3 = cline.apiConversationHistory.some((msg) => {
+					if (Array.isArray(msg.content)) {
+						return msg.content.some((block) => block.type === "text" && block.text.includes("file3.ts"))
+					}
+					return false
+				})
+				expect(hasFile3).toBe(true)
+
+				// Verify multi-file read is still there
+				const hasMultiFile = cline.apiConversationHistory.some((msg) => {
+					if (Array.isArray(msg.content)) {
+						return msg.content.some(
+							(block) =>
+								block.type === "text" &&
+								block.text.includes("file1.ts") &&
+								block.text.includes("file2.ts"),
+						)
+					}
+					return false
+				})
+				expect(hasMultiFile).toBe(true)
+			})
+
+			it("should deduplicate when multi-file read contains only already-seen files", async () => {
+				const now = Date.now()
+				cline.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file1.ts', 'file2.ts'] Result:\n<files><file><path>file1.ts</path><content>old1</content></file><file><path>file2.ts</path><content>old2</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file1.ts', 'file2.ts'] Result:\n<files><file><path>file1.ts</path><content>new1</content></file><file><path>file2.ts</path><content>new2</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000,
+					},
+				]
+
+				await cline.deduplicateReadFileHistory()
+
+				// Should only keep the newer read
+				expect(cline.apiConversationHistory).toHaveLength(1)
+				const content = cline.apiConversationHistory[0].content
+				if (Array.isArray(content) && content[0]?.type === "text") {
+					expect(content[0].text).toContain("new1")
+					expect(content[0].text).toContain("new2")
+				}
 			})
 		})
 	})

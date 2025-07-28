@@ -329,6 +329,110 @@ export class Task extends EventEmitter<ClineEvents> {
 		return readApiMessages({ taskId: this.taskId, globalStoragePath: this.globalStoragePath })
 	}
 
+	public async deduplicateReadFileHistory(): Promise<void> {
+		// Check if the experimental feature is enabled
+		const state = await this.providerRef.deref()?.getState()
+		if (!state?.experiments || !experiments.isEnabled(state.experiments, EXPERIMENT_IDS.READ_FILE_DEDUPLICATION)) {
+			return
+		}
+
+		const cacheWindowMs = 5 * 60 * 1000 // 5 minutes
+		const now = Date.now()
+		const seenFiles = new Map<string, { messageIndex: number; blockIndex: number }>()
+		const blocksToRemove = new Map<number, Set<number>>() // messageIndex -> Set of blockIndexes to remove
+
+		// Process messages in reverse order (newest first) to keep the most recent reads
+		for (let i = this.apiConversationHistory.length - 1; i >= 0; i--) {
+			const message = this.apiConversationHistory[i]
+
+			// Only process user messages
+			if (message.role !== "user") {
+				continue
+			}
+
+			// Skip messages within the cache window
+			if (message.ts && now - message.ts < cacheWindowMs) {
+				continue
+			}
+
+			// Process content blocks
+			if (Array.isArray(message.content)) {
+				for (let j = 0; j < message.content.length; j++) {
+					const block = message.content[j]
+					if (block.type === "text" && typeof block.text === "string") {
+						// Check for read_file results in text blocks
+						const readFileMatch = block.text.match(/\[read_file(?:\s+for\s+'([^']+)')?.*?\]\s*Result:/i)
+
+						if (readFileMatch) {
+							// Extract file paths from the result content
+							const resultContent = block.text.substring(block.text.indexOf("Result:") + 7).trim()
+
+							// Handle new XML format
+							const xmlFileMatches = resultContent.matchAll(/<file>\s*<path>([^<]+)<\/path>/g)
+							const xmlFilePaths: string[] = []
+							for (const match of xmlFileMatches) {
+								xmlFilePaths.push(match[1].trim())
+							}
+
+							// Handle legacy format (single file)
+							let filePaths: string[] = xmlFilePaths
+							if (xmlFilePaths.length === 0 && readFileMatch[1]) {
+								filePaths = [readFileMatch[1]]
+							}
+
+							if (filePaths.length > 0) {
+								// For multi-file reads, only mark as duplicate if ALL files have been seen
+								const allFilesSeen = filePaths.every((path) => seenFiles.has(path))
+
+								if (allFilesSeen) {
+									// This is a duplicate - mark this block for removal
+									if (!blocksToRemove.has(i)) {
+										blocksToRemove.set(i, new Set())
+									}
+									blocksToRemove.get(i)!.add(j)
+								} else {
+									// This is not a duplicate - update seen files
+									filePaths.forEach((path) => {
+										seenFiles.set(path, { messageIndex: i, blockIndex: j })
+									})
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Build the updated history, removing marked blocks
+		const updatedHistory: ApiMessage[] = []
+		for (let i = 0; i < this.apiConversationHistory.length; i++) {
+			const message = this.apiConversationHistory[i]
+			const blocksToRemoveForMessage = blocksToRemove.get(i)
+
+			if (blocksToRemoveForMessage && blocksToRemoveForMessage.size > 0 && Array.isArray(message.content)) {
+				// Filter out marked blocks
+				const filteredContent: Anthropic.Messages.ContentBlockParam[] = []
+
+				for (let j = 0; j < message.content.length; j++) {
+					if (!blocksToRemoveForMessage.has(j)) {
+						filteredContent.push(message.content[j])
+					}
+				}
+
+				// Only add the message if it has content after filtering
+				if (filteredContent.length > 0) {
+					updatedHistory.push({ ...message, content: filteredContent })
+				}
+			} else {
+				// Keep the message as-is
+				updatedHistory.push(message)
+			}
+		}
+
+		// Update the conversation history
+		await this.overwriteApiConversationHistory(updatedHistory)
+	}
+
 	private async addToApiConversationHistory(message: Anthropic.MessageParam) {
 		const messageWithTs = { ...message, ts: Date.now() }
 		this.apiConversationHistory.push(messageWithTs)
