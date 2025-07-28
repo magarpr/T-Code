@@ -101,21 +101,23 @@ vi.mock("@src/components/welcome/RooCloudCTA", () => ({
 // Mock QueuedMessages component
 vi.mock("../QueuedMessages", () => ({
 	default: function MockQueuedMessages({
-		messages = [],
-		onRemoveMessage,
+		queue = [],
+		onRemove,
+		_onUpdate,
 	}: {
-		messages?: Array<{ id: string; text: string; images?: string[] }>
-		onRemoveMessage?: (id: string) => void
+		queue?: Array<{ id: string; text: string; images?: string[] }>
+		onRemove?: (index: number) => void
+		_onUpdate?: (index: number, newText: string) => void
 	}) {
-		if (!messages || messages.length === 0) {
+		if (!queue || queue.length === 0) {
 			return null
 		}
 		return (
 			<div data-testid="queued-messages">
-				{messages.map((msg) => (
+				{queue.map((msg, index) => (
 					<div key={msg.id}>
 						<span>{msg.text}</span>
-						<button aria-label="Remove message" onClick={() => onRemoveMessage?.(msg.id)}>
+						<button aria-label="Remove message" onClick={() => onRemove?.(index)}>
 							Remove
 						</button>
 					</div>
@@ -166,7 +168,7 @@ vi.mock("react-i18next", () => ({
 }))
 
 interface ChatTextAreaProps {
-	onSend: (value: string) => void
+	onSend: () => void
 	inputValue?: string
 	sendingDisabled?: boolean
 	placeholderText?: string
@@ -174,7 +176,6 @@ interface ChatTextAreaProps {
 	shouldDisableImages?: boolean
 }
 
-const mockInputRef = React.createRef<HTMLInputElement>()
 const mockFocus = vi.fn()
 
 vi.mock("../ChatTextArea", () => {
@@ -194,13 +195,10 @@ vi.mock("../ChatTextArea", () => {
 			return (
 				<div data-testid="chat-textarea">
 					<input
-						ref={mockInputRef}
 						type="text"
-						onChange={(e) => {
-							// With message queueing, onSend is always called (it handles queueing internally)
-							props.onSend(e.target.value)
-						}}
 						data-sending-disabled={props.sendingDisabled}
+						value={props.inputValue || ""}
+						readOnly
 					/>
 				</div>
 			)
@@ -1491,5 +1489,234 @@ describe("ChatView - Message Queueing Tests", () => {
 		const chatTextArea = getByTestId("chat-textarea")
 		const input = chatTextArea.querySelector("input")!
 		expect(input.getAttribute("data-sending-disabled")).toBe("false")
+	})
+
+	it("queues messages when sending is disabled", async () => {
+		const { getByTestId, queryByTestId } = renderChatView()
+
+		// Hydrate state with active task that should disable sending
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 1000,
+					text: "Task in progress",
+				},
+				{
+					type: "ask",
+					ask: "tool",
+					ts: Date.now(),
+					text: JSON.stringify({ tool: "readFile", path: "test.txt" }),
+					partial: true, // Partial messages disable sending
+				},
+			],
+		})
+
+		// Wait for state to be updated
+		await waitFor(() => {
+			const chatTextArea = getByTestId("chat-textarea")
+			const input = chatTextArea.querySelector("input")!
+			expect(input.getAttribute("data-sending-disabled")).toBe("true")
+		})
+
+		// Clear any previous vscode.postMessage calls
+		vi.mocked(vscode.postMessage).mockClear()
+
+		// Simulate sending a message through the extension message system
+		// This mimics how the actual ChatTextArea would trigger the send
+		act(() => {
+			window.postMessage(
+				{
+					type: "invoke",
+					invoke: "sendMessage",
+					text: "Test queued message",
+					images: [],
+				},
+				"*",
+			)
+		})
+
+		// Wait for queued messages to appear
+		await waitFor(() => {
+			expect(queryByTestId("queued-messages")).toBeInTheDocument()
+		})
+
+		// Verify the queued message is displayed
+		const queuedMessages = getByTestId("queued-messages")
+		expect(queuedMessages.textContent).toContain("Test queued message")
+
+		// Verify no message was sent to vscode (it should be queued instead)
+		expect(vscode.postMessage).not.toHaveBeenCalled()
+	})
+
+	it("allows removing messages from queue", async () => {
+		const { getByTestId, queryByTestId, getByLabelText } = renderChatView()
+
+		// Hydrate state with active task
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 1000,
+					text: "Task in progress",
+				},
+				{
+					type: "ask",
+					ask: "tool",
+					ts: Date.now(),
+					text: JSON.stringify({ tool: "readFile", path: "test.txt" }),
+					partial: true,
+				},
+			],
+		})
+
+		// Wait for state to be updated
+		await waitFor(() => {
+			const chatTextArea = getByTestId("chat-textarea")
+			const input = chatTextArea.querySelector("input")!
+			expect(input.getAttribute("data-sending-disabled")).toBe("true")
+		})
+
+		// Queue a message
+		act(() => {
+			window.postMessage(
+				{
+					type: "invoke",
+					invoke: "sendMessage",
+					text: "Message to remove",
+					images: [],
+				},
+				"*",
+			)
+		})
+
+		// Wait for queued message to appear
+		await waitFor(() => {
+			expect(queryByTestId("queued-messages")).toBeInTheDocument()
+		})
+
+		// Click remove button
+		const removeButton = getByLabelText("Remove message")
+		act(() => {
+			removeButton.click()
+		})
+
+		// Verify message is removed
+		await waitFor(() => {
+			expect(queryByTestId("queued-messages")).not.toBeInTheDocument()
+		})
+	})
+
+	it("queues multiple messages in order", async () => {
+		const { getByTestId } = renderChatView()
+
+		// Hydrate state with active task
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 1000,
+					text: "Task in progress",
+				},
+				{
+					type: "ask",
+					ask: "tool",
+					ts: Date.now(),
+					text: JSON.stringify({ tool: "readFile", path: "test.txt" }),
+					partial: true,
+				},
+			],
+		})
+
+		// Wait for state to be updated
+		await waitFor(() => {
+			const chatTextArea = getByTestId("chat-textarea")
+			const input = chatTextArea.querySelector("input")!
+			expect(input.getAttribute("data-sending-disabled")).toBe("true")
+		})
+
+		// Queue multiple messages
+		const messages = ["First message", "Second message", "Third message"]
+
+		for (const message of messages) {
+			act(() => {
+				window.postMessage(
+					{
+						type: "invoke",
+						invoke: "sendMessage",
+						text: message,
+						images: [],
+					},
+					"*",
+				)
+			})
+		}
+
+		// Wait for all messages to be queued
+		await waitFor(() => {
+			const queuedMessages = getByTestId("queued-messages")
+			expect(queuedMessages).toBeInTheDocument()
+			// Verify all messages are present in order
+			const textContent = queuedMessages.textContent!
+			const firstIndex = textContent.indexOf("First message")
+			const secondIndex = textContent.indexOf("Second message")
+			const thirdIndex = textContent.indexOf("Third message")
+
+			expect(firstIndex).toBeGreaterThan(-1)
+			expect(secondIndex).toBeGreaterThan(firstIndex)
+			expect(thirdIndex).toBeGreaterThan(secondIndex)
+		})
+	})
+
+	it("does not queue empty messages", async () => {
+		const { getByTestId, queryByTestId } = renderChatView()
+
+		// Hydrate state with active task
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 1000,
+					text: "Task in progress",
+				},
+				{
+					type: "ask",
+					ask: "tool",
+					ts: Date.now(),
+					text: JSON.stringify({ tool: "readFile", path: "test.txt" }),
+					partial: true,
+				},
+			],
+		})
+
+		// Wait for state to be updated
+		await waitFor(() => {
+			const chatTextArea = getByTestId("chat-textarea")
+			const input = chatTextArea.querySelector("input")!
+			expect(input.getAttribute("data-sending-disabled")).toBe("true")
+		})
+
+		// Try to queue an empty message
+		act(() => {
+			window.postMessage(
+				{
+					type: "invoke",
+					invoke: "sendMessage",
+					text: "",
+					images: [],
+				},
+				"*",
+			)
+		})
+
+		// Wait a bit to ensure no queued messages appear
+		await new Promise((resolve) => setTimeout(resolve, 100))
+
+		// Verify no queued messages appear
+		expect(queryByTestId("queued-messages")).not.toBeInTheDocument()
 	})
 })

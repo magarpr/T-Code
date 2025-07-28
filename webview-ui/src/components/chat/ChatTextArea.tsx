@@ -26,7 +26,7 @@ import ModeSelector from "./ModeSelector"
 import { ApiConfigSelector } from "./ApiConfigSelector"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
-import { VolumeX, Image, WandSparkles, SendHorizontal } from "lucide-react"
+import { VolumeX, Image, WandSparkles, SendHorizontal, ListPlus } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
@@ -1047,9 +1047,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				{!isEditMode && (
 					<div className="absolute bottom-1 right-1 z-30">
-						<StandardTooltip content={t("chat:sendMessage")}>
+						<StandardTooltip content={sendingDisabled ? t("chat:queueMessage") : t("chat:sendMessage")}>
 							<button
-								aria-label={t("chat:sendMessage")}
+								aria-label={sendingDisabled ? t("chat:queueMessage") : t("chat:sendMessage")}
 								disabled={false}
 								onClick={onSend}
 								className={cn(
@@ -1063,7 +1063,11 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									"active:bg-[rgba(255,255,255,0.1)]",
 									"cursor-pointer",
 								)}>
-								<SendHorizontal className="w-4 h-4" />
+								{sendingDisabled ? (
+									<ListPlus className="w-4 h-4" />
+								) : (
+									<SendHorizontal className="w-4 h-4" />
+								)}
 							</button>
 						</StandardTooltip>
 					</div>

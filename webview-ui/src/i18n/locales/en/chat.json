@@ -125,6 +125,7 @@
 	"enhancePromptDescription": "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
 	"addImages": "Add images to message",
 	"sendMessage": "Send message",
+	"queueMessage": "Queue message",
 	"stopTts": "Stop text-to-speech",
 	"typeMessage": "Type a message...",
 	"typeTask": "Type your task here...",
@@ -353,7 +354,9 @@
 		"triggerDescription": "Trigger the {{name}} command"
 	},
 	"queuedMessages": {
-		"title": "Queued Messages:",
-		"clickToEdit": "Click to edit message"
+		"title": "Queued Messages ({{count}})",
+		"clickToEdit": "Click to edit message",
+		"withImages": "{{count}} image(s) attached",
+		"remove": "Remove from queue"
 	}
 }
