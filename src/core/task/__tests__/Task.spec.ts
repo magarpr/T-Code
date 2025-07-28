@@ -2105,5 +2105,337 @@ describe("Cline", () => {
 				expect(cline.apiConversationHistory).toHaveLength(2)
 			})
 		})
+
+		describe("getRecentFileContent", () => {
+			let mockProvider: any
+			let mockApiConfig: any
+			let task: Task
+
+			beforeEach(() => {
+				vi.clearAllMocks()
+
+				mockApiConfig = {
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+				}
+
+				mockProvider = {
+					context: {
+						globalStorageUri: { fsPath: "/test/storage" },
+					},
+					getState: vi.fn().mockResolvedValue({
+						experiments: {
+							[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+						},
+						readFileDeduplicationCacheMinutes: 5,
+					}),
+					postStateToWebview: vi.fn().mockResolvedValue(undefined),
+					postMessageToWebview: vi.fn().mockResolvedValue(undefined),
+					updateTaskHistory: vi.fn().mockResolvedValue(undefined),
+				}
+
+				task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					task: "test task",
+					startTask: false,
+				})
+			})
+
+			it("should return null when feature is disabled", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: false,
+					},
+				})
+
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>test content</content></file></files>",
+							},
+						],
+						ts: now - 1000, // 1 second ago
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBeNull()
+			})
+
+			it("should return recent file content within cache window", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>recent content</content></file></files>",
+							},
+						],
+						ts: now - 2 * 60 * 1000, // 2 minutes ago (within 5 minute window)
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBe("recent content")
+			})
+
+			it("should return null for files outside cache window", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 10 * 60 * 1000, // 10 minutes ago (outside 5 minute window)
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBeNull()
+			})
+
+			it("should return most recent content when multiple reads exist", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>old content</content></file></files>",
+							},
+						],
+						ts: now - 4 * 60 * 1000, // 4 minutes ago
+					},
+					{
+						role: "assistant",
+						content: [{ type: "text" as const, text: "Processing..." }],
+						ts: now - 3 * 60 * 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>newer content</content></file></files>",
+							},
+						],
+						ts: now - 2 * 60 * 1000, // 2 minutes ago
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBe("newer content")
+			})
+
+			it("should handle multi-file reads", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'file1.ts', 'file2.ts'] Result:\n<files><file><path>file1.ts</path><content>content1</content></file><file><path>file2.ts</path><content>content2</content></file></files>",
+							},
+						],
+						ts: now - 2 * 60 * 1000,
+					},
+				]
+
+				const result1 = await task.getRecentFileContent("file1.ts")
+				expect(result1).toBe("content1")
+
+				const result2 = await task.getRecentFileContent("file2.ts")
+				expect(result2).toBe("content2")
+			})
+
+			it("should return null for non-existent files", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>test content</content></file></files>",
+							},
+						],
+						ts: now - 1000,
+					},
+				]
+
+				const result = await task.getRecentFileContent("other.ts")
+				expect(result).toBeNull()
+			})
+
+			it("should handle legacy format", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'legacy.ts'] Result:\nFile content without XML wrapper",
+							},
+						],
+						ts: now - 1000,
+					},
+				]
+
+				const result = await task.getRecentFileContent("legacy.ts")
+				expect(result).toBe("File content without XML wrapper")
+			})
+
+			it("should ignore assistant messages", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "assistant",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>assistant content</content></file></files>",
+							},
+						],
+						ts: now - 1000,
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBeNull()
+			})
+
+			it("should handle messages without timestamps", async () => {
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>test content</content></file></files>",
+							},
+						],
+						// No ts property - should be treated as recent
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBe("test content")
+			})
+
+			it("should use custom cache time from settings", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+					readFileDeduplicationCacheMinutes: 10,
+				})
+
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>content within 10 min</content></file></files>",
+							},
+						],
+						ts: now - 8 * 60 * 1000, // 8 minutes ago (within 10 minute window)
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBe("content within 10 min")
+			})
+
+			it("should handle 0 cache time (no caching)", async () => {
+				mockProvider.getState.mockResolvedValue({
+					experiments: {
+						[EXPERIMENT_IDS.READ_FILE_DEDUPLICATION]: true,
+					},
+					readFileDeduplicationCacheMinutes: 0,
+				})
+
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for 'test.ts'] Result:\n<files><file><path>test.ts</path><content>very recent content</content></file></files>",
+							},
+						],
+						ts: now - 100, // 0.1 seconds ago
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBeNull() // With 0 cache time, nothing is cached
+			})
+
+			it("should handle malformed content gracefully", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: "string content instead of array", // Invalid format
+						ts: now - 1000,
+					},
+					{
+						role: "user",
+						content: [
+							{
+								type: "image" as const,
+								source: { type: "base64" as const, media_type: "image/png", data: "..." },
+							},
+						], // Non-text block
+						ts: now - 500,
+					},
+				]
+
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBeNull()
+			})
+
+			it("should handle empty conversation history", async () => {
+				task.apiConversationHistory = []
+				const result = await task.getRecentFileContent("test.ts")
+				expect(result).toBeNull()
+			})
+
+			it("should handle file paths with special characters", async () => {
+				const now = Date.now()
+				task.apiConversationHistory = [
+					{
+						role: "user",
+						content: [
+							{
+								type: "text" as const,
+								text: "[read_file for '@scope/package/file.ts'] Result:\n<files><file><path>@scope/package/file.ts</path><content>scoped content</content></file></files>",
+							},
+						],
+						ts: now - 1000,
+					},
+				]
+
+				const result = await task.getRecentFileContent("@scope/package/file.ts")
+				expect(result).toBe("scoped content")
+			})
+		})
 	})
 })
