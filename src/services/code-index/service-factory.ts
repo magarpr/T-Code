@@ -4,6 +4,7 @@ import { CodeIndexOllamaEmbedder } from "./embedders/ollama"
 import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
 import { GeminiEmbedder } from "./embedders/gemini"
 import { MistralEmbedder } from "./embedders/mistral"
+import { VertexEmbedder } from "./embedders/vertex"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
@@ -70,6 +71,11 @@ export class CodeIndexServiceFactory {
 				throw new Error(t("embeddings:serviceFactory.mistralConfigMissing"))
 			}
 			return new MistralEmbedder(config.mistralOptions.apiKey, config.modelId)
+		} else if (provider === "vertex") {
+			if (!config.vertexOptions?.apiKey) {
+				throw new Error(t("embeddings:serviceFactory.vertexConfigMissing"))
+			}
+			return new VertexEmbedder(config.vertexOptions.apiKey, config.modelId)
 		}
 
 		throw new Error(

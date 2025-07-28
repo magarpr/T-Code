@@ -29,3 +29,6 @@ export const BATCH_PROCESSING_CONCURRENCY = 10
 
 /**Gemini Embedder */
 export const GEMINI_MAX_ITEM_TOKENS = 2048
+
+/**Vertex AI Embedder */
+export const VERTEX_MAX_ITEM_TOKENS = 2048
