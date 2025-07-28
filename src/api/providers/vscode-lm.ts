@@ -225,13 +225,42 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 
 			if (typeof text === "string") {
 				tokenCount = await this.client.countTokens(text, this.currentRequestCancellation.token)
-			} else if (text instanceof vscode.LanguageModelChatMessage) {
+			} else if (text && typeof text === "object" && "role" in text && "content" in text) {
 				// For chat messages, ensure we have content
 				if (!text.content || (Array.isArray(text.content) && text.content.length === 0)) {
 					console.debug("Roo Code <Language Model API>: Empty chat message content")
 					return 0
 				}
 				tokenCount = await this.client.countTokens(text, this.currentRequestCancellation.token)
+
+				// Special handling: when tokenCount equals 4 for LanguageModelChatMessage,
+				// convert to string and recalculate
+				if (tokenCount === 4) {
+					console.debug(
+						"Roo Code <Language Model API>: Token count is 4, converting message to string for recalculation",
+					)
+
+					// Extract text content from the message
+					let textContent = ""
+					if (typeof text.content === "string") {
+						textContent = text.content
+					} else if (Array.isArray(text.content)) {
+						// Handle array of content parts
+						for (const part of text.content) {
+							if (part instanceof vscode.LanguageModelTextPart) {
+								textContent += part.value
+							} else if (typeof part === "string") {
+								textContent += part
+							}
+						}
+					}
+
+					// Recalculate tokens using the extracted text
+					if (textContent) {
+						tokenCount = await this.client.countTokens(textContent, this.currentRequestCancellation.token)
+						console.debug(`Roo Code <Language Model API>: Recalculated token count: ${tokenCount}`)
+					}
+				}
 			} else {
 				console.warn("Roo Code <Language Model API>: Invalid input type for token counting")
 				return 0

@@ -300,4 +300,132 @@ describe("VsCodeLmHandler", () => {
 			await expect(promise).rejects.toThrow("VSCode LM completion error: Completion failed")
 		})
 	})
+
+	describe("countTokens", () => {
+		beforeEach(() => {
+			const mockModel = { ...mockLanguageModelChat }
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([mockModel])
+			handler["client"] = mockLanguageModelChat
+			handler["currentRequestCancellation"] = new vscode.CancellationTokenSource()
+		})
+
+		it("should count tokens for text content", async () => {
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{ type: "text", text: "Hello world" },
+				{ type: "text", text: "How are you?" },
+			]
+
+			mockLanguageModelChat.countTokens.mockResolvedValue(15)
+
+			const result = await handler.countTokens(content)
+			expect(result).toBe(15)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledWith(
+				"Hello worldHow are you?",
+				expect.any(Object),
+			)
+		})
+
+		it("should handle image content with placeholder", async () => {
+			const content: Anthropic.Messages.ContentBlockParam[] = [
+				{ type: "text", text: "Look at this:" },
+				{ type: "image", source: { type: "base64", media_type: "image/png", data: "base64data" } },
+			]
+
+			mockLanguageModelChat.countTokens.mockResolvedValue(10)
+
+			const result = await handler.countTokens(content)
+			expect(result).toBe(10)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledWith("Look at this:[IMAGE]", expect.any(Object))
+		})
+	})
+
+	describe("internalCountTokens", () => {
+		beforeEach(() => {
+			const mockModel = { ...mockLanguageModelChat }
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([mockModel])
+			handler["client"] = mockLanguageModelChat
+			handler["currentRequestCancellation"] = new vscode.CancellationTokenSource()
+		})
+
+		it("should count tokens for string input", async () => {
+			mockLanguageModelChat.countTokens.mockResolvedValue(20)
+
+			const result = await handler["internalCountTokens"]("Test string")
+			expect(result).toBe(20)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledWith("Test string", expect.any(Object))
+		})
+
+		it("should handle LanguageModelChatMessage with normal token count", async () => {
+			const message = vscode.LanguageModelChatMessage.User("Hello")
+			mockLanguageModelChat.countTokens.mockResolvedValue(10)
+
+			const result = await handler["internalCountTokens"](message)
+			expect(result).toBe(10)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledTimes(1)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledWith(message, expect.any(Object))
+		})
+
+		it("should recalculate when LanguageModelChatMessage returns token count of 4", async () => {
+			const message = vscode.LanguageModelChatMessage.User(
+				"This is a longer message that should have more than 4 tokens",
+			)
+
+			// First call returns 4 (the problematic value)
+			// Second call returns the correct count after string conversion
+			mockLanguageModelChat.countTokens.mockResolvedValueOnce(4).mockResolvedValueOnce(25)
+
+			const result = await handler["internalCountTokens"](message)
+			expect(result).toBe(25)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledTimes(2)
+
+			// First call with the message object
+			expect(mockLanguageModelChat.countTokens).toHaveBeenNthCalledWith(1, message, expect.any(Object))
+
+			// Second call with the extracted text
+			expect(mockLanguageModelChat.countTokens).toHaveBeenNthCalledWith(
+				2,
+				"This is a longer message that should have more than 4 tokens",
+				expect.any(Object),
+			)
+		})
+
+		it("should handle LanguageModelChatMessage with array content when token count is 4", async () => {
+			const textPart = new vscode.LanguageModelTextPart("Part 1")
+			const textPart2 = new vscode.LanguageModelTextPart(" Part 2")
+			const message = {
+				role: "user",
+				content: [textPart, textPart2],
+			}
+
+			mockLanguageModelChat.countTokens.mockResolvedValueOnce(4).mockResolvedValueOnce(15)
+
+			const result = await handler["internalCountTokens"](message as any)
+			expect(result).toBe(15)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenCalledTimes(2)
+			expect(mockLanguageModelChat.countTokens).toHaveBeenNthCalledWith(2, "Part 1 Part 2", expect.any(Object))
+		})
+
+		it("should return 0 when no client is available", async () => {
+			handler["client"] = null
+
+			const result = await handler["internalCountTokens"]("Test")
+			expect(result).toBe(0)
+			expect(mockLanguageModelChat.countTokens).not.toHaveBeenCalled()
+		})
+
+		it("should return 0 when no cancellation token is available", async () => {
+			handler["currentRequestCancellation"] = null
+
+			const result = await handler["internalCountTokens"]("Test")
+			expect(result).toBe(0)
+			expect(mockLanguageModelChat.countTokens).not.toHaveBeenCalled()
+		})
+
+		it("should handle errors gracefully", async () => {
+			mockLanguageModelChat.countTokens.mockRejectedValue(new Error("Token counting failed"))
+
+			const result = await handler["internalCountTokens"]("Test")
+			expect(result).toBe(0)
+		})
+	})
 })
