@@ -1166,9 +1166,12 @@ export class ClineProvider
 			await this.initClineWithHistoryItem(historyItem) // Clears existing task.
 		}
 
-		await this.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
-		// Focus the input after loading the task
-		await this.postMessageToWebview({ type: "action", action: "focusInput" })
+		// Combine both actions into a single message to avoid race condition
+		await this.postMessageToWebview({
+			type: "action",
+			action: "chatButtonClicked",
+			followUpAction: "focusInput",
+		})
 	}
 
 	async exportTaskWithId(id: string) {

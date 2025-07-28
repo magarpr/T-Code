@@ -434,7 +434,11 @@ export const webviewMessageHandler = async (
 			}
 			break
 		case "showTaskWithId":
-			provider.showTaskWithId(message.text!)
+			await provider.showTaskWithId(message.text!)
+			// Handle any follow-up action if specified
+			if (message.followUpAction) {
+				await provider.postMessageToWebview({ type: "action", action: message.followUpAction })
+			}
 			break
 		case "condenseTaskContextRequest":
 			provider.condenseTaskContext(message.text!)

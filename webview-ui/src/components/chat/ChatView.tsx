@@ -596,10 +596,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const startNewTask = useCallback(() => {
 		vscode.postMessage({ type: "clearTask" })
-		// Focus the textarea after starting a new task
-		setTimeout(() => {
-			textAreaRef.current?.focus()
-		}, 100)
+		// Focus the textarea directly after starting a new task
+		textAreaRef.current?.focus()
 	}, [])
 
 	// This logic depends on the useEffect[messages] above to set clineAsk,

@@ -122,6 +122,8 @@ export interface ExtensionMessage {
 		| "didBecomeVisible"
 		| "focusInput"
 		| "switchTab"
+		| string // Allow any string for flexibility
+	followUpAction?: string // For follow-up actions after main message handling
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
 	images?: string[]
