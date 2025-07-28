@@ -313,7 +313,11 @@ describe("AwsBedrockHandler - Extended Thinking", () => {
 			expect(BedrockRuntimeClient).toHaveBeenCalledWith(
 				expect.objectContaining({
 					region: "us-east-1",
-					token: { token: "test-api-key-token" },
+					credentials: {
+						accessKeyId: "bedrock-user",
+						secretAccessKey: "bedrock-pwd",
+						sessionToken: "test-api-key-token",
+					},
 					authSchemePreference: ["httpBearerAuth"],
 				}),
 			)
