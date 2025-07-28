@@ -1998,6 +1998,8 @@ export const webviewMessageHandler = async (
 					codebaseIndexOpenAiCompatibleBaseUrl: settings.codebaseIndexOpenAiCompatibleBaseUrl,
 					codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
 					codebaseIndexSearchMinScore: settings.codebaseIndexSearchMinScore,
+					codebaseIndexVertexProjectId: settings.codebaseIndexVertexProjectId,
+					codebaseIndexVertexLocation: settings.codebaseIndexVertexLocation,
 				}
 
 				// Save global state first
@@ -2026,6 +2028,24 @@ export const webviewMessageHandler = async (
 					await provider.contextProxy.storeSecret(
 						"codebaseIndexMistralApiKey",
 						settings.codebaseIndexMistralApiKey,
+					)
+				}
+				if (settings.codebaseIndexVertexApiKey !== undefined) {
+					await provider.contextProxy.storeSecret(
+						"codebaseIndexVertexApiKey",
+						settings.codebaseIndexVertexApiKey,
+					)
+				}
+				if (settings.codebaseIndexVertexJsonCredentials !== undefined) {
+					await provider.contextProxy.storeSecret(
+						"codebaseIndexVertexJsonCredentials",
+						settings.codebaseIndexVertexJsonCredentials,
+					)
+				}
+				if (settings.codebaseIndexVertexKeyFile !== undefined) {
+					await provider.contextProxy.storeSecret(
+						"codebaseIndexVertexKeyFile",
+						settings.codebaseIndexVertexKeyFile,
 					)
 				}
 
@@ -2149,6 +2169,11 @@ export const webviewMessageHandler = async (
 			))
 			const hasGeminiApiKey = !!(await provider.context.secrets.get("codebaseIndexGeminiApiKey"))
 			const hasMistralApiKey = !!(await provider.context.secrets.get("codebaseIndexMistralApiKey"))
+			const hasVertexApiKey = !!(await provider.context.secrets.get("codebaseIndexVertexApiKey"))
+			const hasVertexJsonCredentials = !!(await provider.context.secrets.get(
+				"codebaseIndexVertexJsonCredentials",
+			))
+			const hasVertexKeyFile = !!(await provider.context.secrets.get("codebaseIndexVertexKeyFile"))
 
 			provider.postMessageToWebview({
 				type: "codeIndexSecretStatus",
@@ -2158,6 +2183,9 @@ export const webviewMessageHandler = async (
 					hasOpenAiCompatibleApiKey,
 					hasGeminiApiKey,
 					hasMistralApiKey,
+					hasVertexApiKey,
+					hasVertexJsonCredentials,
+					hasVertexKeyFile,
 				},
 			})
 			break

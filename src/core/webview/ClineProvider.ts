@@ -1554,6 +1554,8 @@ export class ClineProvider
 				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig?.codebaseIndexOpenAiCompatibleBaseUrl,
 				codebaseIndexSearchMaxResults: codebaseIndexConfig?.codebaseIndexSearchMaxResults,
 				codebaseIndexSearchMinScore: codebaseIndexConfig?.codebaseIndexSearchMinScore,
+				codebaseIndexVertexProjectId: codebaseIndexConfig?.codebaseIndexVertexProjectId,
+				codebaseIndexVertexLocation: codebaseIndexConfig?.codebaseIndexVertexLocation,
 			},
 			mdmCompliant: this.checkMdmCompliance(),
 			profileThresholds: profileThresholds ?? {},
@@ -1726,6 +1728,8 @@ export class ClineProvider
 					stateValues.codebaseIndexConfig?.codebaseIndexOpenAiCompatibleBaseUrl,
 				codebaseIndexSearchMaxResults: stateValues.codebaseIndexConfig?.codebaseIndexSearchMaxResults,
 				codebaseIndexSearchMinScore: stateValues.codebaseIndexConfig?.codebaseIndexSearchMinScore,
+				codebaseIndexVertexProjectId: stateValues.codebaseIndexConfig?.codebaseIndexVertexProjectId,
+				codebaseIndexVertexLocation: stateValues.codebaseIndexConfig?.codebaseIndexVertexLocation,
 			},
 			profileThresholds: stateValues.profileThresholds ?? {},
 			// Add diagnostic message settings

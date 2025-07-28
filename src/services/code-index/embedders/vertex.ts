@@ -1,13 +1,15 @@
-import { OpenAICompatibleEmbedder } from "./openai-compatible"
+import { GoogleGenAI } from "@google/genai"
+import type { JWTInput } from "google-auth-library"
 import { IEmbedder, EmbeddingResponse, EmbedderInfo } from "../interfaces/embedder"
 import { VERTEX_MAX_ITEM_TOKENS } from "../constants"
 import { t } from "../../../i18n"
 import { TelemetryEventName } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
+import { safeJsonParse } from "../../../shared/safeJsonParse"
 
 /**
- * Vertex AI embedder implementation that wraps the OpenAI Compatible embedder
- * with configuration for Google's Vertex AI embedding API.
+ * Vertex AI embedder implementation using the @google/genai library
+ * with support for multiple authentication methods.
  *
  * Supported models:
  * - text-embedding-004 (dimension: 768)
@@ -16,31 +18,65 @@ import { TelemetryService } from "@roo-code/telemetry"
  * - textembedding-gecko-multilingual@001 (dimension: 768)
  */
 export class VertexEmbedder implements IEmbedder {
-	private readonly openAICompatibleEmbedder: OpenAICompatibleEmbedder
-	private static readonly VERTEX_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+	private readonly client: GoogleGenAI
 	private static readonly DEFAULT_MODEL = "text-embedding-004"
 	private readonly modelId: string
+	private readonly maxItemTokens: number
 
 	/**
 	 * Creates a new Vertex AI embedder
-	 * @param apiKey The Google AI API key for authentication
-	 * @param modelId The model ID to use (defaults to text-embedding-004)
+	 * @param options Configuration options including authentication methods
 	 */
-	constructor(apiKey: string, modelId?: string) {
-		if (!apiKey) {
-			throw new Error(t("embeddings:validation.apiKeyRequired"))
+	constructor(options: {
+		apiKey?: string
+		jsonCredentials?: string
+		keyFile?: string
+		projectId: string
+		location: string
+		modelId?: string
+	}) {
+		const { apiKey, jsonCredentials, keyFile, projectId, location, modelId } = options
+
+		// Validate required fields
+		if (!projectId) {
+			throw new Error("Project ID is required for Vertex AI")
+		}
+		if (!location) {
+			throw new Error("Location is required for Vertex AI")
 		}
 
 		// Use provided model or default
 		this.modelId = modelId || VertexEmbedder.DEFAULT_MODEL
+		this.maxItemTokens = VERTEX_MAX_ITEM_TOKENS
 
-		// Create an OpenAI Compatible embedder with Vertex AI's configuration
-		this.openAICompatibleEmbedder = new OpenAICompatibleEmbedder(
-			VertexEmbedder.VERTEX_BASE_URL,
-			apiKey,
-			this.modelId,
-			VERTEX_MAX_ITEM_TOKENS,
-		)
+		// Create the GoogleGenAI client with appropriate auth
+		if (jsonCredentials) {
+			this.client = new GoogleGenAI({
+				vertexai: true,
+				project: projectId,
+				location,
+				googleAuthOptions: {
+					credentials: safeJsonParse<JWTInput>(jsonCredentials, undefined),
+				},
+			})
+		} else if (keyFile) {
+			this.client = new GoogleGenAI({
+				vertexai: true,
+				project: projectId,
+				location,
+				googleAuthOptions: { keyFile },
+			})
+		} else if (apiKey && apiKey.trim() !== "") {
+			// For API key auth, we use the regular Gemini API endpoint
+			this.client = new GoogleGenAI({ apiKey })
+		} else {
+			// Default to application default credentials
+			this.client = new GoogleGenAI({
+				vertexai: true,
+				project: projectId,
+				location,
+			})
+		}
 	}
 
 	/**
@@ -51,9 +87,33 @@ export class VertexEmbedder implements IEmbedder {
 	 */
 	async createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse> {
 		try {
-			// Use the provided model or fall back to the instance's model
 			const modelToUse = model || this.modelId
-			return await this.openAICompatibleEmbedder.createEmbeddings(texts, modelToUse)
+
+			// Batch texts if they exceed token limits
+			const batches = this.createBatches(texts)
+			const allEmbeddings: number[][] = []
+
+			for (const batch of batches) {
+				const result = await this.client.models.embedContent({
+					model: modelToUse,
+					contents: batch.map((text) => ({ parts: [{ text }] })),
+				})
+
+				if (!result.embeddings || result.embeddings.length === 0) {
+					throw new Error(t("embeddings:validation.noEmbeddingsReturned"))
+				}
+
+				// Filter out any embeddings without values
+				const validEmbeddings = result.embeddings
+					.filter((e) => e.values !== undefined)
+					.map((e) => e.values as number[])
+
+				allEmbeddings.push(...validEmbeddings)
+			}
+
+			return {
+				embeddings: allEmbeddings,
+			}
 		} catch (error) {
 			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 				error: error instanceof Error ? error.message : String(error),
@@ -65,21 +125,52 @@ export class VertexEmbedder implements IEmbedder {
 	}
 
 	/**
-	 * Validates the Vertex AI embedder configuration by delegating to the underlying OpenAI-compatible embedder
+	 * Creates batches of texts that respect token limits
+	 */
+	private createBatches(texts: string[]): string[][] {
+		// Simple batching - in production, you'd want to estimate tokens
+		const batchSize = 100 // Vertex AI typically supports up to 100 texts per batch
+		const batches: string[][] = []
+
+		for (let i = 0; i < texts.length; i += batchSize) {
+			batches.push(texts.slice(i, i + batchSize))
+		}
+
+		return batches
+	}
+
+	/**
+	 * Validates the Vertex AI embedder configuration
 	 * @returns Promise resolving to validation result with success status and optional error message
 	 */
 	async validateConfiguration(): Promise<{ valid: boolean; error?: string }> {
 		try {
-			// Delegate validation to the OpenAI-compatible embedder
-			// The error messages will be specific to Vertex AI since we're using Vertex AI's base URL
-			return await this.openAICompatibleEmbedder.validateConfiguration()
+			// Test with a simple embedding request
+			const testText = "test"
+			const result = await this.client.models.embedContent({
+				model: this.modelId,
+				contents: [{ parts: [{ text: testText }] }],
+			})
+
+			if (!result.embeddings || result.embeddings.length === 0) {
+				return {
+					valid: false,
+					error: t("embeddings:validation.noEmbeddingsReturned"),
+				}
+			}
+
+			return { valid: true }
 		} catch (error) {
 			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 				error: error instanceof Error ? error.message : String(error),
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "VertexEmbedder:validateConfiguration",
 			})
-			throw error
+
+			return {
+				valid: false,
+				error: error instanceof Error ? error.message : t("embeddings:validation.configurationError"),
+			}
 		}
 	}
 

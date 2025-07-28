@@ -1,10 +1,9 @@
 import { vitest, describe, it, expect, beforeEach } from "vitest"
-import type { MockedClass } from "vitest"
 import { VertexEmbedder } from "../vertex"
-import { OpenAICompatibleEmbedder } from "../openai-compatible"
+import { GoogleGenAI } from "@google/genai"
 
-// Mock the OpenAICompatibleEmbedder
-vitest.mock("../openai-compatible")
+// Mock the @google/genai library
+vitest.mock("@google/genai")
 
 // Mock TelemetryService
 vitest.mock("@roo-code/telemetry", () => ({
@@ -15,61 +14,161 @@ vitest.mock("@roo-code/telemetry", () => ({
 	},
 }))
 
-const MockedOpenAICompatibleEmbedder = OpenAICompatibleEmbedder as MockedClass<typeof OpenAICompatibleEmbedder>
+// Mock i18n
+vitest.mock("../../../../i18n", () => ({
+	t: (key: string, params?: Record<string, any>) => {
+		const translations: Record<string, string> = {
+			"validation.apiKeyRequired": "API key is required",
+			"embeddings:validation.authenticationFailed": "Authentication failed",
+			"embeddings:validation.connectionFailed": "Connection failed",
+			"embeddings:validation.modelNotAvailable": "Model not available",
+			"embeddings:validation.unexpectedError": "Unexpected error",
+			"embeddings:validation.vertexAuthRequired": "At least one authentication method is required for Vertex AI",
+			"embeddings:validation.noEmbeddingsReturned": "No embeddings returned",
+			"embeddings:validation.configurationError": "Configuration error",
+		}
+		return translations[key] || key
+	},
+}))
+
+// Mock safeJsonParse
+vitest.mock("../../../shared/safeJsonParse", () => ({
+	safeJsonParse: (json: string, defaultValue: any) => {
+		try {
+			return JSON.parse(json)
+		} catch {
+			return defaultValue
+		}
+	},
+}))
 
 describe("VertexEmbedder", () => {
 	let embedder: VertexEmbedder
+	let mockClient: any
+	let mockModel: any
+	let mockEmbedContent: any
 
 	beforeEach(() => {
 		vitest.clearAllMocks()
+
+		// Setup mock for embedContent
+		mockEmbedContent = vitest.fn()
+		mockModel = {
+			embedContent: mockEmbedContent,
+		}
+		mockClient = {
+			models: {
+				embedContent: mockEmbedContent,
+			},
+		}
+
+		// Mock GoogleGenAI constructor
+		;(GoogleGenAI as any).mockImplementation(() => mockClient)
 	})
 
 	describe("constructor", () => {
-		it("should create an instance with default model when no model specified", () => {
-			// Arrange
-			const apiKey = "test-vertex-api-key"
-
+		it("should create an instance with API key authentication", () => {
 			// Act
-			embedder = new VertexEmbedder(apiKey)
+			embedder = new VertexEmbedder({
+				apiKey: "test-api-key",
+				projectId: "test-project",
+				location: "us-central1",
+			})
 
 			// Assert
-			expect(MockedOpenAICompatibleEmbedder).toHaveBeenCalledWith(
-				"https://generativelanguage.googleapis.com/v1beta/openai/",
-				apiKey,
-				"text-embedding-004",
-				2048,
-			)
+			expect(GoogleGenAI).toHaveBeenCalledWith({ apiKey: "test-api-key" })
+			expect(embedder.embedderInfo.name).toBe("vertex")
 		})
 
-		it("should create an instance with specified model", () => {
-			// Arrange
-			const apiKey = "test-vertex-api-key"
-			const modelId = "text-multilingual-embedding-002"
-
+		it("should create an instance with JSON credentials authentication", () => {
 			// Act
-			embedder = new VertexEmbedder(apiKey, modelId)
+			embedder = new VertexEmbedder({
+				jsonCredentials: '{"type": "service_account"}',
+				projectId: "test-project",
+				location: "us-central1",
+			})
 
 			// Assert
-			expect(MockedOpenAICompatibleEmbedder).toHaveBeenCalledWith(
-				"https://generativelanguage.googleapis.com/v1beta/openai/",
-				apiKey,
-				"text-multilingual-embedding-002",
-				2048,
-			)
+			expect(GoogleGenAI).toHaveBeenCalledWith({
+				vertexai: true,
+				project: "test-project",
+				location: "us-central1",
+				googleAuthOptions: {
+					credentials: { type: "service_account" },
+				},
+			})
+			expect(embedder.embedderInfo.name).toBe("vertex")
 		})
 
-		it("should throw error when API key is not provided", () => {
-			// Act & Assert
-			expect(() => new VertexEmbedder("")).toThrow("validation.apiKeyRequired")
-			expect(() => new VertexEmbedder(null as any)).toThrow("validation.apiKeyRequired")
-			expect(() => new VertexEmbedder(undefined as any)).toThrow("validation.apiKeyRequired")
+		it("should create an instance with key file authentication", () => {
+			// Act
+			embedder = new VertexEmbedder({
+				keyFile: "/path/to/keyfile.json",
+				projectId: "test-project",
+				location: "us-central1",
+			})
+
+			// Assert
+			expect(GoogleGenAI).toHaveBeenCalledWith({
+				vertexai: true,
+				project: "test-project",
+				location: "us-central1",
+				googleAuthOptions: { keyFile: "/path/to/keyfile.json" },
+			})
+			expect(embedder.embedderInfo.name).toBe("vertex")
+		})
+
+		it("should create an instance with application default credentials", () => {
+			// Act
+			embedder = new VertexEmbedder({
+				apiKey: "", // Empty string to trigger ADC path
+				projectId: "test-project",
+				location: "us-central1",
+			})
+
+			// Assert
+			expect(GoogleGenAI).toHaveBeenCalledWith({
+				vertexai: true,
+				project: "test-project",
+				location: "us-central1",
+			})
+			expect(embedder.embedderInfo.name).toBe("vertex")
+		})
+
+		it("should use default model when not specified", () => {
+			// Act
+			embedder = new VertexEmbedder({
+				apiKey: "test-api-key",
+				projectId: "test-project",
+				location: "us-central1",
+			})
+
+			// Assert
+			expect(embedder["modelId"]).toBe("text-embedding-004")
+		})
+
+		it("should use specified model", () => {
+			// Act
+			embedder = new VertexEmbedder({
+				apiKey: "test-api-key",
+				modelId: "text-multilingual-embedding-002",
+				projectId: "test-project",
+				location: "us-central1",
+			})
+
+			// Assert
+			expect(embedder["modelId"]).toBe("text-multilingual-embedding-002")
 		})
 	})
 
 	describe("embedderInfo", () => {
 		it("should return correct embedder info", () => {
 			// Arrange
-			embedder = new VertexEmbedder("test-api-key")
+			embedder = new VertexEmbedder({
+				apiKey: "test-api-key",
+				projectId: "test-project",
+				location: "us-central1",
+			})
 
 			// Act
 			const info = embedder.embedderInfo
@@ -79,115 +178,185 @@ describe("VertexEmbedder", () => {
 				name: "vertex",
 			})
 		})
+	})
 
-		describe("createEmbeddings", () => {
-			let mockCreateEmbeddings: any
-
-			beforeEach(() => {
-				mockCreateEmbeddings = vitest.fn()
-				MockedOpenAICompatibleEmbedder.prototype.createEmbeddings = mockCreateEmbeddings
+	describe("createEmbeddings", () => {
+		beforeEach(() => {
+			embedder = new VertexEmbedder({
+				apiKey: "test-api-key",
+				projectId: "test-project",
+				location: "us-central1",
 			})
+		})
 
-			it("should use instance model when no model parameter provided", async () => {
-				// Arrange
-				embedder = new VertexEmbedder("test-api-key")
-				const texts = ["test text 1", "test text 2"]
-				const mockResponse = {
-					embeddings: [
-						[0.1, 0.2],
-						[0.3, 0.4],
-					],
-				}
-				mockCreateEmbeddings.mockResolvedValue(mockResponse)
+		it("should create embeddings for single text", async () => {
+			// Arrange
+			const texts = ["test text"]
+			const mockResponse = {
+				embeddings: [{ values: [0.1, 0.2, 0.3] }],
+			}
+			mockEmbedContent.mockResolvedValue(mockResponse)
 
-				// Act
-				const result = await embedder.createEmbeddings(texts)
+			// Act
+			const result = await embedder.createEmbeddings(texts)
 
-				// Assert
-				expect(mockCreateEmbeddings).toHaveBeenCalledWith(texts, "text-embedding-004")
-				expect(result).toEqual(mockResponse)
+			// Assert
+			expect(mockEmbedContent).toHaveBeenCalledWith({
+				model: "text-embedding-004",
+				contents: [{ parts: [{ text: "test text" }] }],
 			})
-
-			it("should use provided model parameter when specified", async () => {
-				// Arrange
-				embedder = new VertexEmbedder("test-api-key", "textembedding-gecko@003")
-				const texts = ["test text 1", "test text 2"]
-				const mockResponse = {
-					embeddings: [
-						[0.1, 0.2],
-						[0.3, 0.4],
-					],
-				}
-				mockCreateEmbeddings.mockResolvedValue(mockResponse)
-
-				// Act
-				const result = await embedder.createEmbeddings(texts, "text-multilingual-embedding-002")
-
-				// Assert
-				expect(mockCreateEmbeddings).toHaveBeenCalledWith(texts, "text-multilingual-embedding-002")
-				expect(result).toEqual(mockResponse)
+			expect(result).toEqual({
+				embeddings: [[0.1, 0.2, 0.3]],
 			})
+		})
 
-			it("should handle errors from OpenAICompatibleEmbedder", async () => {
-				// Arrange
-				embedder = new VertexEmbedder("test-api-key")
-				const texts = ["test text"]
-				const error = new Error("Embedding failed")
-				mockCreateEmbeddings.mockRejectedValue(error)
+		it("should create embeddings for multiple texts in batches", async () => {
+			// Arrange
+			const texts = ["text1", "text2", "text3"]
+			const mockResponse = {
+				embeddings: [{ values: [0.1, 0.2] }, { values: [0.3, 0.4] }, { values: [0.5, 0.6] }],
+			}
+			mockEmbedContent.mockResolvedValue(mockResponse)
 
-				// Act & Assert
-				await expect(embedder.createEmbeddings(texts)).rejects.toThrow("Embedding failed")
+			// Act
+			const result = await embedder.createEmbeddings(texts)
+
+			// Assert
+			expect(mockEmbedContent).toHaveBeenCalledTimes(1)
+			expect(mockEmbedContent).toHaveBeenCalledWith({
+				model: "text-embedding-004",
+				contents: [
+					{ parts: [{ text: "text1" }] },
+					{ parts: [{ text: "text2" }] },
+					{ parts: [{ text: "text3" }] },
+				],
 			})
+			expect(result).toEqual({
+				embeddings: [
+					[0.1, 0.2],
+					[0.3, 0.4],
+					[0.5, 0.6],
+				],
+			})
+		})
+
+		it("should use custom model when provided", async () => {
+			// Arrange
+			const texts = ["test text"]
+			const mockResponse = {
+				embeddings: [{ values: [0.1, 0.2] }],
+			}
+			mockEmbedContent.mockResolvedValue(mockResponse)
+
+			// Act
+			await embedder.createEmbeddings(texts, "text-multilingual-embedding-002")
+
+			// Assert
+			expect(mockEmbedContent).toHaveBeenCalledWith({
+				model: "text-multilingual-embedding-002",
+				contents: [{ parts: [{ text: "test text" }] }],
+			})
+		})
+
+		it("should handle empty text array", async () => {
+			// Act
+			const result = await embedder.createEmbeddings([])
+
+			// Assert
+			expect(mockEmbedContent).not.toHaveBeenCalled()
+			expect(result).toEqual({ embeddings: [] })
+		})
+
+		it("should handle API errors", async () => {
+			// Arrange
+			const texts = ["test text"]
+			const error = new Error("API Error")
+			mockEmbedContent.mockRejectedValue(error)
+
+			// Act & Assert
+			await expect(embedder.createEmbeddings(texts)).rejects.toThrow("API Error")
 		})
 	})
 
 	describe("validateConfiguration", () => {
-		let mockValidateConfiguration: any
-
 		beforeEach(() => {
-			mockValidateConfiguration = vitest.fn()
-			MockedOpenAICompatibleEmbedder.prototype.validateConfiguration = mockValidateConfiguration
+			embedder = new VertexEmbedder({
+				apiKey: "test-api-key",
+				projectId: "test-project",
+				location: "us-central1",
+			})
 		})
 
-		it("should delegate validation to OpenAICompatibleEmbedder", async () => {
+		it("should validate configuration successfully", async () => {
 			// Arrange
-			embedder = new VertexEmbedder("test-api-key")
-			mockValidateConfiguration.mockResolvedValue({ valid: true })
+			const mockResponse = {
+				embeddings: [{ values: [0.1, 0.2] }],
+			}
+			mockEmbedContent.mockResolvedValue(mockResponse)
 
 			// Act
 			const result = await embedder.validateConfiguration()
 
 			// Assert
-			expect(mockValidateConfiguration).toHaveBeenCalled()
+			expect(mockEmbedContent).toHaveBeenCalledWith({
+				model: "text-embedding-004",
+				contents: [{ parts: [{ text: "test" }] }],
+			})
 			expect(result).toEqual({ valid: true })
 		})
 
-		it("should pass through validation errors from OpenAICompatibleEmbedder", async () => {
+		it("should handle unexpected errors", async () => {
 			// Arrange
-			embedder = new VertexEmbedder("test-api-key")
-			mockValidateConfiguration.mockResolvedValue({
-				valid: false,
-				error: "embeddings:validation.authenticationFailed",
-			})
+			const error = new Error("Something went wrong")
+			mockEmbedContent.mockRejectedValue(error)
 
 			// Act
 			const result = await embedder.validateConfiguration()
 
 			// Assert
-			expect(mockValidateConfiguration).toHaveBeenCalled()
 			expect(result).toEqual({
 				valid: false,
-				error: "embeddings:validation.authenticationFailed",
+				error: "Something went wrong",
+			})
+		})
+	})
+
+	describe("createBatches", () => {
+		beforeEach(() => {
+			embedder = new VertexEmbedder({
+				apiKey: "test-api-key",
+				projectId: "test-project",
+				location: "us-central1",
 			})
 		})
 
-		it("should handle validation exceptions", async () => {
+		it("should create batches respecting token limits", () => {
 			// Arrange
-			embedder = new VertexEmbedder("test-api-key")
-			mockValidateConfiguration.mockRejectedValue(new Error("Validation failed"))
+			const texts = [
+				"short text",
+				"another short text",
+				"a".repeat(5000), // Long text
+				"more text",
+			]
 
-			// Act & Assert
-			await expect(embedder.validateConfiguration()).rejects.toThrow("Validation failed")
+			// Act
+			const batches = embedder["createBatches"](texts)
+
+			// Assert
+			expect(batches.length).toBe(1)
+			expect(batches[0].length).toBe(4) // All texts in one batch (under 100 limit)
+		})
+
+		it("should handle all oversized texts", () => {
+			// Arrange
+			const texts = ["a".repeat(10000), "b".repeat(10000)]
+
+			// Act
+			const batches = embedder["createBatches"](texts)
+
+			// Assert
+			expect(batches.length).toBe(1)
+			expect(batches[0].length).toBe(2) // Both texts in one batch
 		})
 	})
 })

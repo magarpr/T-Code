@@ -70,6 +70,10 @@ interface LocalCodeIndexSettings {
 	codebaseIndexGeminiApiKey?: string
 	codebaseIndexMistralApiKey?: string
 	codebaseIndexVertexApiKey?: string
+	codebaseIndexVertexJsonCredentials?: string
+	codebaseIndexVertexKeyFile?: string
+	codebaseIndexVertexProjectId?: string
+	codebaseIndexVertexLocation?: string
 }
 
 // Validation schema for codebase index settings
@@ -137,12 +141,32 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 			})
 
 		case "vertex":
-			return baseSchema.extend({
-				codebaseIndexVertexApiKey: z.string().min(1, t("settings:codeIndex.validation.vertexApiKeyRequired")),
-				codebaseIndexEmbedderModelId: z
-					.string()
-					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
-			})
+			return baseSchema
+				.extend({
+					// At least one auth method is required
+					codebaseIndexVertexApiKey: z.string().optional(),
+					codebaseIndexVertexJsonCredentials: z.string().optional(),
+					codebaseIndexVertexKeyFile: z.string().optional(),
+					codebaseIndexVertexProjectId: z
+						.string()
+						.min(1, t("settings:codeIndex.validation.vertexProjectIdRequired")),
+					codebaseIndexVertexLocation: z
+						.string()
+						.min(1, t("settings:codeIndex.validation.vertexLocationRequired")),
+					codebaseIndexEmbedderModelId: z
+						.string()
+						.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+				})
+				.refine(
+					(data) =>
+						data.codebaseIndexVertexApiKey ||
+						data.codebaseIndexVertexJsonCredentials ||
+						data.codebaseIndexVertexKeyFile,
+					{
+						message: t("settings:codeIndex.validation.vertexAuthRequired"),
+						path: ["codebaseIndexVertexApiKey"],
+					},
+				)
 
 		default:
 			return baseSchema
@@ -189,6 +213,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexGeminiApiKey: "",
 		codebaseIndexMistralApiKey: "",
 		codebaseIndexVertexApiKey: "",
+		codebaseIndexVertexJsonCredentials: "",
+		codebaseIndexVertexKeyFile: "",
+		codebaseIndexVertexProjectId: "",
+		codebaseIndexVertexLocation: "us-central1",
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -224,6 +252,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexGeminiApiKey: "",
 				codebaseIndexMistralApiKey: "",
 				codebaseIndexVertexApiKey: "",
+				codebaseIndexVertexJsonCredentials: "",
+				codebaseIndexVertexKeyFile: "",
+				codebaseIndexVertexProjectId: codebaseIndexConfig.codebaseIndexVertexProjectId || "",
+				codebaseIndexVertexLocation: codebaseIndexConfig.codebaseIndexVertexLocation || "us-central1",
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -321,6 +353,17 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					if (!prev.codebaseIndexVertexApiKey || prev.codebaseIndexVertexApiKey === SECRET_PLACEHOLDER) {
 						updated.codebaseIndexVertexApiKey = secretStatus.hasVertexApiKey ? SECRET_PLACEHOLDER : ""
 					}
+					if (
+						!prev.codebaseIndexVertexJsonCredentials ||
+						prev.codebaseIndexVertexJsonCredentials === SECRET_PLACEHOLDER
+					) {
+						updated.codebaseIndexVertexJsonCredentials = secretStatus.hasVertexJsonCredentials
+							? SECRET_PLACEHOLDER
+							: ""
+					}
+					if (!prev.codebaseIndexVertexKeyFile || prev.codebaseIndexVertexKeyFile === SECRET_PLACEHOLDER) {
+						updated.codebaseIndexVertexKeyFile = secretStatus.hasVertexKeyFile ? SECRET_PLACEHOLDER : ""
+					}
 
 					return updated
 				}
@@ -394,7 +437,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					key === "codebaseIndexOpenAiCompatibleApiKey" ||
 					key === "codebaseIndexGeminiApiKey" ||
 					key === "codebaseIndexMistralApiKey" ||
-					key === "codebaseIndexVertexApiKey"
+					key === "codebaseIndexVertexApiKey" ||
+					key === "codebaseIndexVertexJsonCredentials" ||
+					key === "codebaseIndexVertexKeyFile"
 				) {
 					dataToValidate[key] = "placeholder-valid"
 				}
@@ -1038,6 +1083,15 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 										<>
 											<div className="space-y-2">
 												<label className="text-sm font-medium">
+													{t("settings:codeIndex.vertexAuthMethodLabel")}
+												</label>
+												<p className="text-xs text-vscode-descriptionForeground mb-2">
+													{t("settings:codeIndex.vertexAuthMethodDescription")}
+												</p>
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
 													{t("settings:codeIndex.vertexApiKeyLabel")}
 												</label>
 												<VSCodeTextField
@@ -1054,6 +1108,96 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												{formErrors.codebaseIndexVertexApiKey && (
 													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
 														{formErrors.codebaseIndexVertexApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.vertexJsonCredentialsLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexVertexJsonCredentials || ""}
+													onInput={(e: any) =>
+														updateSetting(
+															"codebaseIndexVertexJsonCredentials",
+															e.target.value,
+														)
+													}
+													placeholder={t(
+														"settings:codeIndex.vertexJsonCredentialsPlaceholder",
+													)}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexVertexJsonCredentials,
+													})}
+												/>
+												{formErrors.codebaseIndexVertexJsonCredentials && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexVertexJsonCredentials}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.vertexKeyFileLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexVertexKeyFile || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexVertexKeyFile", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.vertexKeyFilePlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexVertexKeyFile,
+													})}
+												/>
+												{formErrors.codebaseIndexVertexKeyFile && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexVertexKeyFile}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.vertexProjectIdLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexVertexProjectId || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexVertexProjectId", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.vertexProjectIdPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexVertexProjectId,
+													})}
+												/>
+												{formErrors.codebaseIndexVertexProjectId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexVertexProjectId}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.vertexLocationLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexVertexLocation || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexVertexLocation", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.vertexLocationPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexVertexLocation,
+													})}
+												/>
+												{formErrors.codebaseIndexVertexLocation && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexVertexLocation}
 													</p>
 												)}
 											</div>

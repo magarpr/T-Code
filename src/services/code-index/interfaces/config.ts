@@ -14,7 +14,13 @@ export interface CodeIndexConfig {
 	openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
 	geminiOptions?: { apiKey: string }
 	mistralOptions?: { apiKey: string }
-	vertexOptions?: { apiKey: string }
+	vertexOptions?: {
+		apiKey?: string
+		jsonCredentials?: string
+		keyFile?: string
+		projectId?: string
+		location?: string
+	}
 	qdrantUrl?: string
 	qdrantApiKey?: string
 	searchMinScore?: number
@@ -37,6 +43,10 @@ export type PreviousConfigSnapshot = {
 	geminiApiKey?: string
 	mistralApiKey?: string
 	vertexApiKey?: string
+	vertexJsonCredentials?: string
+	vertexKeyFile?: string
+	vertexProjectId?: string
+	vertexLocation?: string
 	qdrantUrl?: string
 	qdrantApiKey?: string
 }

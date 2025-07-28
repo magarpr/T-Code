@@ -185,6 +185,8 @@ export const SECRET_STATE_KEYS = [
 	"codebaseIndexGeminiApiKey",
 	"codebaseIndexMistralApiKey",
 	"codebaseIndexVertexApiKey",
+	"codebaseIndexVertexJsonCredentials",
+	"codebaseIndexVertexKeyFile",
 	"huggingFaceApiKey",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 export type SecretState = Pick<ProviderSettings, (typeof SECRET_STATE_KEYS)[number]>

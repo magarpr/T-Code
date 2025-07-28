@@ -36,6 +36,9 @@ export const codebaseIndexConfigSchema = z.object({
 	// OpenAI Compatible specific fields
 	codebaseIndexOpenAiCompatibleBaseUrl: z.string().optional(),
 	codebaseIndexOpenAiCompatibleModelDimension: z.number().optional(),
+	// Vertex AI specific fields
+	codebaseIndexVertexProjectId: z.string().optional(),
+	codebaseIndexVertexLocation: z.string().optional(),
 })
 
 export type CodebaseIndexConfig = z.infer<typeof codebaseIndexConfigSchema>
@@ -68,6 +71,8 @@ export const codebaseIndexProviderSchema = z.object({
 	codebaseIndexGeminiApiKey: z.string().optional(),
 	codebaseIndexMistralApiKey: z.string().optional(),
 	codebaseIndexVertexApiKey: z.string().optional(),
+	codebaseIndexVertexJsonCredentials: z.string().optional(),
+	codebaseIndexVertexKeyFile: z.string().optional(),
 })
 
 export type CodebaseIndexProvider = z.infer<typeof codebaseIndexProviderSchema>

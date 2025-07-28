@@ -72,10 +72,29 @@ export class CodeIndexServiceFactory {
 			}
 			return new MistralEmbedder(config.mistralOptions.apiKey, config.modelId)
 		} else if (provider === "vertex") {
-			if (!config.vertexOptions?.apiKey) {
+			const vertexOptions = config.vertexOptions
+			if (!vertexOptions) {
 				throw new Error(t("embeddings:serviceFactory.vertexConfigMissing"))
 			}
-			return new VertexEmbedder(config.vertexOptions.apiKey, config.modelId)
+
+			// Validate that at least one auth method is provided
+			if (!vertexOptions.apiKey && !vertexOptions.jsonCredentials && !vertexOptions.keyFile) {
+				throw new Error(t("embeddings:serviceFactory.vertexAuthRequired"))
+			}
+
+			// Validate required fields for Vertex AI
+			if (!vertexOptions.projectId || !vertexOptions.location) {
+				throw new Error(t("embeddings:serviceFactory.vertexProjectLocationRequired"))
+			}
+
+			return new VertexEmbedder({
+				apiKey: vertexOptions.apiKey,
+				jsonCredentials: vertexOptions.jsonCredentials,
+				keyFile: vertexOptions.keyFile,
+				projectId: vertexOptions.projectId,
+				location: vertexOptions.location,
+				modelId: config.modelId,
+			})
 		}
 
 		throw new Error(
