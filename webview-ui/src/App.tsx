@@ -21,6 +21,7 @@ import ModesView from "./components/modes/ModesView"
 import { HumanRelayDialog } from "./components/human-relay/HumanRelayDialog"
 import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/MessageModificationConfirmationDialog"
 import ErrorBoundary from "./components/ErrorBoundary"
+import { DialogErrorBoundary } from "./components/ui/DialogErrorBoundary"
 import { AccountView } from "./components/account/AccountView"
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { TooltipProvider } from "./components/ui/tooltip"
@@ -207,6 +208,57 @@ const App = () => {
 		console.debug("App initialized with source map support")
 	}, [])
 
+	// Dialog recovery mechanism - detect and close stuck dialogs
+	useEffect(() => {
+		// Set up a timeout to check for stuck dialogs after 30 seconds
+		const timeoutId = setTimeout(() => {
+			// Check if any dialog is open but the app seems unresponsive
+			const hasStuckDialog =
+				humanRelayDialogState.isOpen || deleteMessageDialogState.isOpen || editMessageDialogState.isOpen
+
+			if (hasStuckDialog) {
+				console.warn("Detected potentially stuck dialog, attempting recovery")
+
+				// Reset all dialog states
+				setHumanRelayDialogState({ isOpen: false, requestId: "", promptText: "" })
+				setDeleteMessageDialogState({ isOpen: false, messageTs: 0 })
+				setEditMessageDialogState({ isOpen: false, messageTs: 0, text: "", images: [] })
+
+				// Log telemetry for debugging
+				telemetryClient.capture("dialog_recovery_triggered", {
+					humanRelayOpen: humanRelayDialogState.isOpen,
+					deleteMessageOpen: deleteMessageDialogState.isOpen,
+					editMessageOpen: editMessageDialogState.isOpen,
+				})
+			}
+		}, 30000) // 30 seconds timeout
+
+		return () => clearTimeout(timeoutId)
+	}, [humanRelayDialogState.isOpen, deleteMessageDialogState.isOpen, editMessageDialogState.isOpen])
+
+	// Add keyboard shortcut for manual dialog recovery (Escape key)
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			// Check if Escape key is pressed and any dialog is open
+			if (e.key === "Escape") {
+				const hasOpenDialog =
+					humanRelayDialogState.isOpen || deleteMessageDialogState.isOpen || editMessageDialogState.isOpen
+
+				if (hasOpenDialog) {
+					console.log("Manual dialog recovery triggered via Escape key")
+
+					// Close all dialogs
+					setHumanRelayDialogState({ isOpen: false, requestId: "", promptText: "" })
+					setDeleteMessageDialogState({ isOpen: false, messageTs: 0 })
+					setEditMessageDialogState({ isOpen: false, messageTs: 0, text: "", images: [] })
+				}
+			}
+		}
+
+		window.addEventListener("keydown", handleKeyDown)
+		return () => window.removeEventListener("keydown", handleKeyDown)
+	}, [humanRelayDialogState.isOpen, deleteMessageDialogState.isOpen, editMessageDialogState.isOpen])
+
 	// Focus the WebView when non-interactive content is clicked (only in editor/tab mode)
 	useAddNonInteractiveClickListener(
 		useCallback(() => {
@@ -260,38 +312,44 @@ const App = () => {
 				showAnnouncement={showAnnouncement}
 				hideAnnouncement={() => setShowAnnouncement(false)}
 			/>
-			<MemoizedHumanRelayDialog
-				isOpen={humanRelayDialogState.isOpen}
-				requestId={humanRelayDialogState.requestId}
-				promptText={humanRelayDialogState.promptText}
-				onClose={() => setHumanRelayDialogState((prev) => ({ ...prev, isOpen: false }))}
-				onSubmit={(requestId, text) => vscode.postMessage({ type: "humanRelayResponse", requestId, text })}
-				onCancel={(requestId) => vscode.postMessage({ type: "humanRelayCancel", requestId })}
-			/>
-			<MemoizedDeleteMessageDialog
-				open={deleteMessageDialogState.isOpen}
-				onOpenChange={(open) => setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
-				onConfirm={() => {
-					vscode.postMessage({
-						type: "deleteMessageConfirm",
-						messageTs: deleteMessageDialogState.messageTs,
-					})
-					setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: false }))
-				}}
-			/>
-			<MemoizedEditMessageDialog
-				open={editMessageDialogState.isOpen}
-				onOpenChange={(open) => setEditMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
-				onConfirm={() => {
-					vscode.postMessage({
-						type: "editMessageConfirm",
-						messageTs: editMessageDialogState.messageTs,
-						text: editMessageDialogState.text,
-						images: editMessageDialogState.images,
-					})
-					setEditMessageDialogState((prev) => ({ ...prev, isOpen: false }))
-				}}
-			/>
+			<DialogErrorBoundary onError={() => setHumanRelayDialogState((prev) => ({ ...prev, isOpen: false }))}>
+				<MemoizedHumanRelayDialog
+					isOpen={humanRelayDialogState.isOpen}
+					requestId={humanRelayDialogState.requestId}
+					promptText={humanRelayDialogState.promptText}
+					onClose={() => setHumanRelayDialogState((prev) => ({ ...prev, isOpen: false }))}
+					onSubmit={(requestId, text) => vscode.postMessage({ type: "humanRelayResponse", requestId, text })}
+					onCancel={(requestId) => vscode.postMessage({ type: "humanRelayCancel", requestId })}
+				/>
+			</DialogErrorBoundary>
+			<DialogErrorBoundary onError={() => setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: false }))}>
+				<MemoizedDeleteMessageDialog
+					open={deleteMessageDialogState.isOpen}
+					onOpenChange={(open) => setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
+					onConfirm={() => {
+						vscode.postMessage({
+							type: "deleteMessageConfirm",
+							messageTs: deleteMessageDialogState.messageTs,
+						})
+						setDeleteMessageDialogState((prev) => ({ ...prev, isOpen: false }))
+					}}
+				/>
+			</DialogErrorBoundary>
+			<DialogErrorBoundary onError={() => setEditMessageDialogState((prev) => ({ ...prev, isOpen: false }))}>
+				<MemoizedEditMessageDialog
+					open={editMessageDialogState.isOpen}
+					onOpenChange={(open) => setEditMessageDialogState((prev) => ({ ...prev, isOpen: open }))}
+					onConfirm={() => {
+						vscode.postMessage({
+							type: "editMessageConfirm",
+							messageTs: editMessageDialogState.messageTs,
+							text: editMessageDialogState.text,
+							images: editMessageDialogState.images,
+						})
+						setEditMessageDialogState((prev) => ({ ...prev, isOpen: false }))
+					}}
+				/>
+			</DialogErrorBoundary>
 		</>
 	)
 }
