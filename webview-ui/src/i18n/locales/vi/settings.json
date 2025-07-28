@@ -50,6 +50,7 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Khóa API:",
 		"mistralApiKeyPlaceholder": "Nhập khóa API Mistral của bạn",
+		"vertexProvider": "GCP Vertex AI",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",

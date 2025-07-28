@@ -50,6 +50,7 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API कुंजी:",
 		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
+		"vertexProvider": "GCP Vertex AI",
 		"openaiCompatibleProvider": "OpenAI संगत",
 		"openAiKeyLabel": "OpenAI API कुंजी",
 		"openAiKeyPlaceholder": "अपना OpenAI API कुंजी दर्ज करें",

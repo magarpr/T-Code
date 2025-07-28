@@ -50,6 +50,7 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-sleutel:",
 		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
+		"vertexProvider": "GCP Vertex AI",
 		"openaiCompatibleProvider": "OpenAI-compatibel",
 		"openAiKeyLabel": "OpenAI API-sleutel",
 		"openAiKeyPlaceholder": "Voer uw OpenAI API-sleutel in",

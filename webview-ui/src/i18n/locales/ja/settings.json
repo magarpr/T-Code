@@ -50,6 +50,7 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "APIキー:",
 		"mistralApiKeyPlaceholder": "Mistral APIキーを入力してください",
+		"vertexProvider": "GCP Vertex AI",
 		"openaiCompatibleProvider": "OpenAI互換",
 		"openAiKeyLabel": "OpenAI APIキー",
 		"openAiKeyPlaceholder": "OpenAI APIキーを入力してください",
