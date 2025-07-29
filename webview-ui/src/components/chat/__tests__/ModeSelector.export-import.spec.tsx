@@ -213,8 +213,8 @@ describe("ModeSelector Export/Import", () => {
 			// Import button should be visible
 			const importButton = screen.getByRole("button", { name: "Import Mode" })
 			expect(importButton).toBeInTheDocument()
-			// Check for the icon inside the button
-			const icon = importButton.querySelector(".codicon-cloud-download")
+			// Check for the Download icon (SVG) inside the button
+			const icon = importButton.querySelector("svg")
 			expect(icon).toBeInTheDocument()
 		})
 
@@ -424,16 +424,17 @@ describe("ModeSelector Export/Import", () => {
 			expect(exportButton).toHaveAttribute("aria-label", "Export Mode")
 		})
 
-		test("import button uses IconButton component", async () => {
+		test("import button has proper structure", async () => {
 			render(<ModeSelector value={"code" as Mode} onChange={vi.fn()} modeShortcutText="Ctrl+M" />)
 
 			// Open the popover
 			fireEvent.click(screen.getByTestId("mode-selector-trigger"))
 
-			// Import button should have proper IconButton structure
+			// Import button should have proper structure
 			const importButton = screen.getByRole("button", { name: "Import Mode" })
-			expect(importButton).toHaveAttribute("aria-label", "Import Mode")
-			expect(importButton.querySelector(".codicon-cloud-download")).toBeInTheDocument()
+			expect(importButton).toHaveAttribute("title", "Import Mode")
+			// Check for the Download icon (SVG) inside the button
+			expect(importButton.querySelector("svg")).toBeInTheDocument()
 		})
 	})
 })

@@ -1,5 +1,5 @@
 import React from "react"
-import { ChevronUp, Check, X, Upload } from "lucide-react"
+import { ChevronUp, Check, X, Upload, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRooPortal } from "@/components/ui/hooks/useRooPortal"
 import { Popover, PopoverContent, PopoverTrigger, StandardTooltip, Button } from "@/components/ui"
@@ -368,14 +368,15 @@ export const ModeSelector = ({
 										setOpen(false)
 									}}
 								/>
-								{/* Import button - using IconButton for consistency */}
-								<IconButton
-									iconClass="codicon-cloud-download"
+								{/* Import button - using Button with Download icon to match ModesView */}
+								<Button
+									variant="ghost"
+									size="icon"
 									title={t("prompts:modes.importMode")}
 									onClick={() => setShowImportDialog(true)}
-									disabled={isImporting}
-									isLoading={isImporting}
-								/>
+									disabled={isImporting}>
+									<Download className="h-3.5 w-3.5" />
+								</Button>
 							</div>
 
 							{/* Info icon and title on the right - only show info icon when search bar is visible */}
