@@ -558,7 +558,10 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	public async overwriteClineMessages(newMessages: ClineMessage[]) {
 		this.clineMessages = newMessages
-		restoreTodoListForTask(this)
+		// Only restore todo list from messages if we don't already have initialTodos
+		if (!this.todoList || this.todoList.length === 0) {
+			restoreTodoListForTask(this)
+		}
 		await this.saveClineMessages()
 	}
 
