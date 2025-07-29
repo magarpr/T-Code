@@ -775,6 +775,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "mistake_limit_reached":
 				case "resume_task":
 					startNewTask()
+					// Clear input state when terminating/starting new task
+					setInputValue("")
+					setSelectedImages([])
 					break
 				case "command":
 				case "tool":
@@ -792,9 +795,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						// Responds to the API with a "This operation failed" and lets it try again
 						vscode.postMessage({ type: "askResponse", askResponse: "noButtonClicked" })
 					}
+					// Clear input state after sending rejection
+					setInputValue("")
+					setSelectedImages([])
 					break
 				case "command_output":
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "abort" })
+					// Clear input state after aborting command
+					setInputValue("")
+					setSelectedImages([])
 					break
 			}
 			setSendingDisabled(true)
