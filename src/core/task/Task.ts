@@ -125,6 +125,7 @@ export type TaskOptions = {
 	rootTask?: Task
 	parentTask?: Task
 	taskNumber?: number
+	initialTodos?: TodoItem[]
 	onCreated?: (cline: Task) => void
 }
 
@@ -270,6 +271,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		rootTask,
 		parentTask,
 		taskNumber = -1,
+		initialTodos,
 		onCreated,
 	}: TaskOptions) {
 		super()
@@ -322,6 +324,11 @@ export class Task extends EventEmitter<ClineEvents> {
 			this._taskMode = undefined
 			this.taskModeReady = this.initializeTaskMode(provider)
 			TelemetryService.instance.captureTaskCreated(this.taskId)
+		}
+
+		// Initialize todo list if provided
+		if (initialTodos) {
+			this.todoList = initialTodos
 		}
 
 		// Only set up diff strategy if diff is enabled

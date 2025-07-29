@@ -532,7 +532,12 @@ export class ClineProvider
 		options: Partial<
 			Pick<
 				TaskOptions,
-				"enableDiff" | "enableCheckpoints" | "fuzzyMatchThreshold" | "consecutiveMistakeLimit" | "experiments"
+				| "enableDiff"
+				| "enableCheckpoints"
+				| "fuzzyMatchThreshold"
+				| "consecutiveMistakeLimit"
+				| "experiments"
+				| "initialTodos"
 			>
 		> = {},
 	) {

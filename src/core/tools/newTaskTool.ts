@@ -5,6 +5,7 @@ import { Task } from "../task/Task"
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { formatResponse } from "../prompts/responses"
 import { t } from "../../i18n"
+import { parseMarkdownChecklist } from "./updateTodoListTool"
 
 export async function newTaskTool(
 	cline: Task,
@@ -16,6 +17,7 @@ export async function newTaskTool(
 ) {
 	const mode: string | undefined = block.params.mode
 	const message: string | undefined = block.params.message
+	const todos: string | undefined = block.params.todos
 
 	try {
 		if (block.partial) {
@@ -23,6 +25,7 @@ export async function newTaskTool(
 				tool: "newTask",
 				mode: removeClosingTag("mode", mode),
 				content: removeClosingTag("message", message),
+				todos: removeClosingTag("todos", todos),
 			})
 
 			await cline.ask("tool", partialMessage, block.partial).catch(() => {})
@@ -42,6 +45,13 @@ export async function newTaskTool(
 				return
 			}
 
+			if (!todos) {
+				cline.consecutiveMistakeCount++
+				cline.recordToolError("new_task")
+				pushToolResult(await cline.sayAndCreateMissingParamError("new_task", "todos"))
+				return
+			}
+
 			cline.consecutiveMistakeCount = 0
 			// Un-escape one level of backslashes before '@' for hierarchical subtasks
 			// Un-escape one level: \\@ -> \@ (removes one backslash for hierarchical subtasks)
@@ -55,10 +65,24 @@ export async function newTaskTool(
 				return
 			}
 
+			// Parse the todos markdown
+			let parsedTodos
+			try {
+				parsedTodos = parseMarkdownChecklist(todos)
+			} catch (error) {
+				pushToolResult(
+					formatResponse.toolError(
+						`Invalid todos markdown format: ${error instanceof Error ? error.message : String(error)}`,
+					),
+				)
+				return
+			}
+
 			const toolMessage = JSON.stringify({
 				tool: "newTask",
 				mode: targetMode.name,
 				content: message,
+				todos: parsedTodos,
 			})
 
 			const didApprove = await askApproval("tool", toolMessage)
@@ -81,7 +105,9 @@ export async function newTaskTool(
 			cline.pausedModeSlug = (await provider.getState()).mode ?? defaultModeSlug
 
 			// Create new task instance first (this preserves parent's current mode in its history)
-			const newCline = await provider.initClineWithTask(unescapedMessage, undefined, cline)
+			const newCline = await provider.initClineWithTask(unescapedMessage, undefined, cline, {
+				initialTodos: parsedTodos,
+			})
 			if (!newCline) {
 				pushToolResult(t("tools:newTask.errors.policy_restriction"))
 				return

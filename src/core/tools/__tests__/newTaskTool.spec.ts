@@ -14,6 +14,13 @@ vi.mock("../../prompts/responses", () => ({
 	},
 }))
 
+vi.mock("../updateTodoListTool", () => ({
+	parseMarkdownChecklist: vi.fn((md: string) => [
+		{ id: "1", content: "Test todo 1", status: "pending" },
+		{ id: "2", content: "Test todo 2", status: "pending" },
+	]),
+}))
+
 // Define a minimal type for the resolved value
 type MockClineInstance = { taskId: string }
 
@@ -72,6 +79,7 @@ describe("newTaskTool", () => {
 			params: {
 				mode: "code",
 				message: "Review this: \\\\@file1.txt and also \\\\\\\\@file2.txt", // Input with \\@ and \\\\@
+				todos: "[ ] Test todo 1\n[ ] Test todo 2",
 			},
 			partial: false,
 		}
@@ -93,6 +101,12 @@ describe("newTaskTool", () => {
 			"Review this: \\@file1.txt and also \\\\\\@file2.txt", // Unit Test Expectation: \\@ -> \@, \\\\@ -> \\\\@
 			undefined,
 			mockCline,
+			{
+				initialTodos: [
+					{ id: "1", content: "Test todo 1", status: "pending" },
+					{ id: "2", content: "Test todo 2", status: "pending" },
+				],
+			},
 		)
 
 		// Verify side effects
@@ -109,6 +123,7 @@ describe("newTaskTool", () => {
 			params: {
 				mode: "code",
 				message: "This is already unescaped: \\@file1.txt",
+				todos: "[ ] Test todo",
 			},
 			partial: false,
 		}
@@ -126,6 +141,12 @@ describe("newTaskTool", () => {
 			"This is already unescaped: \\@file1.txt", // Expected: \@ remains \@
 			undefined,
 			mockCline,
+			{
+				initialTodos: [
+					{ id: "1", content: "Test todo 1", status: "pending" },
+					{ id: "2", content: "Test todo 2", status: "pending" },
+				],
+			},
 		)
 	})
 
@@ -136,6 +157,7 @@ describe("newTaskTool", () => {
 			params: {
 				mode: "code",
 				message: "A normal mention @file1.txt",
+				todos: "[ ] Test todo",
 			},
 			partial: false,
 		}
@@ -153,6 +175,12 @@ describe("newTaskTool", () => {
 			"A normal mention @file1.txt", // Expected: @ remains @
 			undefined,
 			mockCline,
+			{
+				initialTodos: [
+					{ id: "1", content: "Test todo 1", status: "pending" },
+					{ id: "2", content: "Test todo 2", status: "pending" },
+				],
+			},
 		)
 	})
 
@@ -163,6 +191,7 @@ describe("newTaskTool", () => {
 			params: {
 				mode: "code",
 				message: "Mix: @file0.txt, \\@file1.txt, \\\\@file2.txt, \\\\\\\\@file3.txt",
+				todos: "[ ] Test todo",
 			},
 			partial: false,
 		}
@@ -180,7 +209,40 @@ describe("newTaskTool", () => {
 			"Mix: @file0.txt, \\@file1.txt, \\@file2.txt, \\\\\\@file3.txt", // Unit Test Expectation: @->@, \@->\@, \\@->\@, \\\\@->\\\\@
 			undefined,
 			mockCline,
+			{
+				initialTodos: [
+					{ id: "1", content: "Test todo 1", status: "pending" },
+					{ id: "2", content: "Test todo 2", status: "pending" },
+				],
+			},
 		)
+	})
+
+	it("should handle missing todos parameter", async () => {
+		const block: ToolUse = {
+			type: "tool_use",
+			name: "new_task",
+			params: {
+				mode: "code",
+				message: "Test message",
+				// todos is missing
+			},
+			partial: false,
+		}
+
+		await newTaskTool(
+			mockCline as any,
+			block,
+			mockAskApproval,
+			mockHandleError,
+			mockPushToolResult,
+			mockRemoveClosingTag,
+		)
+
+		// Should call sayAndCreateMissingParamError for todos
+		expect(mockSayAndCreateMissingParamError).toHaveBeenCalledWith("new_task", "todos")
+		expect(mockCline.consecutiveMistakeCount).toBe(1)
+		expect(mockCline.recordToolError).toHaveBeenCalledWith("new_task")
 	})
 
 	// Add more tests for error handling (missing params, invalid mode, approval denied) if needed
