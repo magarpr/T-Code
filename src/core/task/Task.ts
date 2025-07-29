@@ -92,6 +92,7 @@ import { ApiMessage } from "../task-persistence/apiMessages"
 import { getMessagesSinceLastSummary, summarizeConversation } from "../condense"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
+import { parseMarkdownChecklist } from "../../shared/todoParser"
 
 // Constants
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
@@ -1970,35 +1971,11 @@ export class Task extends EventEmitter<ClineEvents> {
 			return
 		}
 
-		this.todoList = []
-
 		if (!todosMarkdown) {
+			this.todoList = []
 			return
 		}
 
-		const lines = todosMarkdown
-			.split(/\r?\n/)
-			.map((l) => l.trim())
-			.filter(Boolean)
-
-		for (const line of lines) {
-			const match = line.match(/^\[\s*([ xX\-~])\s*\]\s+(.+)$/)
-			if (!match) continue
-
-			let status: "pending" | "in_progress" | "completed" = "pending"
-			if (match[1] === "x" || match[1] === "X") status = "completed"
-			else if (match[1] === "-" || match[1] === "~") status = "in_progress"
-
-			const id = crypto
-				.createHash("md5")
-				.update(match[2] + status)
-				.digest("hex")
-
-			this.todoList.push({
-				id,
-				content: match[2],
-				status,
-			})
-		}
+		this.todoList = parseMarkdownChecklist(todosMarkdown)
 	}
 }
