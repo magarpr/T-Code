@@ -52,6 +52,7 @@ export const ModeSelector = ({
 	const [showImportDialog, setShowImportDialog] = React.useState(false)
 	const [exportError, setExportError] = React.useState<string | null>(null)
 	const [importError, setImportError] = React.useState<string | null>(null)
+	const [selectedImportLevel, setSelectedImportLevel] = React.useState<"project" | "global">("project")
 
 	const trackModeSelectorOpened = React.useCallback(() => {
 		// Track telemetry every time the mode selector is opened
@@ -201,15 +202,13 @@ export const ModeSelector = ({
 
 	// Handle import mode
 	const handleImportMode = React.useCallback(() => {
-		const selectedLevel = (document.querySelector('input[name="importLevel"]:checked') as HTMLInputElement)
-			?.value as "global" | "project"
 		setIsImporting(true)
 		setImportError(null)
 		vscode.postMessage({
 			type: "importMode",
-			source: selectedLevel || "project",
+			source: selectedImportLevel,
 		})
-	}, [])
+	}, [selectedImportLevel])
 
 	// Determine if search should be shown
 	const showSearch = !disableSearch && modes.length > SEARCH_THRESHOLD
@@ -411,7 +410,8 @@ export const ModeSelector = ({
 									value="project"
 									id="import-level-project"
 									className="mt-1"
-									defaultChecked
+									checked={selectedImportLevel === "project"}
+									onChange={() => setSelectedImportLevel("project")}
 								/>
 								<div>
 									<div className="font-medium">{t("prompts:importMode.project.label")}</div>
@@ -427,6 +427,8 @@ export const ModeSelector = ({
 									value="global"
 									id="import-level-global"
 									className="mt-1"
+									checked={selectedImportLevel === "global"}
+									onChange={() => setSelectedImportLevel("global")}
 								/>
 								<div>
 									<div className="font-medium">{t("prompts:importMode.global.label")}</div>
@@ -444,6 +446,7 @@ export const ModeSelector = ({
 								onClick={() => {
 									setShowImportDialog(false)
 									setImportError(null)
+									setSelectedImportLevel("project") // Reset to default
 								}}>
 								{t("prompts:createModeDialog.buttons.cancel")}
 							</Button>
