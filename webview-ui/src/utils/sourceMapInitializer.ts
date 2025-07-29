@@ -113,7 +113,7 @@ export function initializeSourceMaps(): void {
  * Expose source maps on the window object for debugging
  */
 export function exposeSourceMapsForDebugging(): void {
-	if (process.env.NODE_ENV !== "production") {
+	if (process.env.NODE_ENV === "production") {
 		return
 	}
 
