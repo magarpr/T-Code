@@ -326,6 +326,13 @@ const ApiOptions = ({
 			return undefined
 		}
 
+		// Providers that don't have documentation pages yet
+		const excludedProviders = ["huggingface"]
+
+		if (excludedProviders.includes(selectedProvider)) {
+			return undefined
+		}
+
 		// Get the URL slug - use custom mapping if available, otherwise use the provider key.
 		const slugs: Record<string, string> = {
 			"openai-native": "openai",
