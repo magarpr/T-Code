@@ -734,9 +734,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					} else {
 						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
 					}
-					// Clear input state after sending
-					setInputValue("")
-					setSelectedImages([])
+					if (clineAsk !== "resume_task") {
+						// Clear input state after sending
+						setInputValue("")
+						setSelectedImages([])
+					}
 					break
 				case "completion_result":
 				case "resume_completed_task":
@@ -790,9 +792,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						// Responds to the API with a "This operation failed" and lets it try again
 						vscode.postMessage({ type: "askResponse", askResponse: "noButtonClicked" })
 					}
-					// Clear input state after sending
-					setInputValue("")
-					setSelectedImages([])
 					break
 				case "command_output":
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "abort" })
