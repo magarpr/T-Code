@@ -458,12 +458,38 @@ export class CustomModesManager {
 
 	private async updateModesInFile(filePath: string, operation: (modes: ModeConfig[]) => ModeConfig[]): Promise<void> {
 		let content = "{}"
+		let originalYamlOptions: yaml.ToStringOptions = { lineWidth: 0 }
 
 		try {
 			content = await fs.readFile(filePath, "utf-8")
+
+			// Try to detect original YAML formatting style to preserve it
+			if (content.trim()) {
+				// Analyze the original content to preserve formatting style
+				const lines = content.split("\n")
+				let indentSize = 2 // default
+				let hasFlowStyle = false
+
+				// Detect indentation size from the first indented line
+				for (const line of lines) {
+					const match = line.match(/^(\s+)/)
+					if (match && match[1].length > 0) {
+						indentSize = match[1].length
+						break
+					}
+				}
+
+				// Check if the file uses flow style (arrays with brackets)
+				hasFlowStyle = content.includes("[") && content.includes("]")
+
+				originalYamlOptions = {
+					lineWidth: 0, // Prevent line wrapping
+					indent: indentSize,
+				}
+			}
 		} catch (error) {
 			// File might not exist yet.
-			content = yaml.stringify({ customModes: [] }, { lineWidth: 0 })
+			content = yaml.stringify({ customModes: [] }, originalYamlOptions)
 		}
 
 		let settings
@@ -484,7 +510,7 @@ export class CustomModesManager {
 		}
 
 		settings.customModes = operation(settings.customModes)
-		await fs.writeFile(filePath, yaml.stringify(settings, { lineWidth: 0 }), "utf-8")
+		await fs.writeFile(filePath, yaml.stringify(settings, originalYamlOptions), "utf-8")
 	}
 
 	private async refreshMergedState(): Promise<void> {
@@ -786,7 +812,7 @@ export class CustomModesManager {
 								// This excludes the rules-{slug} folder from the path
 								const relativePath = path.relative(modeRulesDir, filePath)
 								// Normalize path to use forward slashes for cross-platform compatibility
-								const normalizedRelativePath = relativePath.replace(/\\/g, '/')
+								const normalizedRelativePath = relativePath.replace(/\\/g, "/")
 								rulesFiles.push({ relativePath: normalizedRelativePath, content: content.trim() })
 							}
 						}
