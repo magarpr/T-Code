@@ -94,6 +94,8 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 			let lastUsageMetadata: GenerateContentResponseUsageMetadata | undefined
 			let pendingGroundingMetadata: GroundingMetadata | undefined
+			let lastTextChunk: string | null = null
+			let hasYieldedContent = false
 
 			for await (const chunk of result) {
 				// Process candidates and their parts to separate thoughts from content
@@ -114,6 +116,8 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 							} else {
 								// This is regular content
 								if (part.text) {
+									lastTextChunk = part.text
+									hasYieldedContent = true
 									yield { type: "text", text: part.text }
 								}
 							}
@@ -123,6 +127,8 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 				// Fallback to the original text property if no candidates structure
 				else if (chunk.text) {
+					lastTextChunk = chunk.text
+					hasYieldedContent = true
 					yield { type: "text", text: chunk.text }
 				}
 
@@ -131,10 +137,12 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 				}
 			}
 
-			if (pendingGroundingMetadata) {
+			// If we have grounding metadata and content was yielded, append sources to the last text chunk
+			if (pendingGroundingMetadata && hasYieldedContent) {
 				const citations = this.extractCitationsOnly(pendingGroundingMetadata)
 				if (citations) {
-					yield { type: "text", text: `\n\n${t("common:errors.gemini.sources")} ${citations}` }
+					const sourcesText = `\n\n${t("common:errors.gemini.sources")} ${citations}`
+					yield { type: "text", text: sourcesText }
 				}
 			}
 
