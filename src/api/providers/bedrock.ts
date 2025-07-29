@@ -30,6 +30,7 @@ import { MultiPointStrategy } from "../transform/cache-strategy/multi-point-stra
 import { ModelInfo as CacheModelInfo } from "../transform/cache-strategy/types"
 import { convertToBedrockConverseMessages as sharedConverter } from "../transform/bedrock-converse-format"
 import { getModelParams } from "../transform/model-params"
+import { limitImagesInConversation, hasExceededImageLimit } from "../transform/image-limiting"
 import { shouldUseReasoningBudget } from "../../shared/api"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
@@ -706,8 +707,20 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		modelInfo?: any,
 		conversationId?: string, // Optional conversation ID to track cache points across messages
 	): { system: SystemContentBlock[]; messages: Message[] } {
+		// Apply image limiting for AWS Bedrock's 20-image conversation limit
+		const limitedMessages = limitImagesInConversation(anthropicMessages as Anthropic.Messages.MessageParam[])
+
+		// Log if images were removed due to the limit
+		if (hasExceededImageLimit(anthropicMessages as Anthropic.Messages.MessageParam[])) {
+			logger.info("Applied image limiting for AWS Bedrock conversation", {
+				ctx: "bedrock",
+				originalImageCount: limitedMessages.length,
+				action: "removed_oldest_images_to_stay_within_limit",
+			})
+		}
+
 		// First convert messages using shared converter for proper image handling
-		const convertedMessages = sharedConverter(anthropicMessages as Anthropic.Messages.MessageParam[])
+		const convertedMessages = sharedConverter(limitedMessages)
 
 		// If prompt caching is disabled, return the converted messages directly
 		if (!usePromptCache) {
@@ -1121,6 +1134,21 @@ Suggestions:
 `,
 			logLevel: "error",
 		},
+		TOO_MANY_IMAGES: {
+			patterns: ["too many images", "too many images and documents", "images and documents:", "> 20"],
+			messageTemplate: `AWS Bedrock "too many images" error detected.
+
+This error occurs when the conversation contains more than 20 images total. The application has automatically applied image limiting to prevent this error in future requests.
+
+What happened:
+- AWS Bedrock has a hard limit of 20 images per conversation
+- Your conversation exceeded this limit (likely from Browser tool screenshots)
+- The oldest images have been automatically replaced with text placeholders
+- The conversation can now continue normally
+
+No action needed - the issue has been resolved automatically.`,
+			logLevel: "info",
+		},
 		SERVICE_QUOTA_EXCEEDED: {
 			patterns: ["service quota exceeded", "service quota", "quota exceeded for model"],
 			messageTemplate: `Service quota exceeded. This error indicates you've reached AWS service limits.
@@ -1234,6 +1262,7 @@ Please check:
 		const errorTypeOrder = [
 			"SERVICE_QUOTA_EXCEEDED", // Most specific - check before THROTTLING
 			"MODEL_NOT_READY",
+			"TOO_MANY_IMAGES", // Check before TOO_MANY_TOKENS for specificity
 			"TOO_MANY_TOKENS",
 			"INTERNAL_SERVER_ERROR",
 			"ON_DEMAND_NOT_SUPPORTED",
