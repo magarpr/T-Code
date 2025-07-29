@@ -4,7 +4,6 @@ import {
 	type ProviderSettings,
 	type ProviderSettingsEntry,
 	type CustomModePrompts,
-	type CustomAgentPrompts,
 	type ModeConfig,
 	type AgentConfig,
 	type ExperimentId,
