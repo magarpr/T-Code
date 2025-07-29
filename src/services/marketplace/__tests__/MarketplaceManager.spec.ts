@@ -223,6 +223,37 @@ describe("MarketplaceManager", () => {
 			expect(manager["installer"].installItem).toHaveBeenCalledWith(item, { target: "project" })
 			expect(result).toBe("/test/path/.roo/mcp.json")
 		})
+
+		it("should install Microsoft Learn Docs MCP item", async () => {
+			const item: MarketplaceItem = {
+				id: "microsoft-learn-docs-search",
+				name: "Microsoft Learn Docs Search",
+				description:
+					"Official Microsoft documentation search and retrieval server. Access trusted, up-to-date information from Microsoft Learn, Azure docs, Microsoft 365 docs, and other official Microsoft sources using semantic search.",
+				type: "mcp",
+				author: "Microsoft",
+				authorUrl: "https://github.com/MicrosoftDocs",
+				url: "https://github.com/MicrosoftDocs/mcp",
+				tags: ["microsoft", "documentation", "search", "azure", "dotnet", "official"],
+				content: JSON.stringify({
+					"microsoft-learn-docs": {
+						type: "streamable-http",
+						url: "https://learn.microsoft.com/api/mcp",
+					},
+				}),
+			}
+
+			// Mock the installer
+			vi.spyOn(manager["installer"], "installItem").mockResolvedValue({
+				filePath: "/test/path/.roo/mcp.json",
+				line: 3,
+			})
+
+			const result = await manager.installMarketplaceItem(item)
+
+			expect(manager["installer"].installItem).toHaveBeenCalledWith(item, { target: "project" })
+			expect(result).toBe("/test/path/.roo/mcp.json")
+		})
 	})
 
 	describe("removeInstalledMarketplaceItem", () => {
