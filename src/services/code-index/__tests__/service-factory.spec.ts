@@ -49,6 +49,11 @@ describe("CodeIndexServiceFactory", () => {
 
 		mockConfigManager = {
 			getConfig: vitest.fn(),
+			memoryOptimizationConfig: {
+				useOnDiskStorage: true,
+				memoryMapThreshold: 50000,
+				hnswEfSearch: 128,
+			},
 		}
 
 		mockCacheManager = {}
@@ -367,6 +372,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				3072,
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -392,6 +402,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				768,
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -417,6 +432,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				3072,
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -449,6 +469,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				modelDimension, // Should use model's built-in dimension, not manual
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -480,6 +505,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				manualDimension, // Should use manual dimension as fallback
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -509,6 +539,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				768,
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -578,6 +613,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				3072,
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -603,6 +643,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				3072,
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 
@@ -627,6 +672,11 @@ describe("CodeIndexServiceFactory", () => {
 				"http://localhost:6333",
 				1536,
 				"test-key",
+				{
+					useOnDiskStorage: true,
+					memoryMapThreshold: 50000,
+					hnswEfSearch: 128,
+				},
 			)
 		})
 

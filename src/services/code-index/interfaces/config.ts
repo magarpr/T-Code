@@ -1,5 +1,6 @@
 import { ApiHandlerOptions } from "../../../shared/api" // Adjust path if needed
 import { EmbedderProvider } from "./manager"
+import { QdrantMemoryOptimizationConfig } from "@roo-code/types"
 
 /**
  * Configuration state for the code indexing feature
@@ -18,6 +19,10 @@ export interface CodeIndexConfig {
 	qdrantApiKey?: string
 	searchMinScore?: number
 	searchMaxResults?: number
+	// Memory optimization settings
+	useOnDiskStorage?: boolean
+	memoryMapThreshold?: number
+	hnswEfSearch?: number
 }
 
 /**
@@ -37,4 +42,8 @@ export type PreviousConfigSnapshot = {
 	mistralApiKey?: string
 	qdrantUrl?: string
 	qdrantApiKey?: string
+	// Memory optimization settings
+	useOnDiskStorage?: boolean
+	memoryMapThreshold?: number
+	hnswEfSearch?: number
 }
