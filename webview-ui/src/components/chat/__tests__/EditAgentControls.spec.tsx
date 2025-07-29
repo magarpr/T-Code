@@ -1,7 +1,7 @@
 import React from "react"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { EditModeControls } from "../EditModeControls"
+import { EditAgentControls } from "../EditAgentControls"
 import { Mode } from "@roo/modes"
 
 // Mock the translation hook
@@ -31,7 +31,7 @@ vi.mock("../ModeSelector", () => ({
 	),
 }))
 
-describe("EditModeControls", () => {
+describe("EditAgentControls", () => {
 	const defaultProps = {
 		mode: "code" as Mode,
 		onModeChange: vi.fn(),
@@ -50,7 +50,7 @@ describe("EditModeControls", () => {
 	})
 
 	it("renders all controls correctly", () => {
-		render(<EditModeControls {...defaultProps} />)
+		render(<EditAgentControls {...defaultProps} />)
 
 		// Check for mode selector
 		expect(screen.getByTitle("chat:selectMode")).toBeInTheDocument()
@@ -66,7 +66,7 @@ describe("EditModeControls", () => {
 	})
 
 	it("calls onCancel when Cancel button is clicked", () => {
-		render(<EditModeControls {...defaultProps} />)
+		render(<EditAgentControls {...defaultProps} />)
 
 		const cancelButton = screen.getByText("Cancel")
 		fireEvent.click(cancelButton)
@@ -75,7 +75,7 @@ describe("EditModeControls", () => {
 	})
 
 	it("calls onSend when send button is clicked", () => {
-		render(<EditModeControls {...defaultProps} />)
+		render(<EditAgentControls {...defaultProps} />)
 
 		const sendButton = screen.getByLabelText("chat:save.tooltip")
 		fireEvent.click(sendButton)
@@ -84,7 +84,7 @@ describe("EditModeControls", () => {
 	})
 
 	it("calls onSelectImages when image button is clicked", () => {
-		render(<EditModeControls {...defaultProps} />)
+		render(<EditAgentControls {...defaultProps} />)
 
 		const imageButton = screen.getByLabelText("chat:addImages")
 		fireEvent.click(imageButton)
@@ -93,7 +93,7 @@ describe("EditModeControls", () => {
 	})
 
 	it("disables buttons when sendingDisabled is true", () => {
-		render(<EditModeControls {...defaultProps} sendingDisabled={true} />)
+		render(<EditAgentControls {...defaultProps} sendingDisabled={true} />)
 
 		const cancelButton = screen.getByText("Cancel")
 		const sendButton = screen.getByLabelText("chat:save.tooltip")
@@ -103,14 +103,14 @@ describe("EditModeControls", () => {
 	})
 
 	it("disables image button when shouldDisableImages is true", () => {
-		render(<EditModeControls {...defaultProps} shouldDisableImages={true} />)
+		render(<EditAgentControls {...defaultProps} shouldDisableImages={true} />)
 
 		const imageButton = screen.getByLabelText("chat:addImages")
 		expect(imageButton).toBeDisabled()
 	})
 
 	it("does not call onSelectImages when image button is disabled", () => {
-		render(<EditModeControls {...defaultProps} shouldDisableImages={true} />)
+		render(<EditAgentControls {...defaultProps} shouldDisableImages={true} />)
 
 		const imageButton = screen.getByLabelText("chat:addImages")
 		fireEvent.click(imageButton)
@@ -119,7 +119,7 @@ describe("EditModeControls", () => {
 	})
 
 	it("does not call onSend when send button is disabled", () => {
-		render(<EditModeControls {...defaultProps} sendingDisabled={true} />)
+		render(<EditAgentControls {...defaultProps} sendingDisabled={true} />)
 
 		const sendButton = screen.getByLabelText("chat:save.tooltip")
 		fireEvent.click(sendButton)
@@ -128,7 +128,7 @@ describe("EditModeControls", () => {
 	})
 
 	it("calls onModeChange when mode is changed", () => {
-		render(<EditModeControls {...defaultProps} />)
+		render(<EditAgentControls {...defaultProps} />)
 
 		const modeSelector = screen.getByTitle("chat:selectMode")
 		fireEvent.change(modeSelector, { target: { value: "architect" } })
