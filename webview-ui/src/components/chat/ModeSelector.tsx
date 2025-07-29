@@ -311,7 +311,7 @@ export const ModeSelector = ({
 													size="icon"
 													className={cn(
 														"h-6 w-6 p-0.5",
-														isExporting === mode.slug ||
+														isExporting !== mode.slug &&
 															"opacity-0 group-hover:opacity-100",
 														"transition-opacity",
 													)}
