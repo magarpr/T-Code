@@ -19,6 +19,7 @@ import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
+import { addArkCaching, extractArkResponseId, getArkCachedTokens } from "../transform/caching/ark"
 
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
@@ -30,6 +31,7 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 export class OpenAiHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
+	private arkPreviousResponseId?: string
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -161,6 +163,14 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 
+			// Add Ark context caching if this is an Ark provider
+			if (ark) {
+				addArkCaching(requestOptions, {
+					previousResponseId: this.arkPreviousResponseId,
+					cacheTtl: 3600, // 1 hour as recommended in the issue
+				})
+			}
+
 			const stream = await this.client.chat.completions.create(
 				requestOptions,
 				isAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {},
@@ -176,6 +186,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			)
 
 			let lastUsage
+			let responseId: string | undefined
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta ?? {}
@@ -195,14 +206,24 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				if (chunk.usage) {
 					lastUsage = chunk.usage
 				}
+
+				// Extract response ID for Ark caching
+				if (ark && chunk.id) {
+					responseId = chunk.id
+				}
 			}
 
 			for (const chunk of matcher.final()) {
 				yield chunk
 			}
 
+			// Store response ID for future Ark caching
+			if (ark && responseId) {
+				this.arkPreviousResponseId = responseId
+			}
+
 			if (lastUsage) {
-				yield this.processUsageMetrics(lastUsage, modelInfo)
+				yield this.processUsageMetrics(lastUsage, modelInfo, ark)
 			}
 		} else {
 			// o1 for instance doesnt support streaming, non-1 temp, or system prompt
@@ -223,28 +244,51 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 
+			// Add Ark context caching if this is an Ark provider
+			if (ark) {
+				addArkCaching(requestOptions, {
+					previousResponseId: this.arkPreviousResponseId,
+					cacheTtl: 3600, // 1 hour as recommended in the issue
+				})
+			}
+
 			const response = await this.client.chat.completions.create(
 				requestOptions,
 				this._isAzureAiInference(modelUrl) ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {},
 			)
+
+			// Store response ID for future Ark caching
+			if (ark && response.id) {
+				this.arkPreviousResponseId = response.id
+			}
 
 			yield {
 				type: "text",
 				text: response.choices[0]?.message.content || "",
 			}
 
-			yield this.processUsageMetrics(response.usage, modelInfo)
+			yield this.processUsageMetrics(response.usage, modelInfo, ark)
 		}
 	}
 
-	protected processUsageMetrics(usage: any, _modelInfo?: ModelInfo): ApiStreamUsageChunk {
-		return {
+	protected processUsageMetrics(usage: any, _modelInfo?: ModelInfo, isArk?: boolean): ApiStreamUsageChunk {
+		const result: ApiStreamUsageChunk = {
 			type: "usage",
 			inputTokens: usage?.prompt_tokens || 0,
 			outputTokens: usage?.completion_tokens || 0,
 			cacheWriteTokens: usage?.cache_creation_input_tokens || undefined,
 			cacheReadTokens: usage?.cache_read_input_tokens || undefined,
 		}
+
+		// Handle Ark-specific cached tokens
+		if (isArk) {
+			const arkCachedTokens = getArkCachedTokens(usage)
+			if (arkCachedTokens > 0) {
+				result.cacheReadTokens = arkCachedTokens
+			}
+		}
+
+		return result
 	}
 
 	override getModel() {
@@ -290,6 +334,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	): ApiStream {
 		const modelInfo = this.getModel().info
 		const methodIsAzureAiInference = this._isAzureAiInference(this.options.openAiBaseUrl)
+		const modelUrl = this.options.openAiBaseUrl ?? ""
+		const ark = modelUrl.includes(".volces.com")
 
 		if (this.options.openAiStreamingEnabled ?? true) {
 			const isGrokXAI = this._isGrokXAI(this.options.openAiBaseUrl)
@@ -314,12 +360,20 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// This allows O3 models to limit response length when includeMaxTokens is enabled
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 
+			// Add Ark context caching if this is an Ark provider
+			if (ark) {
+				addArkCaching(requestOptions, {
+					previousResponseId: this.arkPreviousResponseId,
+					cacheTtl: 3600, // 1 hour as recommended in the issue
+				})
+			}
+
 			const stream = await this.client.chat.completions.create(
 				requestOptions,
 				methodIsAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {},
 			)
 
-			yield* this.handleStreamResponse(stream)
+			yield* this.handleStreamResponse(stream, ark)
 		} else {
 			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
 				model: modelId,
@@ -339,20 +393,38 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// This allows O3 models to limit response length when includeMaxTokens is enabled
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 
+			// Add Ark context caching if this is an Ark provider
+			if (ark) {
+				addArkCaching(requestOptions, {
+					previousResponseId: this.arkPreviousResponseId,
+					cacheTtl: 3600, // 1 hour as recommended in the issue
+				})
+			}
+
 			const response = await this.client.chat.completions.create(
 				requestOptions,
 				methodIsAzureAiInference ? { path: OPENAI_AZURE_AI_INFERENCE_PATH } : {},
 			)
 
+			// Store response ID for future Ark caching
+			if (ark && response.id) {
+				this.arkPreviousResponseId = response.id
+			}
+
 			yield {
 				type: "text",
 				text: response.choices[0]?.message.content || "",
 			}
-			yield this.processUsageMetrics(response.usage)
+			yield this.processUsageMetrics(response.usage, modelInfo, ark)
 		}
 	}
 
-	private async *handleStreamResponse(stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>): ApiStream {
+	private async *handleStreamResponse(
+		stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>,
+		isArk?: boolean,
+	): ApiStream {
+		let responseId: string | undefined
+
 		for await (const chunk of stream) {
 			const delta = chunk.choices[0]?.delta
 			if (delta?.content) {
@@ -362,13 +434,27 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				}
 			}
 
+			// Extract response ID for Ark caching
+			if (isArk && chunk.id) {
+				responseId = chunk.id
+			}
+
 			if (chunk.usage) {
 				yield {
 					type: "usage",
 					inputTokens: chunk.usage.prompt_tokens || 0,
 					outputTokens: chunk.usage.completion_tokens || 0,
+					...(isArk &&
+						getArkCachedTokens(chunk.usage) > 0 && {
+							cacheReadTokens: getArkCachedTokens(chunk.usage),
+						}),
 				}
 			}
+		}
+
+		// Store response ID for future Ark caching
+		if (isArk && responseId) {
+			this.arkPreviousResponseId = responseId
 		}
 	}
 
