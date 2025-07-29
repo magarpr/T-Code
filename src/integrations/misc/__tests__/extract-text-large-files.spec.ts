@@ -25,6 +25,8 @@ describe("extractTextFromFile - Large File Handling", () => {
 		// Set default mock behavior
 		mockedFs.access.mockResolvedValue(undefined)
 		mockedIsBinaryFile.mockResolvedValue(false)
+		// Mock console.warn
+		vi.spyOn(console, "warn").mockImplementation(() => {})
 	})
 
 	it("should truncate files that exceed maxReadFileLine limit", async () => {
@@ -216,6 +218,22 @@ describe("extractTextFromFile - Large File Handling", () => {
 
 		await expect(extractTextFromFile("/test/nonexistent.ts", 100)).rejects.toThrow(
 			"File not found: /test/nonexistent.ts",
+		)
+	})
+
+	it("should handle RangeError from isBinaryFile and treat file as binary", async () => {
+		// Setup - mock isBinaryFile to throw RangeError
+		mockedIsBinaryFile.mockRejectedValue(new RangeError("Invalid array length"))
+
+		// Execute and expect it to throw since file is treated as binary
+		await expect(extractTextFromFile("/test/problematic-file.bin", 100)).rejects.toThrow(
+			"Cannot read text for file type: .bin",
+		)
+
+		// Verify that the warning was logged
+		expect(console.warn).toHaveBeenCalledWith(
+			"Error checking if file is binary for /test/problematic-file.bin:",
+			expect.any(RangeError),
 		)
 	})
 })
