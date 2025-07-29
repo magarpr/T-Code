@@ -24,10 +24,6 @@ export class CodeIndexConfigManager {
 	private qdrantApiKey?: string
 	private searchMinScore?: number
 	private searchMaxResults?: number
-	// Memory optimization settings
-	private useOnDiskStorage?: boolean
-	private memoryMapThreshold?: number
-	private hnswEfSearch?: number
 
 	constructor(private readonly contextProxy: ContextProxy) {
 		// Initialize with current configuration to avoid false restart triggers
@@ -55,9 +51,6 @@ export class CodeIndexConfigManager {
 			codebaseIndexEmbedderModelId: "",
 			codebaseIndexSearchMinScore: undefined,
 			codebaseIndexSearchMaxResults: undefined,
-			codebaseIndexUseOnDiskStorage: QDRANT_MEMORY_OPTIMIZATION_DEFAULTS.USE_ON_DISK_STORAGE,
-			codebaseIndexMemoryMapThreshold: QDRANT_MEMORY_OPTIMIZATION_DEFAULTS.MEMORY_MAP_THRESHOLD,
-			codebaseIndexHnswEfSearch: QDRANT_MEMORY_OPTIMIZATION_DEFAULTS.HNSW_EF_SEARCH,
 		}
 
 		const {
@@ -68,9 +61,6 @@ export class CodeIndexConfigManager {
 			codebaseIndexEmbedderModelId,
 			codebaseIndexSearchMinScore,
 			codebaseIndexSearchMaxResults,
-			codebaseIndexUseOnDiskStorage,
-			codebaseIndexMemoryMapThreshold,
-			codebaseIndexHnswEfSearch,
 		} = codebaseIndexConfig
 
 		const openAiKey = this.contextProxy?.getSecret("codeIndexOpenAiKey") ?? ""
@@ -87,10 +77,6 @@ export class CodeIndexConfigManager {
 		this.qdrantApiKey = qdrantApiKey ?? ""
 		this.searchMinScore = codebaseIndexSearchMinScore
 		this.searchMaxResults = codebaseIndexSearchMaxResults
-		this.useOnDiskStorage = codebaseIndexUseOnDiskStorage ?? QDRANT_MEMORY_OPTIMIZATION_DEFAULTS.USE_ON_DISK_STORAGE
-		this.memoryMapThreshold =
-			codebaseIndexMemoryMapThreshold ?? QDRANT_MEMORY_OPTIMIZATION_DEFAULTS.MEMORY_MAP_THRESHOLD
-		this.hnswEfSearch = codebaseIndexHnswEfSearch ?? QDRANT_MEMORY_OPTIMIZATION_DEFAULTS.HNSW_EF_SEARCH
 
 		// Validate and set model dimension
 		const rawDimension = codebaseIndexConfig.codebaseIndexEmbedderModelDimension
@@ -159,9 +145,6 @@ export class CodeIndexConfigManager {
 			qdrantUrl?: string
 			qdrantApiKey?: string
 			searchMinScore?: number
-			useOnDiskStorage?: boolean
-			memoryMapThreshold?: number
-			hnswEfSearch?: number
 		}
 		requiresRestart: boolean
 	}> {
@@ -205,9 +188,6 @@ export class CodeIndexConfigManager {
 				qdrantUrl: this.qdrantUrl,
 				qdrantApiKey: this.qdrantApiKey,
 				searchMinScore: this.currentSearchMinScore,
-				useOnDiskStorage: this.useOnDiskStorage,
-				memoryMapThreshold: this.memoryMapThreshold,
-				hnswEfSearch: this.hnswEfSearch,
 			},
 			requiresRestart,
 		}
@@ -400,9 +380,6 @@ export class CodeIndexConfigManager {
 			qdrantApiKey: this.qdrantApiKey,
 			searchMinScore: this.currentSearchMinScore,
 			searchMaxResults: this.currentSearchMaxResults,
-			useOnDiskStorage: this.useOnDiskStorage,
-			memoryMapThreshold: this.memoryMapThreshold,
-			hnswEfSearch: this.hnswEfSearch,
 		}
 	}
 
@@ -434,21 +411,6 @@ export class CodeIndexConfigManager {
 		return {
 			url: this.qdrantUrl,
 			apiKey: this.qdrantApiKey,
-		}
-	}
-
-	/**
-	 * Gets the memory optimization settings
-	 */
-	public get memoryOptimizationConfig(): {
-		useOnDiskStorage?: boolean
-		memoryMapThreshold?: number
-		hnswEfSearch?: number
-	} {
-		return {
-			useOnDiskStorage: this.useOnDiskStorage,
-			memoryMapThreshold: this.memoryMapThreshold,
-			hnswEfSearch: this.hnswEfSearch,
 		}
 	}
 

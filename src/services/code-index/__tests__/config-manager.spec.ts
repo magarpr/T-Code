@@ -113,9 +113,6 @@ describe("CodeIndexConfigManager", () => {
 				qdrantUrl: "http://localhost:6333",
 				qdrantApiKey: "",
 				searchMinScore: 0.4,
-				useOnDiskStorage: true,
-				memoryMapThreshold: 50000,
-				hnswEfSearch: 128,
 			})
 			expect(result.requiresRestart).toBe(false)
 		})
@@ -151,9 +148,6 @@ describe("CodeIndexConfigManager", () => {
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
-				useOnDiskStorage: true,
-				memoryMapThreshold: 50000,
-				hnswEfSearch: 128,
 			})
 		})
 
@@ -194,9 +188,6 @@ describe("CodeIndexConfigManager", () => {
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
-				useOnDiskStorage: true,
-				memoryMapThreshold: 50000,
-				hnswEfSearch: 128,
 			})
 		})
 
@@ -237,9 +228,6 @@ describe("CodeIndexConfigManager", () => {
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
-				useOnDiskStorage: true,
-				memoryMapThreshold: 50000,
-				hnswEfSearch: 128,
 			})
 		})
 
@@ -281,9 +269,6 @@ describe("CodeIndexConfigManager", () => {
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
-				useOnDiskStorage: true,
-				memoryMapThreshold: 50000,
-				hnswEfSearch: 128,
 			})
 		})
 
@@ -324,9 +309,6 @@ describe("CodeIndexConfigManager", () => {
 				qdrantUrl: "http://qdrant.local",
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
-				useOnDiskStorage: true,
-				memoryMapThreshold: 50000,
-				hnswEfSearch: 128,
 			})
 		})
 
@@ -1337,9 +1319,6 @@ describe("CodeIndexConfigManager", () => {
 				qdrantApiKey: "test-qdrant-key",
 				searchMinScore: 0.4,
 				searchMaxResults: 50,
-				useOnDiskStorage: true,
-				memoryMapThreshold: 50000,
-				hnswEfSearch: 128,
 			})
 		})
 
