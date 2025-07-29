@@ -3,6 +3,11 @@ import type { HistoryItem } from "@roo-code/types"
 import { formatDate } from "@/utils/format"
 import { DeleteButton } from "./DeleteButton"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { StandardTooltip } from "@/components/ui"
+import { useExtensionState } from "@/context/ExtensionStateContext"
+import { vscode } from "@/utils/vscode"
+import { useAppTranslation } from "@/i18n/TranslationContext"
 
 export interface TaskItemHeaderProps {
 	item: HistoryItem
@@ -11,6 +16,18 @@ export interface TaskItemHeaderProps {
 }
 
 const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, isSelectionMode, onDelete }) => {
+	const { pinnedTasks, togglePinnedTask } = useExtensionState()
+	const { t } = useAppTranslation()
+	const isPinned = pinnedTasks?.[item.id] || false
+
+	const handlePinToggle = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		togglePinnedTask(item.id)
+		vscode.postMessage({
+			type: "toggleTaskPin",
+			text: item.id,
+		})
+	}
 	return (
 		<div
 			className={cn("flex justify-between items-center", {
@@ -27,6 +44,17 @@ const TaskItemHeader: React.FC<TaskItemHeaderProps> = ({ item, isSelectionMode, 
 			{/* Action Buttons */}
 			{!isSelectionMode && (
 				<div className="flex flex-row gap-0 items-center opacity-20 group-hover:opacity-50 hover:opacity-100">
+					<StandardTooltip content={isPinned ? t("history:unpin") : t("history:pin")}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={handlePinToggle}
+							className={cn("size-5 flex items-center justify-center", {
+								"opacity-100 bg-accent": isPinned,
+							})}>
+							<span className="codicon codicon-pin text-xs opacity-50" />
+						</Button>
+					</StandardTooltip>
 					{onDelete && <DeleteButton itemId={item.id} onDelete={onDelete} />}
 				</div>
 			)}

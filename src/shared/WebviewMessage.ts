@@ -169,6 +169,7 @@ export interface WebviewMessage {
 		| "maxDiagnosticMessages"
 		| "searchFiles"
 		| "toggleApiConfigPin"
+		| "toggleTaskPin"
 		| "setHistoryPreviewCollapsed"
 		| "hasOpenedModeSelector"
 		| "accountButtonClicked"

@@ -7,7 +7,7 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRelevant"
 
 export const useTaskSearch = () => {
-	const { taskHistory, cwd } = useExtensionState()
+	const { taskHistory, cwd, pinnedTasks } = useExtensionState()
 	const [searchQuery, setSearchQuery] = useState("")
 	const [sortOption, setSortOption] = useState<SortOption>("newest")
 	const [lastNonRelevantSort, setLastNonRelevantSort] = useState<SortOption | null>("newest")
@@ -57,8 +57,16 @@ export const useTaskSearch = () => {
 			})
 		}
 
-		// Then sort the results
+		// Then sort the results with pinned tasks first
 		return [...results].sort((a, b) => {
+			const aPinned = pinnedTasks?.[a.id] || false
+			const bPinned = pinnedTasks?.[b.id] || false
+
+			// Pinned tasks always come first
+			if (aPinned && !bPinned) return -1
+			if (!aPinned && bPinned) return 1
+
+			// If both are pinned or both are unpinned, sort by the selected option
 			switch (sortOption) {
 				case "oldest":
 					return (a.ts || 0) - (b.ts || 0)
@@ -76,7 +84,7 @@ export const useTaskSearch = () => {
 					return (b.ts || 0) - (a.ts || 0)
 			}
 		})
-	}, [presentableTasks, searchQuery, fzf, sortOption])
+	}, [presentableTasks, searchQuery, fzf, sortOption, pinnedTasks])
 
 	return {
 		tasks,

@@ -129,6 +129,9 @@ export interface ExtensionStateContextType extends ExtensionState {
 	pinnedApiConfigs?: Record<string, boolean>
 	setPinnedApiConfigs: (value: Record<string, boolean>) => void
 	togglePinnedApiConfig: (configName: string) => void
+	pinnedTasks?: Record<string, boolean>
+	setPinnedTasks: (value: Record<string, boolean>) => void
+	togglePinnedTask: (taskId: string) => void
 	terminalCompressProgressBar?: boolean
 	setTerminalCompressProgressBar: (value: boolean) => void
 	setHistoryPreviewCollapsed: (value: boolean) => void
@@ -216,6 +219,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		maxImageFileSize: 5, // Default max image file size in MB
 		maxTotalImageSize: 20, // Default max total image size in MB
 		pinnedApiConfigs: {}, // Empty object for pinned API configs
+		pinnedTasks: {}, // Empty object for pinned tasks
 		terminalZshOhMy: false, // Default Oh My Zsh integration setting
 		maxConcurrentFileReads: 5, // Default concurrent file reads
 		terminalZshP10k: false, // Default Powerlevel10k integration setting
@@ -464,6 +468,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setMaxImageFileSize: (value) => setState((prevState) => ({ ...prevState, maxImageFileSize: value })),
 		setMaxTotalImageSize: (value) => setState((prevState) => ({ ...prevState, maxTotalImageSize: value })),
 		setPinnedApiConfigs: (value) => setState((prevState) => ({ ...prevState, pinnedApiConfigs: value })),
+		setPinnedTasks: (value) => setState((prevState) => ({ ...prevState, pinnedTasks: value })),
 		setTerminalCompressProgressBar: (value) =>
 			setState((prevState) => ({ ...prevState, terminalCompressProgressBar: value })),
 		togglePinnedApiConfig: (configId) =>
@@ -480,6 +485,21 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 				}
 
 				return { ...prevState, pinnedApiConfigs: newPinned }
+			}),
+		togglePinnedTask: (taskId) =>
+			setState((prevState) => {
+				const currentPinned = prevState.pinnedTasks || {}
+				const newPinned = {
+					...currentPinned,
+					[taskId]: !currentPinned[taskId],
+				}
+
+				// If the task is now unpinned, remove it from the object
+				if (!newPinned[taskId]) {
+					delete newPinned[taskId]
+				}
+
+				return { ...prevState, pinnedTasks: newPinned }
 			}),
 		setHistoryPreviewCollapsed: (value) =>
 			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })),

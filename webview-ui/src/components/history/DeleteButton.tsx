@@ -2,6 +2,7 @@ import { useCallback } from "react"
 
 import { Button, StandardTooltip } from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 import { vscode } from "@/utils/vscode"
 
 type DeleteButtonProps = {
@@ -11,17 +12,27 @@ type DeleteButtonProps = {
 
 export const DeleteButton = ({ itemId, onDelete }: DeleteButtonProps) => {
 	const { t } = useAppTranslation()
+	const { pinnedTasks } = useExtensionState()
+	const isPinned = pinnedTasks?.[itemId] || false
 
 	const handleDeleteClick = useCallback(
 		(e: React.MouseEvent) => {
 			e.stopPropagation()
+
+			// Prevent deletion of pinned tasks
+			if (isPinned) {
+				// Show a simple alert for now - we can improve this later
+				alert(t("history:pinnedTaskCannotDelete"))
+				return
+			}
+
 			if (e.shiftKey) {
 				vscode.postMessage({ type: "deleteTaskWithId", text: itemId })
 			} else if (onDelete) {
 				onDelete(itemId)
 			}
 		},
-		[itemId, onDelete],
+		[itemId, onDelete, isPinned, t],
 	)
 
 	return (

@@ -1307,6 +1307,21 @@ export const webviewMessageHandler = async (
 				await provider.postStateToWebview()
 			}
 			break
+		case "toggleTaskPin":
+			if (message.text) {
+				const currentPinnedTasks = getGlobalState("pinnedTasks") ?? {}
+				const updatedPinnedTasks: Record<string, boolean> = { ...currentPinnedTasks }
+
+				if (currentPinnedTasks[message.text]) {
+					delete updatedPinnedTasks[message.text]
+				} else {
+					updatedPinnedTasks[message.text] = true
+				}
+
+				await updateGlobalState("pinnedTasks", updatedPinnedTasks)
+				await provider.postStateToWebview()
+			}
+			break
 		case "enhancementApiConfigId":
 			await updateGlobalState("enhancementApiConfigId", message.text)
 			await provider.postStateToWebview()
