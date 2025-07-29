@@ -3,6 +3,7 @@ import { convertHeadersToObject } from "./utils/headers"
 import { useDebounce } from "react-use"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { ExternalLinkIcon } from "@radix-ui/react-icons"
+import isEqual from "fast-deep-equal"
 
 import {
 	type ProviderName,
@@ -116,7 +117,7 @@ const ApiOptions = ({
 	useEffect(() => {
 		const propHeaders = apiConfiguration?.openAiHeaders || {}
 
-		if (JSON.stringify(customHeaders) !== JSON.stringify(Object.entries(propHeaders))) {
+		if (!isEqual(customHeaders, Object.entries(propHeaders))) {
 			setCustomHeaders(Object.entries(propHeaders))
 		}
 	}, [apiConfiguration?.openAiHeaders, customHeaders])
@@ -131,7 +132,7 @@ const ApiOptions = ({
 			const newHeadersObject = convertHeadersToObject(customHeaders)
 
 			// Only update if the processed object is different from the current config.
-			if (JSON.stringify(currentConfigHeaders) !== JSON.stringify(newHeadersObject)) {
+			if (!isEqual(currentConfigHeaders, newHeadersObject)) {
 				setApiConfigurationField("openAiHeaders", newHeadersObject)
 			}
 		},
@@ -213,6 +214,7 @@ const ApiOptions = ({
 			apiConfiguration?.lmStudioBaseUrl,
 			apiConfiguration?.litellmBaseUrl,
 			apiConfiguration?.litellmApiKey,
+			apiConfiguration?.openAiHeaders,
 			customHeaders,
 		],
 	)

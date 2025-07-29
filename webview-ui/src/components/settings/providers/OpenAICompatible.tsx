@@ -16,6 +16,7 @@ import { ExtensionMessage } from "@roo/ExtensionMessage"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { Button, StandardTooltip } from "@src/components/ui"
+import deepEqual from "fast-deep-equal"
 
 import { convertHeadersToObject } from "../utils/headers"
 import { inputEventTransform, noTransform } from "../transforms"
@@ -47,6 +48,12 @@ export const OpenAICompatible = ({
 		const headers = apiConfiguration?.openAiHeaders || {}
 		return Object.entries(headers)
 	})
+
+	// Sync local state with parent's headers when they change externally
+	useEffect(() => {
+		const headers = apiConfiguration?.openAiHeaders || {}
+		setCustomHeaders(Object.entries(headers))
+	}, [apiConfiguration?.openAiHeaders])
 
 	const handleAddCustomHeader = useCallback(() => {
 		// Only update the local state to show the new row in the UI.
@@ -91,7 +98,7 @@ export const OpenAICompatible = ({
 			const newHeadersObject = convertHeadersToObject(customHeaders)
 
 			// Only update if the processed object is different from the current config
-			if (JSON.stringify(currentConfigHeaders) !== JSON.stringify(newHeadersObject)) {
+			if (!deepEqual(currentConfigHeaders, newHeadersObject)) {
 				setApiConfigurationField("openAiHeaders", newHeadersObject)
 			}
 		}, 300)
