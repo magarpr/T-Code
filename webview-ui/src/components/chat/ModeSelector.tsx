@@ -165,6 +165,9 @@ export const ModeSelector = ({
 	React.useEffect(() => {
 		const handler = (event: MessageEvent) => {
 			const message = event.data
+			// Only handle messages that are specifically for mode export/import
+			if (!message || typeof message !== "object") return
+
 			if (message.type === "exportModeResult") {
 				setIsExporting(null)
 				if (!message.success) {
