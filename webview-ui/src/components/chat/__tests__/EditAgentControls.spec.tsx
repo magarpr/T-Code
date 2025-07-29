@@ -21,14 +21,46 @@ vi.mock("@/components/ui", () => ({
 	StandardTooltip: ({ children, content }: any) => <div title={content}>{children}</div>,
 }))
 
-// Mock ModeSelector
-vi.mock("../ModeSelector", () => ({
+// Mock AgentSelector
+vi.mock("../AgentSelector", () => ({
 	default: ({ value, onChange, title }: any) => (
-		<select value={value} onChange={(e) => onChange(e.target.value)} title={title}>
+		<select value={value} onChange={(e) => onChange(e.target.value)} title={title || "chat:selectAgent"}>
 			<option value="code">Code</option>
 			<option value="architect">Architect</option>
 		</select>
 	),
+}))
+
+// Mock ExtensionStateContext
+vi.mock("@/context/ExtensionStateContext", () => ({
+	useExtensionState: () => ({
+		hasOpenedModeSelector: false,
+		setHasOpenedModeSelector: vi.fn(),
+	}),
+}))
+
+// Mock other dependencies
+vi.mock("@/utils/vscode", () => ({
+	vscode: {
+		postMessage: vi.fn(),
+	},
+}))
+
+vi.mock("@/components/ui/hooks/useRooPortal", () => ({
+	useRooPortal: () => document.body,
+}))
+
+vi.mock("@/utils/TelemetryClient", () => ({
+	telemetryClient: {
+		capture: vi.fn(),
+	},
+}))
+
+vi.mock("@roo/modes", () => ({
+	getAllModes: () => [
+		{ slug: "code", name: "Code", description: "Code mode" },
+		{ slug: "architect", name: "Architect", description: "Architect mode" },
+	],
 }))
 
 describe("EditAgentControls", () => {
@@ -52,8 +84,8 @@ describe("EditAgentControls", () => {
 	it("renders all controls correctly", () => {
 		render(<EditAgentControls {...defaultProps} />)
 
-		// Check for mode selector
-		expect(screen.getByTitle("chat:selectMode")).toBeInTheDocument()
+		// Check for agent selector
+		expect(screen.getByTitle("chat:selectAgent")).toBeInTheDocument()
 
 		// Check for Cancel button
 		expect(screen.getByText("Cancel")).toBeInTheDocument()
@@ -130,8 +162,8 @@ describe("EditAgentControls", () => {
 	it("calls onModeChange when mode is changed", () => {
 		render(<EditAgentControls {...defaultProps} />)
 
-		const modeSelector = screen.getByTitle("chat:selectMode")
-		fireEvent.change(modeSelector, { target: { value: "architect" } })
+		const agentSelector = screen.getByTitle("chat:selectAgent")
+		fireEvent.change(agentSelector, { target: { value: "architect" } })
 
 		expect(defaultProps.onModeChange).toHaveBeenCalledWith("architect")
 	})

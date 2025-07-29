@@ -14,8 +14,8 @@ vi.mock("@/utils/vscode", () => ({
 
 vi.mock("@/context/ExtensionStateContext", () => ({
 	useExtensionState: () => ({
-		hasOpenedAgentSelector: false,
-		setHasOpenedAgentSelector: vi.fn(),
+		hasOpenedModeSelector: false,
+		setHasOpenedModeSelector: vi.fn(),
 	}),
 }))
 
@@ -50,7 +50,7 @@ describe("AgentSelector", () => {
 	test("shows custom description from customModePrompts", () => {
 		const customModePrompts = {
 			code: {
-				description: "Custom code mode description",
+				description: "Custom code agent description",
 			},
 		}
 
@@ -93,7 +93,7 @@ describe("AgentSelector", () => {
 		expect(screen.getByTestId("agent-search-input")).toBeInTheDocument()
 
 		// Info icon should be visible
-		expect(screen.getByText("chat:modeSelector.title")).toBeInTheDocument()
+		expect(screen.getByText("chat:agentSelector.title")).toBeInTheDocument()
 		const infoIcon = document.querySelector(".codicon-info")
 		expect(infoIcon).toBeInTheDocument()
 	})
@@ -117,7 +117,7 @@ describe("AgentSelector", () => {
 		expect(screen.queryByTestId("agent-search-input")).not.toBeInTheDocument()
 
 		// Info blurb should be visible
-		expect(screen.getByText(/chat:modeSelector.description/)).toBeInTheDocument()
+		expect(screen.getByText(/chat:agentSelector.description/)).toBeInTheDocument()
 
 		// Info icon should NOT be visible
 		const infoIcon = document.querySelector(".codicon-info")
@@ -174,7 +174,7 @@ describe("AgentSelector", () => {
 		expect(screen.queryByTestId("agent-search-input")).not.toBeInTheDocument()
 
 		// Info blurb should be visible instead
-		expect(screen.getByText(/chat:modeSelector.description/)).toBeInTheDocument()
+		expect(screen.getByText(/chat:agentSelector.description/)).toBeInTheDocument()
 
 		// Info icon should NOT be visible
 		const infoIcon = document.querySelector(".codicon-info")

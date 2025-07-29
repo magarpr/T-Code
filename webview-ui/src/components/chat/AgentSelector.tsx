@@ -157,7 +157,7 @@ export const AgentSelector = ({
 	const showSearch = !disableSearch && modes.length > SEARCH_THRESHOLD
 
 	// Combine instruction text for tooltip
-	const instructionText = `${t("chat:modeSelector.description")} ${modeShortcutText}`
+	const instructionText = `${t("chat:agentSelector.description")} ${modeShortcutText}`
 
 	const trigger = (
 		<PopoverTrigger
@@ -198,7 +198,7 @@ export const AgentSelector = ({
 								ref={searchInputRef}
 								value={searchValue}
 								onChange={(e) => setSearchValue(e.target.value)}
-								placeholder={t("chat:modeSelector.searchPlaceholder")}
+								placeholder={t("chat:agentSelector.searchPlaceholder")}
 								className="w-full h-8 px-2 py-1 text-xs bg-vscode-input-background text-vscode-input-foreground border border-vscode-input-border rounded focus:outline-0"
 								data-testid="agent-search-input"
 							/>
@@ -221,7 +221,7 @@ export const AgentSelector = ({
 					<div className="max-h-[300px] overflow-y-auto">
 						{filteredModes.length === 0 && searchValue ? (
 							<div className="py-2 px-3 text-sm text-vscode-foreground/70">
-								{t("chat:modeSelector.noResults")}
+								{t("chat:agentSelector.noResults")}
 							</div>
 						) : (
 							<div className="py-1">
@@ -257,7 +257,7 @@ export const AgentSelector = ({
 						<div className="flex flex-row gap-1">
 							<IconButton
 								iconClass="codicon-extensions"
-								title={t("chat:modeSelector.marketplace")}
+								title={t("chat:agentSelector.marketplace")}
 								onClick={() => {
 									window.postMessage(
 										{
@@ -272,7 +272,7 @@ export const AgentSelector = ({
 							/>
 							<IconButton
 								iconClass="codicon-settings-gear"
-								title={t("chat:modeSelector.settings")}
+								title={t("chat:agentSelector.settings")}
 								onClick={() => {
 									vscode.postMessage({
 										type: "switchTab",
@@ -291,7 +291,7 @@ export const AgentSelector = ({
 								</StandardTooltip>
 							)}
 							<h4 className="m-0 font-medium text-sm text-vscode-descriptionForeground">
-								{t("chat:modeSelector.title")}
+								{t("chat:agentSelector.title")}
 							</h4>
 						</div>
 					</div>

@@ -49,7 +49,7 @@ export const EditAgentControls: React.FC<EditAgentControlsProps> = ({
 				<div className="shrink-0">
 					<AgentSelector
 						value={mode}
-						title={t("chat:selectMode")}
+						title={t("chat:selectAgent")}
 						onChange={onModeChange}
 						triggerClassName="w-full"
 						modeShortcutText={modeShortcutText}
