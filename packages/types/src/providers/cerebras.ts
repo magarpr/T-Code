@@ -35,7 +35,7 @@ export const cerebrasModels = {
 	},
 	"qwen-3-235b-a22b-instruct-2507": {
 		maxTokens: 64000,
-		contextWindow: 640000,
+		contextWindow: 64000,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0,

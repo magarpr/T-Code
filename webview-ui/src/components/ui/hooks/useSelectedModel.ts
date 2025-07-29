@@ -6,6 +6,8 @@ import {
 	anthropicModels,
 	bedrockDefaultModelId,
 	bedrockModels,
+	cerebrasDefaultModelId,
+	cerebrasModels,
 	deepSeekDefaultModelId,
 	deepSeekModels,
 	moonshotDefaultModelId,
@@ -224,11 +226,16 @@ function getSelectedModel({
 			const info = claudeCodeModels[id as keyof typeof claudeCodeModels]
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info } }
 		}
+		case "cerebras": {
+			const id = apiConfiguration.apiModelId ?? cerebrasDefaultModelId
+			const info = cerebrasModels[id as keyof typeof cerebrasModels]
+			return { id, info }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies "anthropic" | "gemini-cli" | "human-relay" | "fake-ai" | "cerebras"
+			provider satisfies "anthropic" | "gemini-cli" | "human-relay" | "fake-ai"
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const info = anthropicModels[id as keyof typeof anthropicModels]
 			return { id, info }

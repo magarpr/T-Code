@@ -134,22 +134,6 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 				: {}),
 		}
 
-		console.log("[CEREBRAS DEBUG] Request URL:", `${CEREBRAS_BASE_URL}/chat/completions`)
-		console.log("[CEREBRAS DEBUG] Request body:", JSON.stringify(requestBody, null, 2))
-		console.log("[CEREBRAS DEBUG] API key present:", !!this.apiKey)
-		console.log("[CEREBRAS DEBUG] Message conversion:")
-		console.log("  - Original messages:", messages.length)
-		console.log("  - OpenAI messages:", openaiMessages.length)
-		console.log("  - Cerebras messages:", cerebrasMessages.length)
-		console.log(
-			"  - All content is strings:",
-			cerebrasMessages.every((msg) => typeof msg.content === "string"),
-		)
-		console.log(
-			"  - Thinking tokens stripped from assistant messages:",
-			cerebrasMessages.filter((msg) => msg.role === "assistant").length > 0 ? "✅" : "N/A",
-		)
-
 		try {
 			const response = await fetch(`${CEREBRAS_BASE_URL}/chat/completions`, {
 				method: "POST",
@@ -161,26 +145,33 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 				body: JSON.stringify(requestBody),
 			})
 
-			console.log("[CEREBRAS DEBUG] Response status:", response.status)
-			const headersObj: Record<string, string> = {}
-			response.headers.forEach((value, key) => {
-				headersObj[key] = value
-			})
-			console.log("[CEREBRAS DEBUG] Response headers:", headersObj)
-
 			if (!response.ok) {
 				const errorText = await response.text()
-				console.error("[CEREBRAS DEBUG] Error response body:", errorText)
 
-				let errorDetails = "Unknown error"
+				let errorMessage = "Unknown error"
 				try {
 					const errorJson = JSON.parse(errorText)
-					errorDetails = JSON.stringify(errorJson, null, 2)
+					errorMessage = errorJson.error?.message || errorJson.message || JSON.stringify(errorJson, null, 2)
 				} catch {
-					errorDetails = errorText || `HTTP ${response.status}`
+					errorMessage = errorText || `HTTP ${response.status}`
 				}
 
-				throw new Error(`Cerebras API Error: ${response.status} - ${errorDetails}`)
+				// Provide more actionable error messages
+				if (response.status === 401) {
+					throw new Error(
+						`Cerebras API authentication failed. Please check your API key is valid and not expired.`,
+					)
+				} else if (response.status === 403) {
+					throw new Error(
+						`Cerebras API access forbidden. Your API key may not have access to the requested model or feature.`,
+					)
+				} else if (response.status === 429) {
+					throw new Error(`Cerebras API rate limit exceeded. Please wait before making another request.`)
+				} else if (response.status >= 500) {
+					throw new Error(`Cerebras API server error (${response.status}). Please try again later.`)
+				} else {
+					throw new Error(`Cerebras API Error (${response.status}): ${errorMessage}`)
+				}
 			}
 
 			if (!response.body) {
@@ -241,7 +232,7 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 								}
 							}
 						} catch (error) {
-							console.error("[CEREBRAS DEBUG] Failed to parse streaming data:", error, "Line:", line)
+							// Silently ignore malformed streaming data lines
 						}
 					}
 				}
@@ -270,8 +261,6 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 				outputTokens,
 			}
 		} catch (error) {
-			console.error("[CEREBRAS] Streaming error:", error)
-
 			if (error instanceof Error) {
 				throw new Error(`Cerebras API error: ${error.message}`)
 			}
@@ -302,7 +291,23 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 
 			if (!response.ok) {
 				const errorText = await response.text()
-				throw new Error(`Cerebras API Error: ${response.status} - ${errorText}`)
+
+				// Provide consistent error handling with createMessage
+				if (response.status === 401) {
+					throw new Error(
+						`Cerebras API authentication failed. Please check your API key is valid and not expired.`,
+					)
+				} else if (response.status === 403) {
+					throw new Error(
+						`Cerebras API access forbidden. Your API key may not have access to the requested model or feature.`,
+					)
+				} else if (response.status === 429) {
+					throw new Error(`Cerebras API rate limit exceeded. Please wait before making another request.`)
+				} else if (response.status >= 500) {
+					throw new Error(`Cerebras API server error (${response.status}). Please try again later.`)
+				} else {
+					throw new Error(`Cerebras API Error (${response.status}): ${errorText}`)
+				}
 			}
 
 			const result = await response.json()
