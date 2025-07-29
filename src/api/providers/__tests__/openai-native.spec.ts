@@ -7,10 +7,8 @@ import { ApiHandlerOptions } from "../../../shared/api"
 
 // Mock OpenAI client
 const mockCreate = vitest.fn()
-const mockFetch = vitest.fn()
-
-// Mock global fetch
-global.fetch = mockFetch as any
+const mockResponsesCreate = vitest.fn()
+const mockResponsesStream = vitest.fn()
 
 vitest.mock("openai", () => {
 	return {
@@ -66,6 +64,26 @@ vitest.mock("openai", () => {
 					}),
 				},
 			},
+			responses: {
+				create: mockResponsesCreate.mockImplementation(async () => ({
+					output_text: "Test response",
+				})),
+				stream: mockResponsesStream.mockImplementation(async () => ({
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							type: "response.output_text.delta",
+							delta: "Hello",
+						}
+						yield {
+							type: "response.output_text.delta",
+							delta: " world",
+						}
+						yield {
+							type: "response.completed",
+						}
+					},
+				})),
+			},
 		})),
 	}
 })
@@ -88,7 +106,8 @@ describe("OpenAiNativeHandler", () => {
 		}
 		handler = new OpenAiNativeHandler(mockOptions)
 		mockCreate.mockClear()
-		mockFetch.mockClear()
+		mockResponsesCreate.mockClear()
+		mockResponsesStream.mockClear()
 	})
 
 	describe("constructor", () => {
@@ -455,47 +474,16 @@ describe("OpenAiNativeHandler", () => {
 		})
 
 		it("should handle streaming responses via v1/responses", async () => {
-			const mockStreamData = [
-				'data: {"type": "response.output_text.delta", "delta": "Hello"}\n',
-				'data: {"type": "response.output_text.delta", "delta": " world"}\n',
-				'data: {"type": "response.completed"}\n',
-				"data: [DONE]\n",
-			]
-
-			const encoder = new TextEncoder()
-			const stream = new ReadableStream({
-				start(controller) {
-					for (const data of mockStreamData) {
-						controller.enqueue(encoder.encode(data))
-					}
-					controller.close()
-				},
-			})
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				status: 200,
-				body: stream,
-			})
-
 			const responseStream = handler.createMessage(systemPrompt, messages)
 			const chunks: any[] = []
 			for await (const chunk of responseStream) {
 				chunks.push(chunk)
 			}
 
-			expect(mockFetch).toHaveBeenCalledWith("https://api.openai.com/v1/responses", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: "Bearer test-api-key",
-				},
-				body: JSON.stringify({
-					model: "codex-mini-latest",
-					instructions: systemPrompt,
-					input: "Hello!",
-					stream: true,
-				}),
+			expect(mockResponsesStream).toHaveBeenCalledWith({
+				model: "codex-mini-latest",
+				instructions: systemPrompt,
+				input: "Hello!",
 			})
 
 			const textChunks = chunks.filter((chunk) => chunk.type === "text")
@@ -505,47 +493,26 @@ describe("OpenAiNativeHandler", () => {
 		})
 
 		it("should handle non-streaming completion via v1/responses", async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				status: 200,
-				json: async () => ({ output_text: "Test response" }),
-			})
-
 			const result = await handler.completePrompt("Test prompt")
 
-			expect(mockFetch).toHaveBeenCalledWith("https://api.openai.com/v1/responses", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: "Bearer test-api-key",
-				},
-				body: JSON.stringify({
-					model: "codex-mini-latest",
-					instructions: "Complete the following prompt:",
-					input: "Test prompt",
-					stream: false,
-				}),
+			expect(mockResponsesCreate).toHaveBeenCalledWith({
+				model: "codex-mini-latest",
+				instructions: "Complete the following prompt:",
+				input: "Test prompt",
 			})
 
 			expect(result).toBe("Test response")
 		})
 
 		it("should handle API errors", async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: false,
-				status: 404,
-				statusText: "Not Found",
-				text: async () => "This model is only supported in v1/responses",
-			})
+			mockResponsesStream.mockRejectedValueOnce(new Error("API Error"))
 
 			const stream = handler.createMessage(systemPrompt, messages)
 			await expect(async () => {
 				for await (const _chunk of stream) {
 					// Should not reach here
 				}
-			}).rejects.toThrow(
-				"OpenAI Responses API error: 404 Not Found - This model is only supported in v1/responses",
-			)
+			}).rejects.toThrow("OpenAI Responses API error: API Error")
 		})
 	})
 
