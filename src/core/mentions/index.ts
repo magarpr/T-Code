@@ -267,18 +267,18 @@ async function getFileOrFolderContent(
 						const absoluteFilePath = path.resolve(absPath, entry.name)
 						fileContentPromises.push(
 							(async () => {
+								let isBinary = false
 								try {
-									let isBinary = false
-									try {
-										isBinary = await isBinaryFile(absoluteFilePath)
-									} catch (error) {
-										// If isBinaryFile throws an error (e.g., RangeError), treat as binary
-										console.warn(`Error checking if file is binary for ${absoluteFilePath}:`, error)
-										isBinary = true
-									}
-									if (isBinary) {
-										return undefined
-									}
+									isBinary = await isBinaryFile(absoluteFilePath)
+								} catch (error) {
+									// If isBinaryFile throws an error (e.g., RangeError), treat as binary
+									console.warn(`Error checking if file is binary for ${absoluteFilePath}:`, error)
+									isBinary = true
+								}
+								if (isBinary) {
+									return undefined
+								}
+								try {
 									const content = await extractTextFromFile(absoluteFilePath, maxReadFileLine)
 									return `<file_content path="${filePath.toPosix()}">\n${content}\n</file_content>`
 								} catch (error) {

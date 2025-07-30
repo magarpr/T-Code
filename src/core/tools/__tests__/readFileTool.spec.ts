@@ -518,5 +518,26 @@ describe("read_file tool XML output structure", () => {
 				`<files>\n<file><path>${testFilePath}</path><error>Access to ${testFilePath} is blocked by the .rooignore file settings. You must try to continue in the task without using this file, or ask the user to update the .rooignore file.</error></file>\n</files>`,
 			)
 		})
+
+		it("should handle RangeError from isBinaryFile gracefully", async () => {
+			// Setup - mock isBinaryFile to throw RangeError
+			mockedIsBinaryFile.mockRejectedValue(new RangeError("Invalid array length"))
+			mockedCountFileLines.mockResolvedValue(5)
+
+			// Execute - the main goal is to verify the error doesn't crash the application
+			const result = await executeReadFileTool(
+				{},
+				{
+					totalLines: 5,
+				},
+			)
+
+			// Verify that the file is processed (the error is handled gracefully)
+			expect(result).toContain(`<file><path>${testFilePath}</path>`)
+
+			// Verify that we get a valid XML response (not an error)
+			expect(result).toMatch(/<files>.*<\/files>/s)
+			expect(result).not.toContain("<error>")
+		})
 	})
 })
