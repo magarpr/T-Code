@@ -469,22 +469,46 @@ export class CustomModesManager {
 				const lines = content.split("\n")
 				let indentSize = 2 // default
 				let hasFlowStyle = false
+				let doubleQuotedAsJSON = false
+				let blockQuote = true
 
-				// Detect indentation size from the first indented line
+				// Detect indentation size by looking for customModes section specifically
+				let foundCustomModes = false
 				for (const line of lines) {
-					const match = line.match(/^(\s+)/)
-					if (match && match[1].length > 0) {
-						indentSize = match[1].length
-						break
+					// Look for customModes section first
+					if (line.trim().startsWith("customModes:")) {
+						foundCustomModes = true
+						continue
+					}
+
+					// If we're in customModes section, look for indented content
+					if (foundCustomModes) {
+						const match = line.match(/^(\s+)/)
+						if (match && match[1].length > 0) {
+							indentSize = match[1].length
+							break
+						}
+						// If we hit a non-indented line after customModes, stop looking
+						if (line.trim() && !line.startsWith(" ") && !line.startsWith("\t")) {
+							break
+						}
 					}
 				}
 
 				// Check if the file uses flow style (arrays with brackets)
 				hasFlowStyle = content.includes("[") && content.includes("]")
 
+				// Check for double quotes usage (indicates JSON-like style)
+				doubleQuotedAsJSON = content.includes('"') && !content.includes("'")
+
+				// Check for block quote style (| or >)
+				blockQuote = content.includes("|") || content.includes(">")
+
 				originalYamlOptions = {
 					lineWidth: 0, // Prevent line wrapping
 					indent: indentSize,
+					...(hasFlowStyle && { defaultFlow: "flow" as const }),
+					...(doubleQuotedAsJSON && { doubleQuotedAsJSON: true }),
 				}
 			}
 		} catch (error) {
