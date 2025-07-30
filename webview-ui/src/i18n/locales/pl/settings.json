@@ -50,6 +50,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Klucz API:",
 		"mistralApiKeyPlaceholder": "Wprowadź swój klucz API Mistral",
+		"jinaProvider": "Jina",
+		"jinaApiKeyLabel": "Klucz API:",
+		"jinaApiKeyPlaceholder": "Wprowadź swój klucz API Jina",
 		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
 		"openAiKeyLabel": "Klucz API OpenAI",
 		"openAiKeyPlaceholder": "Wprowadź swój klucz API OpenAI",
@@ -113,6 +116,7 @@
 			"modelDimensionRequired": "Wymagany jest wymiar modelu",
 			"geminiApiKeyRequired": "Wymagany jest klucz API Gemini",
 			"mistralApiKeyRequired": "Klucz API Mistral jest wymagany",
+			"jinaApiKeyRequired": "Klucz API Jina jest wymagany",
 			"ollamaBaseUrlRequired": "Wymagany jest bazowy adres URL Ollama",
 			"baseUrlRequired": "Wymagany jest bazowy adres URL",
 			"modelDimensionMinValue": "Wymiar modelu musi być większy niż 0"

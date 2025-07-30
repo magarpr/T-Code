@@ -55,6 +55,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 密钥:",
 		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
+		"jinaProvider": "Jina",
+		"jinaApiKeyLabel": "API 密钥:",
+		"jinaApiKeyPlaceholder": "输入您的 Jina API 密钥",
 		"openaiCompatibleProvider": "OpenAI 兼容",
 		"openAiKeyLabel": "OpenAI API 密钥",
 		"openAiKeyPlaceholder": "输入你的 OpenAI API 密钥",
@@ -113,6 +116,7 @@
 			"modelDimensionRequired": "需要模型维度",
 			"geminiApiKeyRequired": "需要 Gemini API 密钥",
 			"mistralApiKeyRequired": "需要 Mistral API 密钥",
+			"jinaApiKeyRequired": "需要 Jina API 密钥",
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
 			"modelDimensionMinValue": "模型维度必须大于 0"
