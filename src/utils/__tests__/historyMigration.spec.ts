@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import path from "path"
 import { migrateTasksToWorkspaceStructure, isMigrationNeeded } from "../historyMigration"
 
 // Mock dependencies
@@ -42,7 +43,7 @@ describe("historyMigration", () => {
 			const result = await isMigrationNeeded("/test/storage")
 
 			expect(result).toBe(false)
-			expect(mockFileExistsAtPath).toHaveBeenCalledWith("/test/storage/tasks")
+			expect(mockFileExistsAtPath).toHaveBeenCalledWith(path.join("/test/storage", "tasks"))
 		})
 
 		it("should return false when old tasks directory exists but is empty", async () => {
