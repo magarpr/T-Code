@@ -20,30 +20,61 @@ export interface ArkCacheOptions {
 }
 
 /**
+ * Ark-specific caching configuration
+ */
+export interface ArkCachingConfig {
+	type: "enabled"
+}
+
+/**
+ * Extended OpenAI request parameters with Ark-specific caching support
+ */
+export interface ArkChatCompletionCreateParamsStreaming
+	extends OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming {
+	/** Ark caching configuration */
+	caching?: ArkCachingConfig
+	/** Previous response ID for context continuation */
+	previous_response_id?: string
+	/** Cache TTL in seconds */
+	cache_ttl?: number
+}
+
+/**
+ * Extended OpenAI request parameters with Ark-specific caching support (non-streaming)
+ */
+export interface ArkChatCompletionCreateParamsNonStreaming
+	extends OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming {
+	/** Ark caching configuration */
+	caching?: ArkCachingConfig
+	/** Previous response ID for context continuation */
+	previous_response_id?: string
+	/** Cache TTL in seconds */
+	cache_ttl?: number
+}
+
+/**
  * Add context caching support for Ark/Volcengine using the Responses API
  *
  * @param requestOptions - The OpenAI request options to modify
  * @param cacheOptions - Ark-specific caching options
  */
 export function addArkCaching(
-	requestOptions:
-		| OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming
-		| OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+	requestOptions: ArkChatCompletionCreateParamsStreaming | ArkChatCompletionCreateParamsNonStreaming,
 	cacheOptions: ArkCacheOptions = {},
 ): void {
 	// Enable caching for this request
-	;(requestOptions as any).caching = {
+	requestOptions.caching = {
 		type: "enabled",
 	}
 
 	// If we have a previous response ID, reference it for context continuation
 	if (cacheOptions.previousResponseId) {
-		;(requestOptions as any).previous_response_id = cacheOptions.previousResponseId
+		requestOptions.previous_response_id = cacheOptions.previousResponseId
 	}
 
 	// Set cache TTL (default to 1 hour as recommended in the issue)
 	if (cacheOptions.cacheTtl) {
-		;(requestOptions as any).cache_ttl = cacheOptions.cacheTtl
+		requestOptions.cache_ttl = cacheOptions.cacheTtl
 	}
 }
 

@@ -1,12 +1,19 @@
 // npx vitest run api/transform/caching/__tests__/ark.spec.ts
 
-import { addArkCaching, extractArkResponseId, getArkCachedTokens, hasArkCachedTokens } from "../ark"
+import {
+	addArkCaching,
+	extractArkResponseId,
+	getArkCachedTokens,
+	hasArkCachedTokens,
+	ArkChatCompletionCreateParamsStreaming,
+	ArkChatCompletionCreateParamsNonStreaming,
+} from "../ark"
 import OpenAI from "openai"
 
 describe("Ark Context Caching", () => {
 	describe("addArkCaching", () => {
 		it("should add basic caching configuration", () => {
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsStreaming = {
 				model: "doubao-pro-4k",
 				messages: [
 					{ role: "system", content: "You are a helpful assistant." },
@@ -28,7 +35,7 @@ describe("Ark Context Caching", () => {
 		})
 
 		it("should add previous response ID when provided", () => {
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsStreaming = {
 				model: "doubao-pro-4k",
 				messages: [{ role: "user", content: "Follow up question" }],
 				stream: true,
@@ -47,7 +54,7 @@ describe("Ark Context Caching", () => {
 		})
 
 		it("should add cache TTL when provided", () => {
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsStreaming = {
 				model: "doubao-pro-4k",
 				messages: [{ role: "user", content: "Hello!" }],
 				stream: true,
@@ -66,7 +73,7 @@ describe("Ark Context Caching", () => {
 		})
 
 		it("should add both previous response ID and cache TTL", () => {
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsStreaming = {
 				model: "doubao-pro-4k",
 				messages: [{ role: "user", content: "Hello!" }],
 				stream: true,
@@ -87,7 +94,7 @@ describe("Ark Context Caching", () => {
 		})
 
 		it("should work with non-streaming requests", () => {
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsNonStreaming = {
 				model: "doubao-pro-4k",
 				messages: [{ role: "user", content: "Hello!" }],
 			}
@@ -107,7 +114,7 @@ describe("Ark Context Caching", () => {
 		})
 
 		it("should not add optional fields when not provided", () => {
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsStreaming = {
 				model: "doubao-pro-4k",
 				messages: [{ role: "user", content: "Hello!" }],
 				stream: true,
@@ -323,7 +330,7 @@ describe("Ark Context Caching", () => {
 	describe("integration scenarios", () => {
 		it("should handle complete caching workflow", () => {
 			// First request - no previous response ID
-			const firstRequest: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const firstRequest: ArkChatCompletionCreateParamsStreaming = {
 				model: "doubao-pro-4k",
 				messages: [{ role: "user", content: "Hello!" }],
 				stream: true,
@@ -364,7 +371,7 @@ describe("Ark Context Caching", () => {
 			expect(hasArkCachedTokens(firstResponse.usage)).toBe(false)
 
 			// Second request - with previous response ID
-			const secondRequest: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const secondRequest: ArkChatCompletionCreateParamsStreaming = {
 				model: "doubao-pro-4k",
 				messages: [
 					{ role: "user", content: "Hello!" },

@@ -19,7 +19,13 @@ import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
-import { addArkCaching, extractArkResponseId, getArkCachedTokens } from "../transform/caching/ark"
+import {
+	addArkCaching,
+	extractArkResponseId,
+	getArkCachedTokens,
+	ArkChatCompletionCreateParamsStreaming,
+	ArkChatCompletionCreateParamsNonStreaming,
+} from "../transform/caching/ark"
 
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
@@ -151,7 +157,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			const isGrokXAI = this._isGrokXAI(this.options.openAiBaseUrl)
 
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsStreaming = {
 				model: modelId,
 				temperature: this.options.modelTemperature ?? (deepseekReasoner ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
 				messages: convertedMessages,
@@ -232,7 +238,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				content: systemPrompt,
 			}
 
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsNonStreaming = {
 				model: modelId,
 				messages: deepseekReasoner
 					? convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
@@ -304,7 +310,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			const model = this.getModel()
 			const modelInfo = model.info
 
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsNonStreaming = {
 				model: model.id,
 				messages: [{ role: "user", content: prompt }],
 			}
@@ -340,7 +346,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		if (this.options.openAiStreamingEnabled ?? true) {
 			const isGrokXAI = this._isGrokXAI(this.options.openAiBaseUrl)
 
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsStreaming = {
 				model: modelId,
 				messages: [
 					{
@@ -375,7 +381,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			yield* this.handleStreamResponse(stream, ark)
 		} else {
-			const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+			const requestOptions: ArkChatCompletionCreateParamsNonStreaming = {
 				model: modelId,
 				messages: [
 					{
@@ -482,9 +488,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	 * O3 family models handle max_tokens separately in handleO3FamilyMessage
 	 */
 	private addMaxTokensIfNeeded(
-		requestOptions:
-			| OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming
-			| OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+		requestOptions: ArkChatCompletionCreateParamsStreaming | ArkChatCompletionCreateParamsNonStreaming,
 		modelInfo: ModelInfo,
 	): void {
 		// Only add max_completion_tokens if includeMaxTokens is true
