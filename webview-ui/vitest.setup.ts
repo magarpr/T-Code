@@ -66,3 +66,11 @@ afterAll(() => {
 	console.warn = originalConsoleWarn
 	console.info = originalConsoleInfo
 })
+
+// Set default timeout for waitFor operations to prevent hanging
+import { configure } from "@testing-library/react"
+
+configure({
+	// Reduce default timeout for waitFor to fail faster in CI
+	asyncUtilTimeout: 5000, // 5 seconds instead of default 1000ms
+})
