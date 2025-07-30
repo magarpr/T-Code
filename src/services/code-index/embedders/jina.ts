@@ -104,7 +104,7 @@ export class JinaEmbedder implements IEmbedder {
 						.sort((a, b) => a.index - b.index)
 						.map((item) => {
 							if (typeof item.embedding === "string") {
-								throw new Error("Base64/binary embeddings are not supported")
+								throw new Error(t("embeddings:unsupportedEmbeddingFormat"))
 							}
 							return item.embedding
 						})
@@ -262,7 +262,7 @@ export class JinaEmbedder implements IEmbedder {
 		})
 
 		if (!response.ok) {
-			const errorData = await response.text().catch(() => "Unknown error")
+			const errorData = await response.text().catch(() => t("embeddings:unknownError"))
 			const error = { status: response.status, message: errorData } as any
 			throw formatEmbeddingError(error, MAX_RETRIES)
 		}
