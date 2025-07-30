@@ -158,17 +158,25 @@ export async function browserActionTool(
 				case "resize":
 					await cline.say("browser_action_result", JSON.stringify(browserActionResult))
 
-					pushToolResult(
-						formatResponse.toolResult(
+					{
+						const toolResult = formatResponse.toolResult(
 							`The browser action has been executed. The console logs and screenshot have been captured for your analysis.\n\nConsole logs:\n${
 								browserActionResult?.logs || "(No new logs)"
 							}\n\n(REMEMBER: if you need to proceed to using non-\`browser_action\` tools or launch a new browser, you MUST first close cline browser. For example, if after analyzing the logs and screenshot you need to edit a file, you must first close the browser before you can use the write_to_file tool.)`,
 							browserActionResult?.screenshot ? [browserActionResult.screenshot] : [],
-						),
-					)
+						)
+
+						// Use the new method to manage browser screenshot history
+						await cline.addBrowserActionToApiHistory(toolResult)
+
+						pushToolResult(toolResult)
+					}
 
 					break
 				case "close":
+					// Reset browser screenshot tracking when browser is closed
+					cline.resetBrowserScreenshotTracking()
+
 					pushToolResult(
 						formatResponse.toolResult(
 							`The browser has been closed. You may now proceed to using other tools.`,

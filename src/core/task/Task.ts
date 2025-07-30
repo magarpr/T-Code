@@ -214,6 +214,7 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	// Computer User
 	browserSession: BrowserSession
+	private lastBrowserScreenshotMessageId?: string // Track the last message with browser screenshot
 
 	// Editing
 	diffViewProvider: DiffViewProvider
@@ -506,6 +507,57 @@ export class Task extends EventEmitter<ClineEvents> {
 		const messageWithTs = { ...message, ts: Date.now() }
 		this.apiConversationHistory.push(messageWithTs)
 		await this.saveApiConversationHistory()
+	}
+
+	/**
+	 * Add a browser action result to conversation history, removing previous browser screenshots
+	 * to prevent hitting provider image limits (e.g., AWS Bedrock's 20-image limit).
+	 */
+	async addBrowserActionToApiHistory(
+		toolResult: string | Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>,
+	) {
+		// Remove previous browser screenshot from conversation history
+		if (this.lastBrowserScreenshotMessageId) {
+			// Find and remove images from the last browser action message
+			for (let i = this.apiConversationHistory.length - 1; i >= 0; i--) {
+				const message = this.apiConversationHistory[i]
+				if (message.role === "user" && Array.isArray(message.content)) {
+					// Check if this message contains the last browser screenshot
+					const hasToolResult = message.content.some(
+						(block) => block.type === "text" && block.text.includes("[browser_action Result]"),
+					)
+					if (hasToolResult) {
+						// Remove image blocks from this message, keep only text blocks
+						message.content = message.content.filter((block) => block.type === "text")
+						break
+					}
+				}
+			}
+		}
+
+		// Add the new browser action result
+		const content = Array.isArray(toolResult) ? toolResult : [{ type: "text" as const, text: toolResult }]
+		const messageWithTs = {
+			role: "user" as const,
+			content,
+			ts: Date.now(),
+		}
+
+		// Track this message if it contains images
+		const hasImages = Array.isArray(toolResult) && toolResult.some((block) => block.type === "image")
+		if (hasImages) {
+			this.lastBrowserScreenshotMessageId = messageWithTs.ts.toString()
+		}
+
+		this.apiConversationHistory.push(messageWithTs)
+		await this.saveApiConversationHistory()
+	}
+
+	/**
+	 * Reset browser screenshot tracking when browser is closed
+	 */
+	resetBrowserScreenshotTracking() {
+		this.lastBrowserScreenshotMessageId = undefined
 	}
 
 	async overwriteApiConversationHistory(newHistory: ApiMessage[]) {
