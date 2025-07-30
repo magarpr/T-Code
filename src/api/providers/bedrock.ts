@@ -294,6 +294,47 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
+		// Special handling for Application Inference Profiles (AIPs)
+		// When using custom ARNs for inference profiles, the modelId might be a profile name
+		// but we can make educated guesses about prompt caching support based on common patterns
+		if (this.options.awsCustomArn && this.arnInfo?.modelType === "inference-profile") {
+			// For inference profiles, we assume they're likely using modern Claude models
+			// that support prompt caching, especially if the profile name suggests it
+			const profileName = id
+
+			// Check if the profile name contains indicators of Claude models that support caching
+			const claudeCacheIndicators = ["claude", "anthropic", "sonnet", "haiku", "opus"]
+
+			const hasClaudeIndicator = claudeCacheIndicators.some((indicator) => profileName.includes(indicator))
+
+			if (hasClaudeIndicator) {
+				// Return configuration optimized for modern Claude models with prompt caching
+				return {
+					maxTokens: 8192,
+					contextWindow: 200_000,
+					supportsImages: true,
+					supportsPromptCache: true,
+					// Add cache-specific properties for Claude models
+					minTokensPerCachePoint: 1024,
+					maxCachePoints: 4,
+					cachableFields: ["system", "messages", "tools"],
+				}
+			}
+
+			// For other inference profiles, assume they support prompt caching
+			// since most modern models in inference profiles do
+			return {
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+				// Conservative cache settings for unknown models
+				minTokensPerCachePoint: 1024,
+				maxCachePoints: 1,
+				cachableFields: ["system"],
+			}
+		}
+
 		// Default fallback
 		return {
 			maxTokens: BEDROCK_MAX_TOKENS,
