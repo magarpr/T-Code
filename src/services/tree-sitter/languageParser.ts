@@ -10,6 +10,7 @@ import {
 	cppQuery,
 	cQuery,
 	csharpQuery,
+	vbQuery,
 	rubyQuery,
 	javaQuery,
 	phpQuery,
@@ -136,6 +137,11 @@ export async function loadRequiredLanguageParsers(filesToParse: string[], source
 			case "cs":
 				language = await loadLanguage("c_sharp", sourceDirectory)
 				query = new Query(language, csharpQuery)
+				break
+			case "vb":
+				// Use C# parser as fallback for VB.NET until dedicated parser is available
+				language = await loadLanguage("c_sharp", sourceDirectory)
+				query = new Query(language, vbQuery)
 				break
 			case "rb":
 				language = await loadLanguage("ruby", sourceDirectory)

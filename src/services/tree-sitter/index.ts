@@ -46,6 +46,8 @@ const extensions = [
 	"hpp",
 	// C#
 	"cs",
+	// Visual Basic .NET
+	"vb",
 	// Ruby
 	"rb",
 	"java",
