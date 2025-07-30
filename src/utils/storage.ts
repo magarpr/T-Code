@@ -4,6 +4,8 @@ import * as fs from "fs/promises"
 
 import { Package } from "../shared/package"
 import { t } from "../i18n"
+import { getWorkspaceHash, getShortWorkspaceHash } from "./workspaceHash"
+import { isMigrationNeeded, migrateTasksToWorkspaceStructure } from "./historyMigration"
 
 /**
  * Gets the base storage path for conversations
@@ -49,9 +51,46 @@ export async function getStorageBasePath(defaultPath: string): Promise<string> {
 }
 
 /**
- * Gets the storage directory path for a task
+ * Gets the storage directory path for a task using the new workspace-based structure
  */
 export async function getTaskDirectoryPath(globalStoragePath: string, taskId: string): Promise<string> {
+	const basePath = await getStorageBasePath(globalStoragePath)
+
+	// Check if migration is needed and perform it
+	if (await isMigrationNeeded(basePath)) {
+		console.log("Migrating tasks to workspace-based structure...")
+		try {
+			await migrateTasksToWorkspaceStructure(basePath, console.log)
+		} catch (error) {
+			console.error("Migration failed, falling back to old structure:", error)
+			// Fall back to old structure if migration fails
+			const taskDir = path.join(basePath, "tasks", taskId)
+			await fs.mkdir(taskDir, { recursive: true })
+			return taskDir
+		}
+	}
+
+	// Use workspace-based structure
+	const workspaceHash = getWorkspaceHash()
+	if (workspaceHash) {
+		const shortHash = getShortWorkspaceHash(workspaceHash)
+		const taskDir = path.join(basePath, "workspaces", shortHash, "tasks", taskId)
+		await fs.mkdir(taskDir, { recursive: true })
+		return taskDir
+	} else {
+		// Fallback to old structure if no workspace is available
+		console.warn("No workspace available, using legacy task storage structure")
+		const taskDir = path.join(basePath, "tasks", taskId)
+		await fs.mkdir(taskDir, { recursive: true })
+		return taskDir
+	}
+}
+
+/**
+ * Gets the storage directory path for a task using the legacy structure
+ * This is kept for backward compatibility and testing
+ */
+export async function getLegacyTaskDirectoryPath(globalStoragePath: string, taskId: string): Promise<string> {
 	const basePath = await getStorageBasePath(globalStoragePath)
 	const taskDir = path.join(basePath, "tasks", taskId)
 	await fs.mkdir(taskDir, { recursive: true })
