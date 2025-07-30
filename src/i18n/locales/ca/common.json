@@ -93,7 +93,9 @@
 			"generate_complete_prompt": "Error de finalització de Gemini: {{error}}",
 			"sources": "Fonts:"
 		},
-		"mode_import_failed": "Ha fallat la importació del mode: {{error}}"
+		"mode_import_failed": "Ha fallat la importació del mode: {{error}}",
+		"toggle_favorite_failed": "Error en canviar l'estat de favorit de la tasca",
+		"rename_task_failed": "Error en canviar el nom de la tasca"
 	},
 	"warnings": {
 		"no_terminal_content": "No s'ha seleccionat contingut de terminal",

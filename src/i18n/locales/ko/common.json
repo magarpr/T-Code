@@ -89,7 +89,9 @@
 			"generate_stream": "Gemini 생성 컨텍스트 스트림 오류: {{error}}",
 			"generate_complete_prompt": "Gemini 완료 오류: {{error}}",
 			"sources": "출처:"
-		}
+		},
+		"toggle_favorite_failed": "작업 즐겨찾기 상태 전환에 실패했습니다",
+		"rename_task_failed": "작업 이름 변경에 실패했습니다"
 	},
 	"warnings": {
 		"no_terminal_content": "선택된 터미널 내용이 없습니다",

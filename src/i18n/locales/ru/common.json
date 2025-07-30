@@ -89,7 +89,9 @@
 			"generate_stream": "Ошибка потока контекста генерации Gemini: {{error}}",
 			"generate_complete_prompt": "Ошибка завершения Gemini: {{error}}",
 			"sources": "Источники:"
-		}
+		},
+		"toggle_favorite_failed": "Не удалось переключить статус избранного задачи",
+		"rename_task_failed": "Не удалось переименовать задачу"
 	},
 	"warnings": {
 		"no_terminal_content": "Не выбрано содержимое терминала",

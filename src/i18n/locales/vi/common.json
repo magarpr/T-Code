@@ -89,7 +89,9 @@
 			"generate_stream": "Lỗi luồng ngữ cảnh tạo Gemini: {{error}}",
 			"generate_complete_prompt": "Lỗi hoàn thành Gemini: {{error}}",
 			"sources": "Nguồn:"
-		}
+		},
+		"toggle_favorite_failed": "Không thể chuyển đổi trạng thái yêu thích của nhiệm vụ",
+		"rename_task_failed": "Không thể đổi tên nhiệm vụ"
 	},
 	"warnings": {
 		"no_terminal_content": "Không có nội dung terminal được chọn",

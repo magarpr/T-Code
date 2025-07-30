@@ -89,7 +89,9 @@
 			"generate_stream": "Error del stream de contexto de generación de Gemini: {{error}}",
 			"generate_complete_prompt": "Error de finalización de Gemini: {{error}}",
 			"sources": "Fuentes:"
-		}
+		},
+		"toggle_favorite_failed": "Error al cambiar el estado de favorito de la tarea",
+		"rename_task_failed": "Error al renombrar la tarea"
 	},
 	"warnings": {
 		"no_terminal_content": "No hay contenido de terminal seleccionado",

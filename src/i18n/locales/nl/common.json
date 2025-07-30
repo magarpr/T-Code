@@ -89,7 +89,9 @@
 			"generate_stream": "Fout bij het genereren van contextstream door Gemini: {{error}}",
 			"generate_complete_prompt": "Fout bij het voltooien door Gemini: {{error}}",
 			"sources": "Bronnen:"
-		}
+		},
+		"toggle_favorite_failed": "Kan favorieten status van taak niet wijzigen",
+		"rename_task_failed": "Kan taak niet hernoemen"
 	},
 	"warnings": {
 		"no_terminal_content": "Geen terminalinhoud geselecteerd",

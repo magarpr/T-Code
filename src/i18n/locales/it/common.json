@@ -89,7 +89,9 @@
 			"generate_stream": "Errore del flusso di contesto di generazione Gemini: {{error}}",
 			"generate_complete_prompt": "Errore di completamento Gemini: {{error}}",
 			"sources": "Fonti:"
-		}
+		},
+		"toggle_favorite_failed": "Impossibile cambiare lo stato preferito dell'attività",
+		"rename_task_failed": "Impossibile rinominare l'attività"
 	},
 	"warnings": {
 		"no_terminal_content": "Nessun contenuto del terminale selezionato",

@@ -89,7 +89,9 @@
 			"generate_stream": "जेमिनी जनरेट कॉन्टेक्स्ट स्ट्रीम त्रुटि: {{error}}",
 			"generate_complete_prompt": "जेमिनी समापन त्रुटि: {{error}}",
 			"sources": "स्रोत:"
-		}
+		},
+		"toggle_favorite_failed": "कार्य पसंदीदा स्थिति टॉगल करने में विफल",
+		"rename_task_failed": "कार्य का नाम बदलने में विफल"
 	},
 	"warnings": {
 		"no_terminal_content": "कोई टर्मिनल सामग्री चयनित नहीं",

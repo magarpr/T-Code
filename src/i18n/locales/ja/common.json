@@ -89,7 +89,9 @@
 			"generate_stream": "Gemini 生成コンテキスト ストリーム エラー: {{error}}",
 			"generate_complete_prompt": "Gemini 完了エラー: {{error}}",
 			"sources": "ソース:"
-		}
+		},
+		"toggle_favorite_failed": "タスクのお気に入り状態の切り替えに失敗しました",
+		"rename_task_failed": "タスクの名前変更に失敗しました"
 	},
 	"warnings": {
 		"no_terminal_content": "選択されたターミナルコンテンツがありません",

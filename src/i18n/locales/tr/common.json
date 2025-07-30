@@ -89,7 +89,9 @@
 			"generate_stream": "Gemini oluşturma bağlam akışı hatası: {{error}}",
 			"generate_complete_prompt": "Gemini tamamlama hatası: {{error}}",
 			"sources": "Kaynaklar:"
-		}
+		},
+		"toggle_favorite_failed": "Görev favori durumu değiştirilemedi",
+		"rename_task_failed": "Görev yeniden adlandırılamadı"
 	},
 	"warnings": {
 		"no_terminal_content": "Seçili terminal içeriği yok",

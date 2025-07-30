@@ -89,7 +89,9 @@
 			"generate_stream": "Fehler beim Generieren des Kontext-Streams von Gemini: {{error}}",
 			"generate_complete_prompt": "Fehler bei der Vervollständigung durch Gemini: {{error}}",
 			"sources": "Quellen:"
-		}
+		},
+		"toggle_favorite_failed": "Fehler beim Ändern des Favoriten-Status der Aufgabe",
+		"rename_task_failed": "Fehler beim Umbenennen der Aufgabe"
 	},
 	"warnings": {
 		"no_terminal_content": "Kein Terminal-Inhalt ausgewählt",

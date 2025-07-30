@@ -89,7 +89,9 @@
 			"generate_stream": "Erreur du flux de contexte de génération Gemini : {{error}}",
 			"generate_complete_prompt": "Erreur d'achèvement de Gemini : {{error}}",
 			"sources": "Sources :"
-		}
+		},
+		"toggle_favorite_failed": "Échec du changement du statut de favori de la tâche",
+		"rename_task_failed": "Échec du renommage de la tâche"
 	},
 	"warnings": {
 		"no_terminal_content": "Aucun contenu de terminal sélectionné",
