@@ -71,6 +71,7 @@ import { WebviewMessage } from "../../shared/WebviewMessage"
 import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
 import { ProfileValidator } from "../../shared/ProfileValidator"
 import { getWorkspaceGitInfo } from "../../utils/git"
+import { applyMessageWindow, shouldApplyWindowing } from "../../utils/messageWindowing"
 
 /**
  * https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -1549,7 +1550,10 @@ export class ClineProvider
 			currentTaskItem: this.getCurrentCline()?.taskId
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentCline()?.taskId)
 				: undefined,
-			clineMessages: this.getCurrentCline()?.clineMessages || [],
+			clineMessages: (() => {
+				const messages = this.getCurrentCline()?.clineMessages || []
+				return shouldApplyWindowing(messages.length) ? applyMessageWindow(messages) : messages
+			})(),
 			taskHistory: (taskHistory || [])
 				.filter((item: HistoryItem) => item.ts && item.task)
 				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
