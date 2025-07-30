@@ -36,6 +36,29 @@ vi.mock("@src/utils/vscode", () => ({
 	},
 }))
 
+// Mock useSelectedModel to return a model that supports images
+vi.mock("@src/components/ui/hooks/useSelectedModel", () => ({
+	useSelectedModel: vi.fn(() => ({
+		info: {
+			supportsImages: true,
+			maxTokens: 8192,
+			contextWindow: 200_000,
+		},
+	})),
+}))
+
+// Mock the API configuration and related hooks
+vi.mock("@src/shared/api", () => ({
+	getModelMaxOutputTokens: vi.fn(() => 8192),
+}))
+
+// Mock TaskHeader to avoid API configuration issues
+vi.mock("../TaskHeader", () => ({
+	default: function MockTaskHeader() {
+		return <div data-testid="task-header">Task Header</div>
+	},
+}))
+
 // Mock use-sound hook
 const mockPlayFunction = vi.fn()
 vi.mock("use-sound", () => ({
@@ -68,7 +91,7 @@ vi.mock("../../common/VersionIndicator", () => ({
 
 vi.mock("../Announcement", () => ({
 	default: function MockAnnouncement({ hideAnnouncement }: { hideAnnouncement: () => void }) {
-		const React = require("react")
+		const React = require("react") // eslint-disable-line @typescript-eslint/no-require-imports
 		return React.createElement(
 			"div",
 			{ "data-testid": "announcement-modal" },
@@ -94,7 +117,6 @@ vi.mock("../QueuedMessages", () => ({
 	default: function MockQueuedMessages({
 		queue = [],
 		onRemove,
-		onUpdate,
 	}: {
 		queue?: Array<{ id: string; text: string; images: string[] }>
 		onRemove?: (index: number) => void
@@ -178,7 +200,7 @@ const mockFocus = vi.fn()
 
 // Create a simple mock that can test the core functionality
 vi.mock("../ChatTextArea", () => {
-	const mockReact = require("react")
+	const mockReact = require("react") // eslint-disable-line @typescript-eslint/no-require-imports
 
 	return {
 		default: mockReact.forwardRef(function MockChatTextArea(
@@ -189,6 +211,9 @@ vi.mock("../ChatTextArea", () => {
 			mockReact.useImperativeHandle(ref, () => ({
 				focus: mockFocus,
 			}))
+
+			// Use the selectedImages from props directly
+			const selectedImages = props.selectedImages || []
 
 			return (
 				<div data-testid="chat-textarea">
@@ -207,7 +232,17 @@ vi.mock("../ChatTextArea", () => {
 						disabled={props.sendingDisabled}>
 						Send Image Only
 					</button>
-					<div data-testid="selected-images-count">{props.selectedImages?.length || 0}</div>
+					<button
+						onClick={() => {
+							// Simulate adding images for testing
+							const newImages = ["data:image/png;base64,test1", "data:image/png;base64,test2"]
+							props.setSelectedImages?.(newImages)
+						}}
+						data-testid="add-images-button"
+						disabled={props.shouldDisableImages}>
+						Add Images
+					</button>
+					<div data-testid="selected-images-count">{selectedImages.length}</div>
 				</div>
 			)
 		}),
