@@ -111,6 +111,10 @@ const claudeCodeTools = [
 
 const CLAUDE_CODE_TIMEOUT = 600000 // 10 minutes
 
+// Maximum safe size for command line arguments to avoid E2BIG error on Linux (~128KB limit)
+// We use 100KB as a conservative threshold to account for other arguments and shell overhead
+const MAX_CMDLINE_ARG_SIZE = 100 * 1024 // 100KB
+
 function runProcess({
 	systemPrompt,
 	messages,
@@ -121,11 +125,15 @@ function runProcess({
 	const claudePath = path || "claude"
 	const isWindows = os.platform() === "win32"
 
-	// Build args based on platform
+	// Check if system prompt is too large for command line arguments
+	const systemPromptSize = Buffer.byteLength(systemPrompt, "utf8")
+	const useStdinForSystemPrompt = isWindows || systemPromptSize > MAX_CMDLINE_ARG_SIZE
+
+	// Build args based on platform and system prompt size
 	const args = ["-p"]
 
-	// Pass system prompt as flag on non-Windows, via stdin on Windows (avoids cmd length limits)
-	if (!isWindows) {
+	// Pass system prompt as flag only if it's small enough and not on Windows
+	if (!useStdinForSystemPrompt) {
 		args.push("--system-prompt", systemPrompt)
 	}
 
@@ -161,10 +169,10 @@ function runProcess({
 		timeout: CLAUDE_CODE_TIMEOUT,
 	})
 
-	// Prepare stdin data: Windows gets both system prompt & messages (avoids 8191 char limit),
-	// other platforms get messages only (avoids Linux E2BIG error from ~128KiB execve limit)
+	// Prepare stdin data: Windows and large system prompts get both system prompt & messages,
+	// other platforms with small prompts get messages only (avoids Linux E2BIG error from ~128KiB execve limit)
 	let stdinData: string
-	if (isWindows) {
+	if (useStdinForSystemPrompt) {
 		stdinData = JSON.stringify({
 			systemPrompt,
 			messages,

@@ -289,4 +289,135 @@ describe("runClaudeCode", () => {
 		consoleErrorSpy.mockRestore()
 		await generator.return(undefined)
 	})
+
+	test("should use stdin for large system prompts on non-Windows platforms", async () => {
+		const { runClaudeCode } = await import("../run")
+		const os = await import("os")
+		vi.mocked(os.platform).mockReturnValue("linux")
+
+		// Create a large system prompt (over 100KB)
+		const largeSystemPrompt = "A".repeat(101 * 1024) // 101KB
+		const messages = [{ role: "user" as const, content: "Hello" }]
+		const options = {
+			systemPrompt: largeSystemPrompt,
+			messages,
+		}
+
+		const generator = runClaudeCode(options)
+
+		// Consume at least one item to trigger process spawn
+		await generator.next()
+
+		// On non-Windows with large system prompt, should NOT have --system-prompt in args
+		const [, args] = mockExeca.mock.calls[0]
+		expect(args).not.toContain("--system-prompt")
+		expect(args).not.toContain(largeSystemPrompt)
+
+		// Should pass both system prompt and messages via stdin (like Windows)
+		const expectedStdinData = JSON.stringify({ systemPrompt: largeSystemPrompt, messages })
+		expect(mockStdin.write).toHaveBeenCalledWith(expectedStdinData, "utf8", expect.any(Function))
+
+		// Clean up
+		await generator.return(undefined)
+	})
+
+	test("should use command line args for small system prompts on non-Windows platforms", async () => {
+		const { runClaudeCode } = await import("../run")
+		const os = await import("os")
+		vi.mocked(os.platform).mockReturnValue("linux")
+
+		// Create a small system prompt (under 100KB)
+		const smallSystemPrompt = "You are a helpful assistant"
+		const messages = [{ role: "user" as const, content: "Hello" }]
+		const options = {
+			systemPrompt: smallSystemPrompt,
+			messages,
+		}
+
+		const generator = runClaudeCode(options)
+
+		// Consume at least one item to trigger process spawn
+		await generator.next()
+
+		// On non-Windows with small system prompt, should have --system-prompt in args
+		const [, args] = mockExeca.mock.calls[0]
+		expect(args).toContain("--system-prompt")
+		expect(args).toContain(smallSystemPrompt)
+
+		// Should only pass messages via stdin
+		expect(mockStdin.write).toHaveBeenCalledWith(JSON.stringify(messages), "utf8", expect.any(Function))
+
+		// Clean up
+		await generator.return(undefined)
+	})
+
+	test("should always use stdin for system prompts on Windows regardless of size", async () => {
+		const { runClaudeCode } = await import("../run")
+		const os = await import("os")
+		vi.mocked(os.platform).mockReturnValue("win32")
+
+		// Test with both small and large system prompts
+		const testCases = [
+			{ name: "small", systemPrompt: "You are a helpful assistant" },
+			{ name: "large", systemPrompt: "A".repeat(101 * 1024) }, // 101KB
+		]
+
+		for (const testCase of testCases) {
+			vi.clearAllMocks()
+			mockExeca.mockReturnValue(createMockProcess())
+
+			const messages = [{ role: "user" as const, content: "Hello" }]
+			const options = {
+				systemPrompt: testCase.systemPrompt,
+				messages,
+			}
+
+			const generator = runClaudeCode(options)
+
+			// Consume at least one item to trigger process spawn
+			await generator.next()
+
+			// On Windows, should never have --system-prompt in args regardless of size
+			const [, args] = mockExeca.mock.calls[0]
+			expect(args).not.toContain("--system-prompt")
+			expect(args).not.toContain(testCase.systemPrompt)
+
+			// Should always pass both system prompt and messages via stdin
+			const expectedStdinData = JSON.stringify({ systemPrompt: testCase.systemPrompt, messages })
+			expect(mockStdin.write).toHaveBeenCalledWith(expectedStdinData, "utf8", expect.any(Function))
+
+			// Clean up
+			await generator.return(undefined)
+		}
+	})
+
+	test("should handle edge case system prompt at exactly 100KB threshold", async () => {
+		const { runClaudeCode } = await import("../run")
+		const os = await import("os")
+		vi.mocked(os.platform).mockReturnValue("linux")
+
+		// Create a system prompt at exactly 100KB
+		const exactThresholdPrompt = "A".repeat(100 * 1024) // Exactly 100KB
+		const messages = [{ role: "user" as const, content: "Hello" }]
+		const options = {
+			systemPrompt: exactThresholdPrompt,
+			messages,
+		}
+
+		const generator = runClaudeCode(options)
+
+		// Consume at least one item to trigger process spawn
+		await generator.next()
+
+		// At exactly 100KB, should still use command line args (threshold is exclusive)
+		const [, args] = mockExeca.mock.calls[0]
+		expect(args).toContain("--system-prompt")
+		expect(args).toContain(exactThresholdPrompt)
+
+		// Should only pass messages via stdin
+		expect(mockStdin.write).toHaveBeenCalledWith(JSON.stringify(messages), "utf8", expect.any(Function))
+
+		// Clean up
+		await generator.return(undefined)
+	})
 })
