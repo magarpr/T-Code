@@ -50,7 +50,7 @@ describe("HistoryView", () => {
 		// Check for main UI elements
 		expect(screen.getByText("history:history")).toBeInTheDocument()
 		expect(screen.getByText("history:done")).toBeInTheDocument()
-		expect(screen.getByPlaceholderText("history:searchPlaceholder")).toBeInTheDocument()
+		expect(screen.getByPlaceholderText("Search history or use 'path:' to filter by workspace")).toBeInTheDocument()
 	})
 
 	it("calls onDone when done button is clicked", () => {

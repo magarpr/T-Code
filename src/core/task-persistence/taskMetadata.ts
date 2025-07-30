@@ -8,6 +8,7 @@ import { combineCommandSequences } from "../../shared/combineCommandSequences"
 import { getApiMetrics } from "../../shared/getApiMetrics"
 import { findLastIndex } from "../../shared/array"
 import { getTaskDirectoryPath } from "../../utils/storage"
+import { getWorkspaceHash } from "../../utils/workspaceHash"
 import { t } from "../../i18n"
 
 const taskSizeCache = new NodeCache({ stdTTL: 30, checkperiod: 5 * 60 })
@@ -18,6 +19,7 @@ export type TaskMetadataOptions = {
 	taskNumber: number
 	globalStoragePath: string
 	workspace: string
+	workspaceHash?: string
 	mode?: string
 }
 
@@ -27,6 +29,7 @@ export async function taskMetadata({
 	taskNumber,
 	globalStoragePath,
 	workspace,
+	workspaceHash,
 	mode,
 }: TaskMetadataOptions) {
 	const taskDir = await getTaskDirectoryPath(globalStoragePath, taskId)
@@ -79,6 +82,9 @@ export async function taskMetadata({
 		}
 	}
 
+	// Generate workspace hash if not provided, convert null to undefined
+	const finalWorkspaceHash = workspaceHash || getWorkspaceHash() || undefined
+
 	// Create historyItem once with pre-calculated values
 	const historyItem: HistoryItem = {
 		id: taskId,
@@ -94,6 +100,7 @@ export async function taskMetadata({
 		totalCost: tokenUsage.totalCost,
 		size: taskDirSize,
 		workspace,
+		workspaceHash: finalWorkspaceHash,
 		mode,
 	}
 

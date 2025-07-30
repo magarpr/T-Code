@@ -66,6 +66,7 @@ import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 import { getWorkspacePath } from "../../utils/path"
+import { migrateHistoryToWorkspaceHash, isMigrationNeeded } from "../../utils/historyMigration"
 import { webviewMessageHandler } from "./webviewMessageHandler"
 import { WebviewMessage } from "../../shared/WebviewMessage"
 import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
@@ -1824,6 +1825,24 @@ export class ClineProvider
 
 		await this.updateGlobalState("taskHistory", history)
 		return history
+	}
+
+	/**
+	 * Migrates existing task history to include workspace hashes if needed
+	 */
+	async migrateHistoryIfNeeded(): Promise<void> {
+		try {
+			const taskHistory = this.getGlobalState("taskHistory") ?? []
+
+			if (isMigrationNeeded(taskHistory)) {
+				this.log("Migrating task history to include workspace hashes...")
+				const migratedHistory = migrateHistoryToWorkspaceHash(taskHistory)
+				await this.updateGlobalState("taskHistory", migratedHistory)
+				this.log(`Successfully migrated ${migratedHistory.length} history items`)
+			}
+		} catch (error) {
+			this.log(`Error during history migration: ${error instanceof Error ? error.message : String(error)}`)
+		}
 	}
 
 	// ContextProxy

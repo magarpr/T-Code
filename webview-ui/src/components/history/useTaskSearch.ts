@@ -4,6 +4,23 @@ import { Fzf } from "fzf"
 import { highlightFzfMatch } from "@/utils/highlight"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 
+// Helper function to get workspace hash from current workspace
+const getCurrentWorkspaceHash = (): string | null => {
+	// This will be populated by the extension state
+	return null // Placeholder - will be updated when we add workspace hash to extension state
+}
+
+// Helper function to check if a task belongs to the current workspace
+const isTaskInCurrentWorkspace = (item: any, cwd: string | undefined, currentWorkspaceHash: string | null): boolean => {
+	// Primary method: Use workspace hash if available for both current workspace and task
+	if (currentWorkspaceHash && item.workspaceHash) {
+		return item.workspaceHash === currentWorkspaceHash
+	}
+
+	// Fallback method: Use path-based matching for legacy items or when hash is unavailable
+	return cwd ? item.workspace === cwd : false
+}
+
 type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRelevant"
 
 export const useTaskSearch = () => {
@@ -26,7 +43,8 @@ export const useTaskSearch = () => {
 	const presentableTasks = useMemo(() => {
 		let tasks = taskHistory.filter((item) => item.ts && item.task)
 		if (!showAllWorkspaces) {
-			tasks = tasks.filter((item) => item.workspace === cwd)
+			const currentWorkspaceHash = getCurrentWorkspaceHash()
+			tasks = tasks.filter((item) => isTaskInCurrentWorkspace(item, cwd, currentWorkspaceHash))
 		}
 		return tasks
 	}, [taskHistory, showAllWorkspaces, cwd])
@@ -41,20 +59,27 @@ export const useTaskSearch = () => {
 		let results = presentableTasks
 
 		if (searchQuery) {
-			const searchResults = fzf.find(searchQuery)
-			results = searchResults.map((result) => {
-				const positions = Array.from(result.positions)
-				const taskEndIndex = result.item.task.length
+			// Check if this is a path search (prefixed with "path:")
+			if (searchQuery.startsWith("path:")) {
+				const pathQuery = searchQuery.substring(5).trim()
+				results = presentableTasks.filter((item) => item.workspace && item.workspace.includes(pathQuery))
+			} else {
+				// Regular fuzzy search
+				const searchResults = fzf.find(searchQuery)
+				results = searchResults.map((result) => {
+					const positions = Array.from(result.positions)
+					const taskEndIndex = result.item.task.length
 
-				return {
-					...result.item,
-					highlight: highlightFzfMatch(
-						result.item.task,
-						positions.filter((p) => p < taskEndIndex),
-					),
-					workspace: result.item.workspace,
-				}
-			})
+					return {
+						...result.item,
+						highlight: highlightFzfMatch(
+							result.item.task,
+							positions.filter((p) => p < taskEndIndex),
+						),
+						workspace: result.item.workspace,
+					}
+				})
+			}
 		}
 
 		// Then sort the results

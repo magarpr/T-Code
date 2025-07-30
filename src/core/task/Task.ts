@@ -62,6 +62,7 @@ import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 // utils
 import { calculateApiCostAnthropic } from "../../shared/cost"
 import { getWorkspacePath } from "../../utils/path"
+import { getWorkspaceHash } from "../../utils/workspaceHash"
 
 // prompts
 import { formatResponse } from "../prompts/responses"

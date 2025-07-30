@@ -106,7 +106,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 				<div className="flex flex-col gap-2">
 					<VSCodeTextField
 						className="w-full"
-						placeholder={t("history:searchPlaceholder")}
+						placeholder="Search history or use 'path:' to filter by workspace"
 						value={searchQuery}
 						data-testid="history-search-input"
 						onInput={(e) => {
