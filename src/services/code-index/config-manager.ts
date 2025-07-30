@@ -41,15 +41,28 @@ export class CodeIndexConfigManager {
 	 * This eliminates code duplication between initializeWithCurrentConfig() and loadConfiguration().
 	 */
 	private _loadAndSetConfiguration(): void {
-		// Load configuration from storage
-		const codebaseIndexConfig = this.contextProxy?.getGlobalState("codebaseIndexConfig") ?? {
-			codebaseIndexEnabled: true,
-			codebaseIndexQdrantUrl: "http://localhost:6333",
-			codebaseIndexEmbedderProvider: "openai",
-			codebaseIndexEmbedderBaseUrl: "",
-			codebaseIndexEmbedderModelId: "",
-			codebaseIndexSearchMinScore: undefined,
-			codebaseIndexSearchMaxResults: undefined,
+		// Load configuration from workspace storage first, then fall back to global storage for migration
+		let codebaseIndexConfig = this.contextProxy?.getWorkspaceState("codebaseIndexConfig")
+
+		// If no workspace config exists, check for global config and migrate it
+		if (!codebaseIndexConfig) {
+			const globalConfig = this.contextProxy?.getGlobalState("codebaseIndexConfig")
+			if (globalConfig) {
+				// Migrate global config to workspace
+				this.contextProxy?.updateWorkspaceState("codebaseIndexConfig", globalConfig)
+				codebaseIndexConfig = globalConfig
+			} else {
+				// Use default configuration
+				codebaseIndexConfig = {
+					codebaseIndexEnabled: true,
+					codebaseIndexQdrantUrl: "http://localhost:6333",
+					codebaseIndexEmbedderProvider: "openai",
+					codebaseIndexEmbedderBaseUrl: "",
+					codebaseIndexEmbedderModelId: "",
+					codebaseIndexSearchMinScore: undefined,
+					codebaseIndexSearchMaxResults: undefined,
+				}
+			}
 		}
 
 		const {

@@ -30,6 +30,8 @@ describe("CodeIndexConfigManager", () => {
 		// Setup mock ContextProxy
 		mockContextProxy = {
 			getGlobalState: vi.fn(),
+			getWorkspaceState: vi.fn(),
+			updateWorkspaceState: vi.fn(),
 			getSecret: vi.fn().mockReturnValue(undefined),
 			refreshSecrets: vi.fn().mockResolvedValue(undefined),
 			updateGlobalState: vi.fn(),
@@ -1809,6 +1811,91 @@ describe("CodeIndexConfigManager", () => {
 				// Should return undefined since custom dimension is invalid
 				expect(configManager.currentModelDimension).toBe(undefined)
 			})
+		})
+	})
+
+	describe("workspace-specific storage", () => {
+		it("should use workspace storage instead of global storage", async () => {
+			const mockWorkspaceConfig = {
+				codebaseIndexEnabled: true,
+				codebaseIndexQdrantUrl: "http://workspace-qdrant.local",
+				codebaseIndexEmbedderProvider: "openai",
+				codebaseIndexEmbedderModelId: "text-embedding-3-large",
+			}
+
+			mockContextProxy.getWorkspaceState.mockReturnValue(mockWorkspaceConfig)
+			mockContextProxy.getGlobalState.mockReturnValue(undefined)
+			setupSecretMocks({
+				codeIndexOpenAiKey: "test-openai-key",
+				codeIndexQdrantApiKey: "test-qdrant-key",
+			})
+
+			const result = await configManager.loadConfiguration()
+
+			expect(mockContextProxy.getWorkspaceState).toHaveBeenCalledWith("codebaseIndexConfig")
+			expect(result.currentConfig.qdrantUrl).toBe("http://workspace-qdrant.local")
+			expect(result.currentConfig.modelId).toBe("text-embedding-3-large")
+		})
+
+		it("should migrate global config to workspace storage when workspace config doesn't exist", async () => {
+			const mockGlobalConfig = {
+				codebaseIndexEnabled: true,
+				codebaseIndexQdrantUrl: "http://global-qdrant.local",
+				codebaseIndexEmbedderProvider: "openai",
+				codebaseIndexEmbedderModelId: "text-embedding-3-small",
+			}
+
+			mockContextProxy.getWorkspaceState.mockReturnValue(undefined)
+			mockContextProxy.getGlobalState.mockReturnValue(mockGlobalConfig)
+			setupSecretMocks({
+				codeIndexOpenAiKey: "test-openai-key",
+			})
+
+			const result = await configManager.loadConfiguration()
+
+			// Should have migrated global config to workspace
+			expect(mockContextProxy.updateWorkspaceState).toHaveBeenCalledWith("codebaseIndexConfig", mockGlobalConfig)
+			expect(result.currentConfig.qdrantUrl).toBe("http://global-qdrant.local")
+			expect(result.currentConfig.modelId).toBe("text-embedding-3-small")
+		})
+
+		it("should use default config when neither workspace nor global config exists", async () => {
+			mockContextProxy.getWorkspaceState.mockReturnValue(undefined)
+			mockContextProxy.getGlobalState.mockReturnValue(undefined)
+			mockContextProxy.getSecret.mockReturnValue(undefined)
+
+			const result = await configManager.loadConfiguration()
+
+			expect(result.currentConfig.qdrantUrl).toBe("http://localhost:6333")
+			expect(result.currentConfig.embedderProvider).toBe("openai")
+			expect(result.currentConfig.isConfigured).toBe(false)
+		})
+
+		it("should prefer workspace config over global config when both exist", async () => {
+			const mockWorkspaceConfig = {
+				codebaseIndexEnabled: true,
+				codebaseIndexQdrantUrl: "http://workspace-qdrant.local",
+				codebaseIndexEmbedderProvider: "ollama",
+				codebaseIndexEmbedderBaseUrl: "http://workspace-ollama.local",
+			}
+
+			const mockGlobalConfig = {
+				codebaseIndexEnabled: true,
+				codebaseIndexQdrantUrl: "http://global-qdrant.local",
+				codebaseIndexEmbedderProvider: "openai",
+				codebaseIndexEmbedderModelId: "text-embedding-3-small",
+			}
+
+			mockContextProxy.getWorkspaceState.mockReturnValue(mockWorkspaceConfig)
+			mockContextProxy.getGlobalState.mockReturnValue(mockGlobalConfig)
+
+			const result = await configManager.loadConfiguration()
+
+			// Should use workspace config, not global
+			expect(result.currentConfig.qdrantUrl).toBe("http://workspace-qdrant.local")
+			expect(result.currentConfig.embedderProvider).toBe("ollama")
+			// Should NOT have called updateWorkspaceState since workspace config already exists
+			expect(mockContextProxy.updateWorkspaceState).not.toHaveBeenCalled()
 		})
 	})
 })

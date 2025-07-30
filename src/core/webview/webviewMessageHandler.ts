@@ -1990,12 +1990,12 @@ export const webviewMessageHandler = async (
 
 			try {
 				// Check if embedder provider has changed
-				const currentConfig = getGlobalState("codebaseIndexConfig") || {}
+				const currentConfig = provider.contextProxy.getWorkspaceState("codebaseIndexConfig") || {}
 				const embedderProviderChanged =
 					currentConfig.codebaseIndexEmbedderProvider !== settings.codebaseIndexEmbedderProvider
 
-				// Save global state settings atomically
-				const globalStateConfig = {
+				// Save workspace state settings atomically
+				const workspaceStateConfig = {
 					...currentConfig,
 					codebaseIndexEnabled: settings.codebaseIndexEnabled,
 					codebaseIndexQdrantUrl: settings.codebaseIndexQdrantUrl,
@@ -2008,8 +2008,8 @@ export const webviewMessageHandler = async (
 					codebaseIndexSearchMinScore: settings.codebaseIndexSearchMinScore,
 				}
 
-				// Save global state first
-				await updateGlobalState("codebaseIndexConfig", globalStateConfig)
+				// Save workspace state first
+				await provider.contextProxy.updateWorkspaceState("codebaseIndexConfig", workspaceStateConfig)
 
 				// Save secrets directly using context proxy
 				if (settings.codeIndexOpenAiKey !== undefined) {
@@ -2041,7 +2041,7 @@ export const webviewMessageHandler = async (
 				await provider.postMessageToWebview({
 					type: "codeIndexSettingsSaved",
 					success: true,
-					settings: globalStateConfig,
+					settings: workspaceStateConfig,
 				})
 
 				// Update webview state

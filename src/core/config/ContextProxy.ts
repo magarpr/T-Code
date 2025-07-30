@@ -129,6 +129,22 @@ export class ContextProxy {
 	}
 
 	/**
+	 * ExtensionContext.workspaceState
+	 * https://code.visualstudio.com/api/references/vscode-api#ExtensionContext.workspaceState
+	 */
+
+	getWorkspaceState<T = any>(key: string): T | undefined
+	getWorkspaceState<T = any>(key: string, defaultValue: T): T
+	getWorkspaceState<T = any>(key: string, defaultValue?: T): T | undefined {
+		const value = this.originalContext.workspaceState.get<T>(key)
+		return value !== undefined ? value : defaultValue
+	}
+
+	updateWorkspaceState<T = any>(key: string, value: T) {
+		return this.originalContext.workspaceState.update(key, value)
+	}
+
+	/**
 	 * ExtensionContext.secrets
 	 * https://code.visualstudio.com/api/references/vscode-api#ExtensionContext.secrets
 	 */
