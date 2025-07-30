@@ -30,6 +30,7 @@ import { MultiPointStrategy } from "../transform/cache-strategy/multi-point-stra
 import { ModelInfo as CacheModelInfo } from "../transform/cache-strategy/types"
 import { convertToBedrockConverseMessages as sharedConverter } from "../transform/bedrock-converse-format"
 import { getModelParams } from "../transform/model-params"
+import { applyBedrockImageLimiting } from "../transform/image-limiting"
 import { shouldUseReasoningBudget } from "../../shared/api"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
@@ -706,8 +707,11 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		modelInfo?: any,
 		conversationId?: string, // Optional conversation ID to track cache points across messages
 	): { system: SystemContentBlock[]; messages: Message[] } {
+		// Apply image limiting before conversion to prevent "too many images" errors
+		const limitedMessages = applyBedrockImageLimiting(anthropicMessages as Anthropic.Messages.MessageParam[])
+
 		// First convert messages using shared converter for proper image handling
-		const convertedMessages = sharedConverter(anthropicMessages as Anthropic.Messages.MessageParam[])
+		const convertedMessages = sharedConverter(limitedMessages)
 
 		// If prompt caching is disabled, return the converted messages directly
 		if (!usePromptCache) {
@@ -737,7 +741,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		const config = {
 			modelInfo: cacheModelInfo,
 			systemPrompt: systemMessage,
-			messages: anthropicMessages as Anthropic.Messages.MessageParam[],
+			messages: limitedMessages,
 			usePromptCache,
 			previousCachePointPlacements: previousPlacements,
 		}
@@ -1178,6 +1182,15 @@ Please try:
 			messageTemplate: `Invalid ARN format. ARN should follow the pattern: arn:aws:bedrock:region:account-id:resource-type/resource-name`,
 			logLevel: "error",
 		},
+		TOO_MANY_IMAGES: {
+			patterns: ["too many images", "too many images and documents"],
+			messageTemplate: `Too many images in conversation. AWS Bedrock has a limit of 20 images per conversation.
+
+The system has automatically limited the conversation to the 20 most recent images to resolve this issue. Older images have been replaced with descriptive text placeholders.
+
+This is normal behavior when using the browser tool extensively, as each browser action captures a screenshot.`,
+			logLevel: "info",
+		},
 		VALIDATION_ERROR: {
 			patterns: [
 				"input tag",
@@ -1235,6 +1248,7 @@ Please check:
 			"SERVICE_QUOTA_EXCEEDED", // Most specific - check before THROTTLING
 			"MODEL_NOT_READY",
 			"TOO_MANY_TOKENS",
+			"TOO_MANY_IMAGES", // Check for image limit errors
 			"INTERNAL_SERVER_ERROR",
 			"ON_DEMAND_NOT_SUPPORTED",
 			"NOT_FOUND",
