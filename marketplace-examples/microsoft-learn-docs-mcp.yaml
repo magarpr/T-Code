@@ -1,10 +1,10 @@
-# Microsoft Learn Docs Search MCP Server
-# Example marketplace item definition for the Microsoft Learn Docs Search MCP Server
+# Microsoft Learn MCP Server
+# Example marketplace item definition for the Microsoft Learn MCP Server
 # This demonstrates the proper format for adding MCP servers to the Roo Code marketplace
 
 items:
   - id: "microsoft-learn-docs-search"
-    name: "Microsoft Learn Docs Search"
+    name: "Microsoft Learn MCP"
     description: "Official Microsoft documentation search and retrieval server. Access trusted, up-to-date information from Microsoft Learn, Azure docs, Microsoft 365 docs, and other official Microsoft sources using semantic search."
     author: "Microsoft"
     authorUrl: "https://github.com/MicrosoftDocs"

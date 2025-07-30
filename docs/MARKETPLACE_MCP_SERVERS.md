@@ -26,14 +26,14 @@ MCP servers in the marketplace follow a specific schema defined in `packages/typ
 - `tags`: Array of relevant tags for discovery
 - `prerequisites`: Array of requirements (e.g., API keys, software)
 
-## Example: Microsoft Learn Docs Search MCP Server
+## Example: Microsoft Learn MCP Server
 
-Here's a complete example of how to define the Microsoft Learn Docs Search MCP server:
+Here's a complete example of how to define the Microsoft Learn MCP server:
 
 ```yaml
 items:
     - id: "microsoft-learn-docs-search"
-      name: "Microsoft Learn Docs Search"
+      name: "Microsoft Learn MCP"
       description: "Official Microsoft documentation search and retrieval server. Access trusted, up-to-date information from Microsoft Learn, Azure docs, Microsoft 365 docs, and other official Microsoft sources using semantic search."
       author: "Microsoft"
       authorUrl: "https://github.com/MicrosoftDocs"
@@ -92,9 +92,9 @@ For MCP servers distributed as npm packages:
 }
 ```
 
-## Key Features of the Microsoft Learn Docs MCP Server
+## Key Features of the Microsoft Learn MCP Server
 
-The Microsoft Learn Docs Search MCP server provides:
+The Microsoft Learn MCP server provides:
 
 - **Semantic Search**: Advanced vector search through Microsoft's official documentation
 - **Comprehensive Coverage**: Access to Microsoft Learn, Azure docs, Microsoft 365 docs, and more

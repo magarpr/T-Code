@@ -224,10 +224,10 @@ describe("MarketplaceManager", () => {
 			expect(result).toBe("/test/path/.roo/mcp.json")
 		})
 
-		it("should install Microsoft Learn Docs MCP item", async () => {
+		it("should install Microsoft Learn MCP item", async () => {
 			const item: MarketplaceItem = {
 				id: "microsoft-learn-docs-search",
-				name: "Microsoft Learn Docs Search",
+				name: "Microsoft Learn MCP",
 				description:
 					"Official Microsoft documentation search and retrieval server. Access trusted, up-to-date information from Microsoft Learn, Azure docs, Microsoft 365 docs, and other official Microsoft sources using semantic search.",
 				type: "mcp",
