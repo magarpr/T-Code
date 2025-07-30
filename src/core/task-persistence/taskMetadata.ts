@@ -95,6 +95,8 @@ export async function taskMetadata({
 		size: taskDirSize,
 		workspace,
 		mode,
+		isFavorite: false, // Initialize as not favorited
+		customName: undefined, // Initialize with no custom name
 	}
 
 	return { historyItem, tokenUsage }

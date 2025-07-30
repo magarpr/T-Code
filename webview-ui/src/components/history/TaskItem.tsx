@@ -20,6 +20,8 @@ interface TaskItemProps {
 	isSelected?: boolean
 	onToggleSelection?: (taskId: string, isSelected: boolean) => void
 	onDelete?: (taskId: string) => void
+	onToggleFavorite?: (taskId: string) => void
+	onRename?: (taskId: string, newName: string) => void
 	className?: string
 }
 
@@ -31,6 +33,8 @@ const TaskItem = ({
 	isSelected = false,
 	onToggleSelection,
 	onDelete,
+	onToggleFavorite,
+	onRename,
 	className,
 }: TaskItemProps) => {
 	const handleClick = () => {
@@ -70,7 +74,13 @@ const TaskItem = ({
 
 				<div className="flex-1 min-w-0">
 					{/* Header with metadata */}
-					<TaskItemHeader item={item} isSelectionMode={isSelectionMode} onDelete={onDelete} />
+					<TaskItemHeader
+						item={item}
+						isSelectionMode={isSelectionMode}
+						onDelete={onDelete}
+						onToggleFavorite={onToggleFavorite}
+						onRename={onRename}
+					/>
 
 					{/* Task content */}
 					<div
@@ -80,7 +90,7 @@ const TaskItem = ({
 						})}
 						data-testid="task-content"
 						{...(item.highlight ? { dangerouslySetInnerHTML: { __html: item.highlight } } : {})}>
-						{item.highlight ? undefined : item.task}
+						{item.highlight ? undefined : item.customName || item.task}
 					</div>
 
 					{/* Task Item Footer */}

@@ -3,6 +3,7 @@ import { Fzf } from "fzf"
 
 import { highlightFzfMatch } from "@/utils/highlight"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { vscode } from "@/utils/vscode"
 
 type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRelevant"
 
@@ -12,6 +13,7 @@ export const useTaskSearch = () => {
 	const [sortOption, setSortOption] = useState<SortOption>("newest")
 	const [lastNonRelevantSort, setLastNonRelevantSort] = useState<SortOption | null>("newest")
 	const [showAllWorkspaces, setShowAllWorkspaces] = useState(false)
+	const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
 
 	useEffect(() => {
 		if (searchQuery && sortOption !== "mostRelevant" && !lastNonRelevantSort) {
@@ -28,12 +30,15 @@ export const useTaskSearch = () => {
 		if (!showAllWorkspaces) {
 			tasks = tasks.filter((item) => item.workspace === cwd)
 		}
+		if (showFavoritesOnly) {
+			tasks = tasks.filter((item) => item.isFavorite === true)
+		}
 		return tasks
-	}, [taskHistory, showAllWorkspaces, cwd])
+	}, [taskHistory, showAllWorkspaces, showFavoritesOnly, cwd])
 
 	const fzf = useMemo(() => {
 		return new Fzf(presentableTasks, {
-			selector: (item) => item.task,
+			selector: (item) => item.customName || item.task,
 		})
 	}, [presentableTasks])
 
@@ -44,12 +49,13 @@ export const useTaskSearch = () => {
 			const searchResults = fzf.find(searchQuery)
 			results = searchResults.map((result) => {
 				const positions = Array.from(result.positions)
-				const taskEndIndex = result.item.task.length
+				const searchText = result.item.customName || result.item.task
+				const taskEndIndex = searchText.length
 
 				return {
 					...result.item,
 					highlight: highlightFzfMatch(
-						result.item.task,
+						searchText,
 						positions.filter((p) => p < taskEndIndex),
 					),
 					workspace: result.item.workspace,
@@ -78,6 +84,21 @@ export const useTaskSearch = () => {
 		})
 	}, [presentableTasks, searchQuery, fzf, sortOption])
 
+	const handleToggleFavorite = (taskId: string) => {
+		vscode.postMessage({
+			type: "toggleTaskFavorite",
+			taskId,
+		})
+	}
+
+	const handleRename = (taskId: string, newName: string) => {
+		vscode.postMessage({
+			type: "renameTask",
+			taskId,
+			newName,
+		})
+	}
+
 	return {
 		tasks,
 		searchQuery,
@@ -88,5 +109,9 @@ export const useTaskSearch = () => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		showFavoritesOnly,
+		setShowFavoritesOnly,
+		handleToggleFavorite,
+		handleRename,
 	}
 }

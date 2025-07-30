@@ -12,7 +12,14 @@ vi.mock("@/utils/highlight", () => ({
 	highlightFzfMatch: vi.fn((text) => `<mark>${text}</mark>`),
 }))
 
+vi.mock("@/utils/vscode", () => ({
+	vscode: {
+		postMessage: vi.fn(),
+	},
+}))
+
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { vscode } from "@/utils/vscode"
 
 const mockUseExtensionState = useExtensionState as ReturnType<typeof vi.fn>
 
@@ -26,6 +33,8 @@ const mockTaskHistory: HistoryItem[] = [
 		tokensOut: 50,
 		totalCost: 0.01,
 		workspace: "/workspace/project1",
+		isFavorite: false,
+		customName: undefined,
 	},
 	{
 		id: "task-2",
@@ -38,6 +47,8 @@ const mockTaskHistory: HistoryItem[] = [
 		cacheWrites: 25,
 		cacheReads: 10,
 		workspace: "/workspace/project1",
+		isFavorite: true,
+		customName: "My Custom Test Task",
 	},
 	{
 		id: "task-3",
@@ -48,6 +59,8 @@ const mockTaskHistory: HistoryItem[] = [
 		tokensOut: 75,
 		totalCost: 0.05,
 		workspace: "/workspace/project2",
+		isFavorite: true,
+		customName: undefined,
 	},
 ]
 
@@ -283,5 +296,114 @@ describe("useTaskSearch", () => {
 		// When searching, mostRelevant should preserve fzf order
 		// When not searching, it should fall back to newest
 		expect(result.current.sortOption).toBe("mostRelevant")
+	})
+
+	describe("favorites functionality", () => {
+		it("filters to show only favorites when showFavoritesOnly is true", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.setShowAllWorkspaces(true)
+				result.current.setShowFavoritesOnly(true)
+			})
+
+			expect(result.current.tasks).toHaveLength(2)
+			expect(result.current.tasks.every((task) => task.isFavorite)).toBe(true)
+			expect(result.current.tasks[0].id).toBe("task-2")
+			expect(result.current.tasks[1].id).toBe("task-3")
+		})
+
+		it("shows all tasks when showFavoritesOnly is false", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.setShowAllWorkspaces(true)
+				result.current.setShowFavoritesOnly(false)
+			})
+
+			expect(result.current.tasks).toHaveLength(3)
+			expect(result.current.showFavoritesOnly).toBe(false)
+		})
+
+		it("handles toggle favorite functionality", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.handleToggleFavorite("task-1")
+			})
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "toggleTaskFavorite",
+				taskId: "task-1",
+			})
+		})
+
+		it("handles rename functionality", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.handleRename("task-1", "New Task Name")
+			})
+
+			expect(vscode.postMessage).toHaveBeenCalledWith({
+				type: "renameTask",
+				taskId: "task-1",
+				newName: "New Task Name",
+			})
+		})
+
+		it("searches in custom names when available", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.setShowAllWorkspaces(true)
+				result.current.setSearchQuery("Custom")
+			})
+
+			expect(result.current.tasks).toHaveLength(1)
+			expect(result.current.tasks[0].id).toBe("task-2")
+			expect((result.current.tasks[0] as any).highlight).toBe("<mark>My Custom Test Task</mark>")
+		})
+
+		it("falls back to original task name when custom name is not available", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.setShowAllWorkspaces(true)
+				result.current.setSearchQuery("React")
+			})
+
+			expect(result.current.tasks).toHaveLength(1)
+			expect(result.current.tasks[0].id).toBe("task-1")
+			expect((result.current.tasks[0] as any).highlight).toBe("<mark>Create a React component</mark>")
+		})
+
+		it("combines favorites filter with search", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.setShowAllWorkspaces(true)
+				result.current.setShowFavoritesOnly(true)
+				result.current.setSearchQuery("authentication")
+			})
+
+			expect(result.current.tasks).toHaveLength(1)
+			expect(result.current.tasks[0].id).toBe("task-3")
+			expect(result.current.tasks[0].isFavorite).toBe(true)
+		})
+
+		it("combines favorites filter with workspace filter", () => {
+			const { result } = renderHook(() => useTaskSearch())
+
+			act(() => {
+				result.current.setShowFavoritesOnly(true)
+			})
+
+			// Should only show favorites from current workspace
+			expect(result.current.tasks).toHaveLength(1)
+			expect(result.current.tasks[0].id).toBe("task-2")
+			expect(result.current.tasks[0].workspace).toBe("/workspace/project1")
+			expect(result.current.tasks[0].isFavorite).toBe(true)
+		})
 	})
 })

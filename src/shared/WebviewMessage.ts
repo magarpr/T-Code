@@ -208,6 +208,8 @@ export interface WebviewMessage {
 		| "deleteCommand"
 		| "createCommand"
 		| "insertTextIntoTextarea"
+		| "toggleTaskFavorite"
+		| "renameTask"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account"
@@ -270,6 +272,8 @@ export interface WebviewMessage {
 		codebaseIndexGeminiApiKey?: string
 		codebaseIndexMistralApiKey?: string
 	}
+	taskId?: string
+	newName?: string
 }
 
 export const checkoutDiffPayloadSchema = z.object({

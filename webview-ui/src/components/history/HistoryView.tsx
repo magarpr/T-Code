@@ -37,6 +37,10 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		showFavoritesOnly,
+		setShowFavoritesOnly,
+		handleToggleFavorite,
+		handleRename,
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
 
@@ -152,6 +156,27 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 								</SelectItem>
 							</SelectContent>
 						</Select>
+						<Select
+							value={showFavoritesOnly ? "favorites" : "all"}
+							onValueChange={(value) => setShowFavoritesOnly(value === "favorites")}>
+							<SelectTrigger className="flex-1">
+								<SelectValue>{showFavoritesOnly ? "Favorites Only" : "All Tasks"}</SelectValue>
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">
+									<div className="flex items-center gap-2">
+										<span className="codicon codicon-list-unordered" />
+										All Tasks
+									</div>
+								</SelectItem>
+								<SelectItem value="favorites">
+									<div className="flex items-center gap-2">
+										<span className="codicon codicon-star-full text-yellow-400" />
+										Favorites Only
+									</div>
+								</SelectItem>
+							</SelectContent>
+						</Select>
 						<Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
 							<SelectTrigger className="flex-1">
 								<SelectValue>
@@ -243,6 +268,8 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							isSelected={selectedTaskIds.includes(item.id)}
 							onToggleSelection={toggleTaskSelection}
 							onDelete={setDeleteTaskId}
+							onToggleFavorite={handleToggleFavorite}
+							onRename={handleRename}
 							className="m-2 mr-0"
 						/>
 					)}

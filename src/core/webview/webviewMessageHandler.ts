@@ -2558,5 +2558,57 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "toggleTaskFavorite": {
+			if (message.taskId) {
+				try {
+					// Get the task and update its favorite status
+					const { historyItem } = await provider.getTaskWithId(message.taskId)
+					if (historyItem) {
+						// Toggle the favorite status
+						const updatedHistoryItem = {
+							...historyItem,
+							isFavorite: !historyItem.isFavorite,
+						}
+
+						// Update the task metadata
+						await provider.updateTaskHistory(updatedHistoryItem)
+
+						// Refresh the webview state to reflect the change
+						await provider.postStateToWebview()
+					}
+				} catch (error) {
+					provider.log(
+						`Error toggling task favorite: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+					)
+					vscode.window.showErrorMessage(t("common:errors.toggle_favorite_failed"))
+				}
+			}
+			break
+		}
+		case "renameTask": {
+			if (message.taskId && message.newName !== undefined) {
+				try {
+					// Get the task and update its custom name
+					const { historyItem } = await provider.getTaskWithId(message.taskId)
+					if (historyItem) {
+						// Update the custom name (empty string means remove custom name)
+						const updatedHistoryItem = {
+							...historyItem,
+							customName: message.newName.trim() || undefined,
+						}
+
+						// Update the task metadata
+						await provider.updateTaskHistory(updatedHistoryItem)
+
+						// Refresh the webview state to reflect the change
+						await provider.postStateToWebview()
+					}
+				} catch (error) {
+					provider.log(`Error renaming task: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`)
+					vscode.window.showErrorMessage(t("common:errors.rename_task_failed"))
+				}
+			}
+			break
+		}
 	}
 }
