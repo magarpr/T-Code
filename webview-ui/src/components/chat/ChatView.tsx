@@ -145,10 +145,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		return getLatestTodo(messages)
 	}, [messages])
 
-	// Track the last checkpoint message
+	// Track the last checkpoint message - optimized to only recalculate when checkpoint messages change
+	const checkpointMessages = useMemo(() => messages.filter((msg) => msg.say === "checkpoint_saved"), [messages])
 	const lastCheckpointInfo = useMemo(() => {
-		// Find the last checkpoint_saved message
-		const checkpointMessages = messages.filter((msg) => msg.say === "checkpoint_saved")
 		if (checkpointMessages.length === 0) return null
 
 		const lastCheckpoint = checkpointMessages[checkpointMessages.length - 1]
@@ -157,7 +156,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			commitHash: lastCheckpoint.text || "",
 			checkpoint: lastCheckpoint.checkpoint,
 		}
-	}, [messages])
+	}, [checkpointMessages])
 
 	const modifiedMessages = useMemo(() => combineApiRequests(combineCommandSequences(messages.slice(1))), [messages])
 

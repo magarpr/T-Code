@@ -117,7 +117,6 @@ export const ChatRowContent = ({
 	onBatchFileResponse,
 	isFollowUpAnswered,
 	editable,
-	lastCheckpointInfo: _lastCheckpointInfo,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 	const { mcpServers, alwaysAllowMcp, currentCheckpoint: _currentCheckpoint, mode } = useExtensionState()
@@ -1345,9 +1344,6 @@ export const ChatRowContent = ({
 					return null
 			}
 	}
-
-	// Default return for messages that don't match any case
-	return null
 }
 
 // Create a wrapper component to handle the checkpoint UI
@@ -1356,7 +1352,7 @@ export const ChatRowWithCheckpoint: React.FC<ChatRowContentProps> = (props) => {
 	const { currentCheckpoint } = useExtensionState()
 
 	// Render the regular content
-	const content = <ChatRowContent {...props} lastCheckpointInfo={null} />
+	const content = <ChatRowContent {...props} />
 
 	// Check if we should show checkpoint UI
 	const shouldShowCheckpoint =
