@@ -14,7 +14,7 @@ export default function Privacy() {
 					<h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
 						Roo Code Cloud Privacy Policy
 					</h1>
-					<p className="text-muted-foreground">Last Updated: June 19, 2025</p>
+					<p className="text-muted-foreground">Last Updated: January 30, 2025</p>
 
 					<p className="lead">
 						This Privacy Policy explains how Roo Code, Inc. (&quot;Roo Code,&quot; &quot;we,&quot;
@@ -62,6 +62,11 @@ export default function Privacy() {
 						<li>
 							We collect only the data needed to operate Roo Code Cloud, do <strong>not</strong> sell
 							customer data, and do <strong>not</strong> use your content to train models.
+						</li>
+						<li>
+							We use cookies and similar technologies for{" "}
+							<strong>analytics and interest‑based advertising</strong> (aka &ldquo;retargeting&rdquo;);
+							you can opt‑out at any time (see Section 6).
 						</li>
 					</ul>
 
@@ -125,6 +130,19 @@ export default function Privacy() {
 									</td>
 									<td className="border border-border px-4 py-2">
 										Marketing Site automatically / You
+									</td>
+								</tr>
+								<tr>
+									<td className="border border-border px-4 py-2 font-medium">
+										Marketing & Advertising Data
+									</td>
+									<td className="border border-border px-4 py-2">
+										Online identifiers (IP, cookie ID, device ID), pages or screens viewed, referral
+										source, marketing pixel events (e.g., Google Ads remarketing, Meta Pixel,
+										LinkedIn Insight)
+									</td>
+									<td className="border border-border px-4 py-2">
+										Marketing Site automatically / Pixels
 									</td>
 								</tr>
 							</tbody>
@@ -238,28 +256,92 @@ export default function Privacy() {
 							<strong>Delete your Cloud account</strong> at any time from{" "}
 							<strong>Security Settings</strong> inside Roo Code Cloud.
 						</li>
+						<li>
+							<strong>Opt‑out of targeted advertising</strong> via the footer links described in Section 6
+							or by sending a GPC signal.
+						</li>
 					</ul>
 
-					<h2 className="mt-12 text-2xl font-bold">6. Security Practices</h2>
+					<h2 className="mt-12 text-2xl font-bold">
+						6. Targeted Advertising, &ldquo;Sale or Share,&rdquo; and How to Opt Out
+					</h2>
+					<p>
+						We use Google Ads, Meta (Facebook) Pixel and LinkedIn Insight Tag to show ads to visitors who
+						have previously interacted with Roo Code (&ldquo;retargeting&rdquo; or &ldquo;cross‑context
+						behavioral advertising&rdquo;). Under the California Consumer Privacy Act as amended by the
+						CPRA—and similar laws in CO, CT, VA, UT, OR, TX and others—disclosing personal information (like
+						a cookie ID) to an ad network for this purpose may be considered a{" "}
+						<strong>&ldquo;sale&rdquo; or &ldquo;share.&rdquo;</strong>
+					</p>
+
+					<h3 className="mt-8 text-xl font-bold">Your Options</h3>
+					<ol>
+						<li>
+							<strong>Site links.</strong> Every page now displays a
+							<ul>
+								<li>
+									<strong>
+										&ldquo;Do Not Sell or Share My Personal Information / Opt Out of Targeted
+										Advertising&rdquo;
+									</strong>{" "}
+									link that lets you disable all non‑essential advertising cookies; and
+								</li>
+								<li>
+									<strong>&ldquo;Your Privacy Choices&rdquo;</strong> link that provides the same
+									opt‑out for other states.
+								</li>
+							</ul>
+						</li>
+						<li>
+							<strong>Global Privacy Control (GPC).</strong> We automatically honor the browser‑level{" "}
+							<em>GPC</em> signal. When received, we block marketing pixels and treat the request as a
+							valid opt‑out of sale/share.
+						</li>
+						<li>
+							<strong>Ad platform tools.</strong> You may also set ad‑preferences directly with Google
+							Ads, Meta, or LinkedIn; those choices are respected across sites.
+						</li>
+					</ol>
+					<p>
+						We do <strong>not</strong> knowingly sell/share data of consumers under 16, and we prohibit our
+						ad partners from creating interest‑based profiles of such users.
+					</p>
+
+					<h2 className="mt-12 text-2xl font-bold">7. Security Practices</h2>
 					<p>
 						We use TLS for all data in transit, AES‑256 encryption at rest, least‑privilege IAM, continuous
 						monitoring, routine penetration testing, and maintain a SOC 2 program.
 					</p>
 
-					<h2 className="mt-12 text-2xl font-bold">7. Updates to This Policy</h2>
+					<h2 className="mt-12 text-2xl font-bold">8. Updates to This Policy</h2>
 					<p>
 						If our privacy practices change, we will update this policy and note the new{" "}
 						<strong>Last Updated</strong> date at the top. For material changes that affect Cloud
 						workspaces, we will also email registered workspace owners before the changes take effect.
 					</p>
 
-					<h2 className="mt-12 text-2xl font-bold">8. Contact Us</h2>
+					<h2 className="mt-12 text-2xl font-bold">9. Contact Us</h2>
 					<p>
 						Questions or concerns? Email{" "}
 						<a href="mailto:privacy@roocode.com" className="text-primary hover:underline">
 							privacy@roocode.com
 						</a>
 						.
+					</p>
+
+					<h2 className="mt-12 text-2xl font-bold">10. State‑Specific Privacy Rights</h2>
+					<p>
+						Residents of California, Colorado, Connecticut, Utah, Virginia, Oregon, Texas and other states
+						with comprehensive privacy statutes have additional rights, including to access, correct,
+						delete, and{" "}
+						<strong>
+							opt‑out of the sale or sharing of personal information and of targeted advertising
+						</strong>
+						. You may exercise these rights through the mechanisms in Sections 5–6 or by emailing{" "}
+						<a href="mailto:privacy@roocode.com" className="text-primary hover:underline">
+							privacy@roocode.com
+						</a>
+						. We will respond within the timeframe required by your state law (usually 45 days).
 					</p>
 				</div>
 			</div>
