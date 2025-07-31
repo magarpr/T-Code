@@ -7,6 +7,13 @@ vi.mock("openai", () => {
 			chat: {
 				completions: {
 					create: mockCreate.mockImplementation(async (options) => {
+						// Check if signal is aborted (for timeout tests)
+						if (options.signal?.aborted) {
+							const error = new Error("Request was aborted")
+							error.name = "AbortError"
+							throw error
+						}
+
 						if (!options.stream) {
 							return {
 								id: "test-completion",
@@ -27,6 +34,13 @@ vi.mock("openai", () => {
 
 						return {
 							[Symbol.asyncIterator]: async function* () {
+								// Check if signal is aborted during streaming
+								if (options.signal?.aborted) {
+									const error = new Error("Request was aborted")
+									error.name = "AbortError"
+									throw error
+								}
+
 								yield {
 									choices: [
 										{
@@ -131,12 +145,17 @@ describe("LmStudioHandler", () => {
 		it("should complete prompt successfully", async () => {
 			const result = await handler.completePrompt("Test prompt")
 			expect(result).toBe("Test response")
-			expect(mockCreate).toHaveBeenCalledWith({
-				model: mockOptions.lmStudioModelId,
-				messages: [{ role: "user", content: "Test prompt" }],
-				temperature: 0,
-				stream: false,
-			})
+			expect(mockCreate).toHaveBeenCalledWith(
+				{
+					model: mockOptions.lmStudioModelId,
+					messages: [{ role: "user", content: "Test prompt" }],
+					temperature: 0,
+					stream: false,
+				},
+				expect.objectContaining({
+					signal: expect.any(AbortSignal),
+				}),
+			)
 		})
 
 		it("should handle API errors", async () => {
@@ -162,6 +181,85 @@ describe("LmStudioHandler", () => {
 			expect(modelInfo.info).toBeDefined()
 			expect(modelInfo.info.maxTokens).toBe(-1)
 			expect(modelInfo.info.contextWindow).toBe(128_000)
+		})
+	})
+
+	describe("timeout functionality", () => {
+		it("should use default timeout of 600 seconds when not configured", () => {
+			const handlerWithoutTimeout = new LmStudioHandler({
+				apiModelId: "local-model",
+				lmStudioModelId: "local-model",
+				lmStudioBaseUrl: "http://localhost:1234",
+			})
+
+			// Verify that the handler was created successfully
+			expect(handlerWithoutTimeout).toBeInstanceOf(LmStudioHandler)
+		})
+
+		it("should use custom timeout when configured", () => {
+			const customTimeoutHandler = new LmStudioHandler({
+				apiModelId: "local-model",
+				lmStudioModelId: "local-model",
+				lmStudioBaseUrl: "http://localhost:1234",
+				lmStudioTimeoutSeconds: 120, // 2 minutes
+			})
+
+			// Verify that the handler was created successfully with custom timeout
+			expect(customTimeoutHandler).toBeInstanceOf(LmStudioHandler)
+		})
+
+		it("should handle AbortError and convert to timeout message", async () => {
+			// Mock an AbortError
+			const abortError = new Error("Request was aborted")
+			abortError.name = "AbortError"
+			mockCreate.mockRejectedValueOnce(abortError)
+
+			await expect(handler.completePrompt("Test prompt")).rejects.toThrow(
+				"LM Studio request timed out after 600 seconds",
+			)
+		})
+
+		it("should pass AbortSignal to OpenAI client", async () => {
+			const result = await handler.completePrompt("Test prompt")
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: "local-model",
+					messages: [{ role: "user", content: "Test prompt" }],
+					temperature: 0,
+					stream: false,
+				}),
+				expect.objectContaining({
+					signal: expect.any(AbortSignal),
+				}),
+			)
+
+			expect(result).toBe("Test response")
+		})
+
+		it("should pass AbortSignal to streaming requests", async () => {
+			const systemPrompt = "You are a helpful assistant."
+			const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Hello!" }]
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: "local-model",
+					messages: expect.any(Array),
+					temperature: 0,
+					stream: true,
+				}),
+				expect.objectContaining({
+					signal: expect.any(AbortSignal),
+				}),
+			)
+
+			expect(chunks.length).toBeGreaterThan(0)
 		})
 	})
 })

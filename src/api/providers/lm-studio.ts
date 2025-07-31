@@ -15,6 +15,9 @@ import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { getModels, getModelsFromCache } from "./fetchers/modelCache"
 
+// Default timeout for LM Studio requests (10 minutes)
+const LMSTUDIO_DEFAULT_TIMEOUT_SECONDS = 600
+
 export class LmStudioHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private client: OpenAI
@@ -73,7 +76,19 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 
 		let assistantText = ""
 
+		// Create AbortController with configurable timeout
+		const controller = new AbortController()
+		let timeoutId: NodeJS.Timeout | undefined
+
+		// Get timeout from settings or use default (10 minutes)
+		const timeoutSeconds = this.options.lmStudioTimeoutSeconds ?? LMSTUDIO_DEFAULT_TIMEOUT_SECONDS
+		const timeoutMs = timeoutSeconds * 1000
+
 		try {
+			timeoutId = setTimeout(() => {
+				controller.abort()
+			}, timeoutMs)
+
 			const params: OpenAI.Chat.ChatCompletionCreateParamsStreaming & { draft_model?: string } = {
 				model: this.getModel().id,
 				messages: openAiMessages,
@@ -85,7 +100,9 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 				params.draft_model = this.options.lmStudioDraftModelId
 			}
 
-			const results = await this.client.chat.completions.create(params)
+			const results = await this.client.chat.completions.create(params, {
+				signal: controller.signal,
+			})
 
 			const matcher = new XmlMatcher(
 				"think",
@@ -124,7 +141,20 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 				inputTokens,
 				outputTokens,
 			} as const
-		} catch (error) {
+
+			// Clear timeout after successful completion
+			clearTimeout(timeoutId)
+		} catch (error: unknown) {
+			// Clear timeout on error
+			clearTimeout(timeoutId)
+
+			// Check if this is an abort error (timeout)
+			if (error instanceof Error && error.name === "AbortError") {
+				throw new Error(
+					`LM Studio request timed out after ${timeoutSeconds} seconds. This can happen with large models that need more processing time. Try increasing the timeout in LM Studio settings or use a smaller model.`,
+				)
+			}
+
 			throw new Error(
 				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Roo Code's prompts.",
 			)
@@ -147,7 +177,19 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 	}
 
 	async completePrompt(prompt: string): Promise<string> {
+		// Create AbortController with configurable timeout
+		const controller = new AbortController()
+		let timeoutId: NodeJS.Timeout | undefined
+
+		// Get timeout from settings or use default (10 minutes)
+		const timeoutSeconds = this.options.lmStudioTimeoutSeconds ?? LMSTUDIO_DEFAULT_TIMEOUT_SECONDS
+		const timeoutMs = timeoutSeconds * 1000
+
 		try {
+			timeoutId = setTimeout(() => {
+				controller.abort()
+			}, timeoutMs)
+
 			// Create params object with optional draft model
 			const params: any = {
 				model: this.getModel().id,
@@ -161,9 +203,25 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 				params.draft_model = this.options.lmStudioDraftModelId
 			}
 
-			const response = await this.client.chat.completions.create(params)
+			const response = await this.client.chat.completions.create(params, {
+				signal: controller.signal,
+			})
+
+			// Clear timeout after successful completion
+			clearTimeout(timeoutId)
+
 			return response.choices[0]?.message.content || ""
-		} catch (error) {
+		} catch (error: unknown) {
+			// Clear timeout on error
+			clearTimeout(timeoutId)
+
+			// Check if this is an abort error (timeout)
+			if (error instanceof Error && error.name === "AbortError") {
+				throw new Error(
+					`LM Studio request timed out after ${timeoutSeconds} seconds. This can happen with large models that need more processing time. Try increasing the timeout in LM Studio settings or use a smaller model.`,
+				)
+			}
+
 			throw new Error(
 				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Roo Code's prompts.",
 			)
