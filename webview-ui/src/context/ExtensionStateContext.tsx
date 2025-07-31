@@ -315,7 +315,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 				case "incrementalStateUpdate": {
 					const update = message.incrementalUpdate!
 					setState((prevState) => {
-						let newClineMessages = [...prevState.clineMessages]
+						const newClineMessages = [...prevState.clineMessages]
 
 						// Add new messages
 						if (update.newMessages) {
