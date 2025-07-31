@@ -78,11 +78,11 @@ const baseProviderSettingsSchema = z.object({
 	modelMaxThinkingTokens: z.number().optional(),
 
 	// Enterprise network configuration for connection reliability
-	connectionKeepAliveEnabled: z.boolean().optional().default(true),
-	connectionKeepAliveInterval: z.number().min(5000).max(300000).optional().default(30000), // 5s to 5min, default 30s
-	connectionRetryEnabled: z.boolean().optional().default(true),
-	connectionMaxRetries: z.number().min(0).max(10).optional().default(3),
-	connectionRetryBaseDelay: z.number().min(1000).max(30000).optional().default(2000), // 1s to 30s, default 2s
+	connectionKeepAliveEnabled: z.boolean().optional(),
+	connectionKeepAliveInterval: z.number().min(5000).max(300000).optional(),
+	connectionRetryEnabled: z.boolean().optional(),
+	connectionMaxRetries: z.number().min(0).max(10).optional(),
+	connectionRetryBaseDelay: z.number().min(1000).max(30000).optional(),
 })
 
 // Several of the providers share common model config properties.
