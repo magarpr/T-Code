@@ -556,12 +556,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	 * @param fromQueue - Internal flag indicating if this message is being sent from the queue (prevents re-queueing)
 	 */
 	const handleSendMessage = useCallback(
-		(text: string, images: string[], fromQueue = false) => {
+		(text: string, images: string[], fromQueue = false, bypassQueue = false) => {
 			try {
 				text = text.trim()
 
 				if (text || images.length > 0) {
-					if (sendingDisabled && !fromQueue) {
+					if (sendingDisabled && !fromQueue && !bypassQueue) {
 						// Generate a more unique ID using timestamp + random component
 						const messageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 						setMessageQueue((prev) => [...prev, { id: messageId, text, images }])
@@ -718,7 +718,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			switch (clineAsk) {
 				case "api_req_failed":
 				case "command":
-				case "tool":
 				case "browser_action_launch":
 				case "use_mcp_server":
 				case "resume_task":
@@ -738,6 +737,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
 					}
 					break
+				case "tool":
+					// For tool operations (including diff saves), send message with bypass queue flag
+					if (trimmedInput || (images && images.length > 0)) {
+						// Use handleSendMessage with bypassQueue=true to ensure message is sent immediately
+						// even if sendingDisabled is true (which happens during diff saves)
+						handleSendMessage(trimmedInput || "", images || [], false, true)
+					} else {
+						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
+					}
+					break
 				case "completion_result":
 				case "resume_completed_task":
 					// Waiting for feedback, but we can just present a new task button
@@ -752,7 +761,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			setClineAsk(undefined)
 			setEnableButtons(false)
 		},
-		[clineAsk, startNewTask],
+		[clineAsk, startNewTask, handleSendMessage],
 	)
 
 	const handleSecondaryButtonClick = useCallback(
@@ -775,7 +784,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					startNewTask()
 					break
 				case "command":
-				case "tool":
 				case "browser_action_launch":
 				case "use_mcp_server":
 					// Only send text/images if they exist
@@ -794,6 +802,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						vscode.postMessage({ type: "askResponse", askResponse: "noButtonClicked" })
 					}
 					break
+				case "tool":
+					// For tool operations (including diff saves), send message with bypass queue flag
+					if (trimmedInput || (images && images.length > 0)) {
+						// Use handleSendMessage with bypassQueue=true to ensure message is sent immediately
+						// even if sendingDisabled is true (which happens during diff saves)
+						handleSendMessage(trimmedInput || "", images || [], false, true)
+					} else {
+						// Responds to the API with a "This operation failed" and lets it try again
+						vscode.postMessage({ type: "askResponse", askResponse: "noButtonClicked" })
+					}
+					break
 				case "command_output":
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "abort" })
 					break
@@ -802,7 +821,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			setClineAsk(undefined)
 			setEnableButtons(false)
 		},
-		[clineAsk, startNewTask, isStreaming],
+		[clineAsk, startNewTask, isStreaming, handleSendMessage],
 	)
 
 	const handleTaskCloseButtonClick = useCallback(() => startNewTask(), [startNewTask])
