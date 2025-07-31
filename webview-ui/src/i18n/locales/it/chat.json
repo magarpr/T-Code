@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "Modalità personalizzabili",
 			"description": "Personalità specializzate con comportamenti propri e modelli assegnati"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"selectMode": "Seleziona modalità di interazione",

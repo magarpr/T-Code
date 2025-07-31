@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "Modes personalitzables",
 			"description": "Personalitats especialitzades amb comportaments propis i models assignats"
+		},
+		"slashCommands": {
+			"title": "Ordres de Barra",
+			"description": "Crea ordres personalitzades per accedir ràpidament a indicacions utilitzades amb freqüència"
 		}
 	},
 	"selectMode": "Selecciona el mode d'interacció",

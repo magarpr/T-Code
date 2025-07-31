@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "自訂模式",
 			"description": "具有專屬行為和指定模型的特定角色"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"selectMode": "選擇互動模式",

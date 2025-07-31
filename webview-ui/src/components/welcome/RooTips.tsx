@@ -17,6 +17,12 @@ const tips = [
 		titleKey: "rooTips.boomerangTasks.title",
 		descriptionKey: "rooTips.boomerangTasks.description",
 	},
+	{
+		icon: "codicon-terminal-cmd",
+		href: buildDocLink("features/slash-commands", "tips"),
+		titleKey: "rooTips.slashCommands.title",
+		descriptionKey: "rooTips.slashCommands.description",
+	},
 ]
 
 const RooTips = () => {

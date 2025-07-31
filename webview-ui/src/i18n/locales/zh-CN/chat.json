@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "自定义模式",
 			"description": "具有专属行为和指定模型的特定角色"
+		},
+		"slashCommands": {
+			"title": "斜杠命令",
+			"description": "创建自定义命令以快速访问常用提示词"
 		}
 	},
 	"selectMode": "选择交互模式",

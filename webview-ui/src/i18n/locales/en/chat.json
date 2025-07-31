@@ -109,6 +109,10 @@
 		"customizableModes": {
 			"title": "Customizable Modes",
 			"description": "Specialized personas with their own behaviors and assigned models"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"selectMode": "Select mode for interaction",

@@ -97,6 +97,10 @@
 		"customizableModes": {
 			"title": "Настраиваемые режимы",
 			"description": "Специализированные персонажи с собственным поведением и назначенными моделями"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"onboarding": "<strong>Ваш список задач в этом рабочем пространстве пуст.</strong> Начните с ввода задачи ниже. Не знаете, с чего начать? Подробнее о возможностях Roo читайте в <DocsLink>документации</DocsLink>.",

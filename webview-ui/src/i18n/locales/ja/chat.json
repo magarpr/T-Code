@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "カスタマイズ可能なモード",
 			"description": "独自の動作と割り当てられたモデルを持つ専門的なペルソナ"
+		},
+		"slashCommands": {
+			"title": "スラッシュコマンド",
+			"description": "よく使用するプロンプトへの素早いアクセスのためのカスタムコマンドを作成"
 		}
 	},
 	"selectMode": "対話モードを選択",

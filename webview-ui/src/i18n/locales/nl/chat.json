@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "Aanpasbare modi",
 			"description": "Gespecialiseerde persona's met hun eigen gedrag en toegewezen modellen"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"selectMode": "Selecteer modus voor interactie",

@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "사용자 정의 모드",
 			"description": "고유한 동작과 할당된 모델을 가진 전문 페르소나"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"selectMode": "상호작용 모드 선택",

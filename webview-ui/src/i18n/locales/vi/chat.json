@@ -98,6 +98,10 @@
 		"customizableModes": {
 			"title": "Chế độ tùy chỉnh",
 			"description": "Các nhân vật chuyên biệt với hành vi riêng và mô hình được chỉ định"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"selectMode": "Chọn chế độ tương tác",

@@ -112,6 +112,10 @@
 		"customizableModes": {
 			"title": "Mode yang Dapat Disesuaikan",
 			"description": "Persona khusus dengan perilaku dan model yang ditugaskan sendiri"
+		},
+		"slashCommands": {
+			"title": "Slash Commands",
+			"description": "Create custom commands for quick access to frequently used prompts"
 		}
 	},
 	"selectMode": "Pilih mode untuk interaksi",
