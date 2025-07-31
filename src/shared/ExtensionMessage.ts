@@ -192,7 +192,9 @@ export interface ExtensionMessage {
 	organizationAllowList?: OrganizationAllowList
 	tab?: string
 	marketplaceItems?: MarketplaceItem[]
+	organizationMcps?: MarketplaceItem[]
 	marketplaceInstalledMetadata?: MarketplaceInstalledMetadata
+	errors?: string[]
 	visibility?: ShareVisibility
 	rulesFolderPath?: string
 	settings?: any
@@ -319,6 +321,7 @@ export type ExtensionState = Pick<
 	cloudApiUrl?: string
 	sharingEnabled: boolean
 	organizationAllowList: OrganizationAllowList
+	organizationSettingsVersion?: number
 
 	autoCondenseContext: boolean
 	autoCondenseContextPercent: number

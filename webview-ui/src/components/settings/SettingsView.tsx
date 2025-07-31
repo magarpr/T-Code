@@ -182,6 +182,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		rulesSettings,
 		includeDiagnosticMessages,
 		maxDiagnosticMessages,
+		includeTaskHistoryInEnhance,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -339,6 +340,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "condensingApiConfigId", text: condensingApiConfigId || "" })
 			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
 			vscode.postMessage({ type: "updateSupportPrompt", values: customSupportPrompts || {} })
+			vscode.postMessage({ type: "includeTaskHistoryInEnhance", bool: includeTaskHistoryInEnhance ?? false })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
@@ -706,6 +708,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<PromptsSettings
 							customSupportPrompts={customSupportPrompts || {}}
 							setCustomSupportPrompts={setCustomSupportPromptsField}
+							includeTaskHistoryInEnhance={includeTaskHistoryInEnhance}
+							setIncludeTaskHistoryInEnhance={(value) =>
+								setCachedStateField("includeTaskHistoryInEnhance", value)
+							}
 						/>
 					)}
 
