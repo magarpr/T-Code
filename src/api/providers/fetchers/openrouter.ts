@@ -97,8 +97,14 @@ export async function getOpenRouterModels(options?: ApiHandlerOptions): Promise<
 	const models: Record<string, ModelInfo> = {}
 	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 
+	// Prepare headers with API key if available
+	const headers: Record<string, string> = {}
+	if (options?.openRouterApiKey) {
+		headers.Authorization = `Bearer ${options.openRouterApiKey}`
+	}
+
 	try {
-		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`)
+		const response = await axios.get<OpenRouterModelsResponse>(`${baseURL}/models`, { headers })
 		const result = openRouterModelsResponseSchema.safeParse(response.data)
 		const data = result.success ? result.data.data : response.data.data
 
@@ -118,6 +124,10 @@ export async function getOpenRouterModels(options?: ApiHandlerOptions): Promise<
 			})
 		}
 	} catch (error) {
+		if (axios.isAxiosError(error) && error.response?.status === 401) {
+			console.error("OpenRouter API authentication failed. Please check your API key.")
+			throw new Error("OpenRouter API authentication failed. Please check your API key.")
+		}
 		console.error(
 			`Error fetching OpenRouter models: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
 		)
@@ -137,8 +147,16 @@ export async function getOpenRouterModelEndpoints(
 	const models: Record<string, ModelInfo> = {}
 	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 
+	// Prepare headers with API key if available
+	const headers: Record<string, string> = {}
+	if (options?.openRouterApiKey) {
+		headers.Authorization = `Bearer ${options.openRouterApiKey}`
+	}
+
 	try {
-		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}/endpoints`)
+		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}/endpoints`, {
+			headers,
+		})
 		const result = openRouterModelEndpointsResponseSchema.safeParse(response.data)
 		const data = result.success ? result.data.data : response.data.data
 
@@ -157,6 +175,10 @@ export async function getOpenRouterModelEndpoints(
 			})
 		}
 	} catch (error) {
+		if (axios.isAxiosError(error) && error.response?.status === 401) {
+			console.error("OpenRouter API authentication failed. Please check your API key.")
+			throw new Error("OpenRouter API authentication failed. Please check your API key.")
+		}
 		console.error(
 			`Error fetching OpenRouter model endpoints: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
 		)

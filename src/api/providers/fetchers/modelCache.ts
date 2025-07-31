@@ -55,7 +55,10 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 	try {
 		switch (provider) {
 			case "openrouter":
-				models = await getOpenRouterModels()
+				models = await getOpenRouterModels({
+					openRouterApiKey: options.apiKey,
+					openRouterBaseUrl: options.baseUrl,
+				})
 				break
 			case "requesty":
 				// Requesty models endpoint requires an API key for per-user custom policies

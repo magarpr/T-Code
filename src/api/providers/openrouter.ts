@@ -66,6 +66,11 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const baseURL = this.options.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 		const apiKey = this.options.openRouterApiKey ?? "not-provided"
 
+		// Validate API key format
+		if (apiKey === "not-provided" || !apiKey || apiKey.trim() === "") {
+			console.warn("OpenRouter API key is missing or invalid. This may cause authentication errors.")
+		}
+
 		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
@@ -175,11 +180,16 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 	public async fetchModel() {
 		const [models, endpoints] = await Promise.all([
-			getModels({ provider: "openrouter" }),
+			getModels({
+				provider: "openrouter",
+				apiKey: this.options.openRouterApiKey,
+				baseUrl: this.options.openRouterBaseUrl,
+			}),
 			getModelEndpoints({
 				router: "openrouter",
 				modelId: this.options.openRouterModelId,
 				endpoint: this.options.openRouterSpecificProvider,
+				...this.options,
 			}),
 		])
 

@@ -12,6 +12,7 @@ import {
 } from "@roo-code/types"
 
 import { getOpenRouterModelEndpoints, getOpenRouterModels } from "../openrouter"
+import axios from "axios"
 
 nockBack.fixtures = path.join(__dirname, "fixtures")
 nockBack.setMode("lockdown")
@@ -249,6 +250,74 @@ describe("OpenRouter API", () => {
 			})
 
 			nockDone()
+		})
+
+		it("should include authorization header when API key is provided", async () => {
+			const mockAxiosGet = vi.spyOn(axios, "get").mockResolvedValue({
+				data: { data: [] },
+			})
+
+			await getOpenRouterModels({ openRouterApiKey: "test-api-key" })
+
+			expect(mockAxiosGet).toHaveBeenCalledWith("https://openrouter.ai/api/v1/models", {
+				headers: { Authorization: "Bearer test-api-key" },
+			})
+
+			mockAxiosGet.mockRestore()
+		})
+
+		it("should not include authorization header when API key is not provided", async () => {
+			const mockAxiosGet = vi.spyOn(axios, "get").mockResolvedValue({
+				data: { data: [] },
+			})
+
+			await getOpenRouterModels()
+
+			expect(mockAxiosGet).toHaveBeenCalledWith("https://openrouter.ai/api/v1/models", { headers: {} })
+
+			mockAxiosGet.mockRestore()
+		})
+
+		it("should throw authentication error on 401 response", async () => {
+			const mockAxiosGet = vi.spyOn(axios, "get").mockRejectedValue({
+				isAxiosError: true,
+				response: { status: 401 },
+			})
+
+			await expect(getOpenRouterModels({ openRouterApiKey: "invalid-key" })).rejects.toThrow(
+				"OpenRouter API authentication failed. Please check your API key.",
+			)
+
+			mockAxiosGet.mockRestore()
+		})
+	})
+
+	describe("getOpenRouterModelEndpoints", () => {
+		it("should include authorization header when API key is provided", async () => {
+			const mockAxiosGet = vi.spyOn(axios, "get").mockResolvedValue({
+				data: { data: { id: "test", name: "test", endpoints: [] } },
+			})
+
+			await getOpenRouterModelEndpoints("test-model", { openRouterApiKey: "test-api-key" })
+
+			expect(mockAxiosGet).toHaveBeenCalledWith("https://openrouter.ai/api/v1/models/test-model/endpoints", {
+				headers: { Authorization: "Bearer test-api-key" },
+			})
+
+			mockAxiosGet.mockRestore()
+		})
+
+		it("should throw authentication error on 401 response", async () => {
+			const mockAxiosGet = vi.spyOn(axios, "get").mockRejectedValue({
+				isAxiosError: true,
+				response: { status: 401 },
+			})
+
+			await expect(
+				getOpenRouterModelEndpoints("test-model", { openRouterApiKey: "invalid-key" }),
+			).rejects.toThrow("OpenRouter API authentication failed. Please check your API key.")
+
+			mockAxiosGet.mockRestore()
 		})
 	})
 })

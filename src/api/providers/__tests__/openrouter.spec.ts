@@ -68,6 +68,30 @@ describe("OpenRouterHandler", () => {
 		})
 	})
 
+	it("should warn when API key is missing or invalid", () => {
+		const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+		// Test with missing API key
+		new OpenRouterHandler({})
+		expect(consoleSpy).toHaveBeenCalledWith(
+			"OpenRouter API key is missing or invalid. This may cause authentication errors.",
+		)
+
+		// Test with empty API key
+		new OpenRouterHandler({ openRouterApiKey: "" })
+		expect(consoleSpy).toHaveBeenCalledWith(
+			"OpenRouter API key is missing or invalid. This may cause authentication errors.",
+		)
+
+		// Test with whitespace-only API key
+		new OpenRouterHandler({ openRouterApiKey: "   " })
+		expect(consoleSpy).toHaveBeenCalledWith(
+			"OpenRouter API key is missing or invalid. This may cause authentication errors.",
+		)
+
+		consoleSpy.mockRestore()
+	})
+
 	describe("fetchModel", () => {
 		it("returns correct model info when options are provided", async () => {
 			const handler = new OpenRouterHandler(mockOptions)
