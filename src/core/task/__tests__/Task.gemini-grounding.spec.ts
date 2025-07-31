@@ -5,6 +5,77 @@ import { Task } from "../Task"
 import type { ClineProvider } from "../../webview/ClineProvider"
 import type { ProviderSettings } from "@roo-code/types"
 
+// Mock TelemetryService
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			logEvent: vi.fn(),
+			logError: vi.fn(),
+			logPerformance: vi.fn(),
+			captureTaskCreated: vi.fn(),
+			captureTaskCompleted: vi.fn(),
+			captureTaskAborted: vi.fn(),
+		},
+	},
+	BaseTelemetryClient: vi.fn(() => ({
+		logEvent: vi.fn(),
+		logError: vi.fn(),
+		logPerformance: vi.fn(),
+	})),
+}))
+
+// Mock VSCode API
+vi.mock("vscode", () => ({
+	Uri: {
+		file: vi.fn((path: string) => ({ fsPath: path, path })),
+		parse: vi.fn((uri: string) => ({ fsPath: uri, path: uri })),
+	},
+	workspace: {
+		getConfiguration: vi.fn(() => ({
+			get: vi.fn(),
+			update: vi.fn(),
+		})),
+		workspaceFolders: [],
+		createFileSystemWatcher: vi.fn(() => ({
+			onDidCreate: vi.fn(),
+			onDidChange: vi.fn(),
+			onDidDelete: vi.fn(),
+			dispose: vi.fn(),
+		})),
+	},
+	window: {
+		showErrorMessage: vi.fn(),
+		showWarningMessage: vi.fn(),
+		showInformationMessage: vi.fn(),
+		createTextEditorDecorationType: vi.fn(() => ({
+			dispose: vi.fn(),
+		})),
+	},
+	commands: {
+		registerCommand: vi.fn(),
+	},
+	EventEmitter: vi.fn(() => ({
+		event: vi.fn(),
+		fire: vi.fn(),
+		dispose: vi.fn(),
+	})),
+	RelativePattern: vi.fn((base: any, pattern: string) => ({
+		base,
+		pattern,
+	})),
+	Range: vi.fn(),
+	Position: vi.fn(),
+	Selection: vi.fn(),
+	TextEdit: vi.fn(),
+	WorkspaceEdit: vi.fn(),
+	OverviewRulerLane: {
+		Left: 1,
+		Center: 2,
+		Right: 4,
+		Full: 7,
+	},
+}))
+
 describe("Task Gemini Grounding Loop Prevention", () => {
 	let mockProvider: Partial<ClineProvider>
 	let mockApiConfiguration: ProviderSettings
