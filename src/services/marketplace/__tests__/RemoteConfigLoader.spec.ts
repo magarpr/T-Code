@@ -54,21 +54,27 @@ describe("RemoteConfigLoader", () => {
 			expect(mockedAxios.get).toHaveBeenCalledWith(
 				"https://test.api.com/api/marketplace/modes",
 				expect.objectContaining({
-					timeout: 10000,
+					timeout: 15000,
 					headers: {
 						Accept: "application/json",
 						"Content-Type": "application/json",
+						"User-Agent": "Roo-Code-Extension/1.0",
 					},
+					maxRedirects: 5,
+					validateStatus: expect.any(Function),
 				}),
 			)
 			expect(mockedAxios.get).toHaveBeenCalledWith(
 				"https://test.api.com/api/marketplace/mcps",
 				expect.objectContaining({
-					timeout: 10000,
+					timeout: 15000,
 					headers: {
 						Accept: "application/json",
 						"Content-Type": "application/json",
+						"User-Agent": "Roo-Code-Extension/1.0",
 					},
+					maxRedirects: 5,
+					validateStatus: expect.any(Function),
 				}),
 			)
 
@@ -140,7 +146,10 @@ describe("RemoteConfigLoader", () => {
 				if (url.includes("/modes")) {
 					modesCallCount++
 					if (modesCallCount <= 2) {
-						return Promise.reject(new Error("Network error"))
+						// Use a network error that will be retried
+						const error = new Error("ECONNRESET") as any
+						error.code = "ECONNRESET"
+						return Promise.reject(error)
 					}
 					return Promise.resolve({ data: mockModesYaml })
 				}
@@ -161,7 +170,9 @@ describe("RemoteConfigLoader", () => {
 		it("should throw error after max retries", async () => {
 			mockedAxios.get.mockRejectedValue(new Error("Persistent network error"))
 
-			await expect(loader.loadAllItems()).rejects.toThrow("Persistent network error")
+			await expect(loader.loadAllItems()).rejects.toThrow(
+				"Failed to load marketplace data: Persistent network error",
+			)
 
 			// Both endpoints will be called with retries since Promise.all starts both promises
 			// Each endpoint retries 3 times, but due to Promise.all behavior, one might fail faster

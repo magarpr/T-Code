@@ -1345,19 +1345,44 @@ export class ClineProvider
 			})
 		} catch (error) {
 			console.error("Failed to fetch marketplace data:", error)
+			const errorMessage = error instanceof Error ? error.message : String(error)
+
 			// Send empty data on error to prevent UI from hanging
 			this.postMessageToWebview({
 				type: "marketplaceData",
 				organizationMcps: [],
 				marketplaceItems: [],
 				marketplaceInstalledMetadata: { project: {}, global: {} },
-				errors: [error instanceof Error ? error.message : String(error)],
+				errors: [errorMessage],
 			})
 
-			// Show user-friendly error notification for network issues
-			if (error instanceof Error && error.message.includes("timeout")) {
+			// Show user-friendly error notification for specific network issues
+			if (errorMessage.includes("socket hang up") || errorMessage.includes("corporate proxy")) {
+				vscode.window
+					.showWarningMessage(
+						"Marketplace data could not be loaded due to network restrictions or corporate proxy settings. " +
+							"Core functionality remains available. Please check your network configuration if you need marketplace features.",
+						"Learn More",
+					)
+					.then((selection) => {
+						if (selection === "Learn More") {
+							vscode.env.openExternal(
+								vscode.Uri.parse("https://docs.roo-code.com/troubleshooting/network-issues"),
+							)
+						}
+					})
+			} else if (errorMessage.includes("timeout")) {
 				vscode.window.showWarningMessage(
-					"Marketplace data could not be loaded due to network restrictions. Core functionality remains available.",
+					"Marketplace data could not be loaded due to network timeout. Core functionality remains available.",
+				)
+			} else if (errorMessage.includes("ENOTFOUND") || errorMessage.includes("DNS")) {
+				vscode.window.showWarningMessage(
+					"Marketplace data could not be loaded due to DNS resolution issues. Please check your internet connection.",
+				)
+			} else {
+				// Generic network error
+				vscode.window.showWarningMessage(
+					"Marketplace data could not be loaded due to network issues. Core functionality remains available.",
 				)
 			}
 		}
