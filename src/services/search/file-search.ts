@@ -135,7 +135,40 @@ export async function searchWorkspaceFiles(
 		})
 
 		// Get all matching results from fzf
-		const fzfResults = fzf.find(query).map((result) => result.item.original)
+		// The fzf library supports exact matching with quotes, but for queries starting
+		// with special characters like periods, we need to handle them specially.
+		// The issue is that fzf may not handle leading periods well in fuzzy matching.
+		let fzfResults = fzf.find(query).map((result) => result.item.original)
+
+		// If the original query didn't return results and starts with a period,
+		// try alternative search strategies
+		if (fzfResults.length === 0 && query.startsWith(".")) {
+			// Try exact substring matching as a fallback for period-prefixed queries
+			const exactMatches = allItems.filter((item) => {
+				const searchStr = `${item.path} ${item.label || ""}`
+				return searchStr.toLowerCase().includes(query.toLowerCase())
+			})
+
+			// Sort by relevance (exact filename matches first, then path matches)
+			exactMatches.sort((a, b) => {
+				const aLabel = (a.label || "").toLowerCase()
+				const bLabel = (b.label || "").toLowerCase()
+				const queryLower = query.toLowerCase()
+
+				// Prioritize exact filename matches
+				if (aLabel === queryLower && bLabel !== queryLower) return -1
+				if (bLabel === queryLower && aLabel !== queryLower) return 1
+
+				// Then prioritize filename starts with query
+				if (aLabel.startsWith(queryLower) && !bLabel.startsWith(queryLower)) return -1
+				if (bLabel.startsWith(queryLower) && !aLabel.startsWith(queryLower)) return 1
+
+				// Finally sort by path length (shorter paths first)
+				return a.path.length - b.path.length
+			})
+
+			fzfResults = exactMatches.slice(0, limit)
+		}
 
 		// Verify types of the shortest results
 		const verifiedResults = await Promise.all(
