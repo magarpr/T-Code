@@ -1,8 +1,9 @@
 import { HTMLAttributes, useState } from "react"
 import { X } from "lucide-react"
+import { Trans } from "react-i18next"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeCheckbox, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
 import { Button, Input, Slider, StandardTooltip } from "@/components/ui"
 
@@ -32,6 +33,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	followupAutoApproveTimeoutMs?: number
 	allowedCommands?: string[]
 	deniedCommands?: string[]
+	allowedMaxRequests?: number | null
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
 		| "alwaysAllowReadOnlyOutsideWorkspace"
@@ -50,6 +52,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "allowedCommands"
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
+		| "allowedMaxRequests"
 	>
 }
 
@@ -71,6 +74,7 @@ export const AutoApproveSettings = ({
 	alwaysAllowUpdateTodoList,
 	allowedCommands,
 	deniedCommands,
+	allowedMaxRequests,
 	setCachedStateField,
 	...props
 }: AutoApproveSettingsProps) => {
@@ -374,6 +378,32 @@ export const AutoApproveSettings = ({
 						</div>
 					</div>
 				)}
+
+				{/* Max Requests Setting */}
+				<div className="flex flex-col gap-3 mt-6">
+					<div className="flex items-center gap-4 font-bold">
+						<span className="codicon codicon-number" />
+						<div>{t("settings:autoApprove.apiRequestLimit.title")}</div>
+					</div>
+					<div className="flex items-center gap-2">
+						<VSCodeTextField
+							placeholder={t("settings:autoApprove.apiRequestLimit.unlimited")}
+							value={(allowedMaxRequests ?? Infinity) === Infinity ? "" : allowedMaxRequests?.toString()}
+							onInput={(e) => {
+								const input = e.target as HTMLInputElement
+								// Remove any non-numeric characters
+								input.value = input.value.replace(/[^0-9]/g, "")
+								const value = parseInt(input.value)
+								const parsedValue = !isNaN(value) && value > 0 ? value : undefined
+								setCachedStateField("allowedMaxRequests", parsedValue)
+							}}
+							style={{ flex: 1, maxWidth: "200px" }}
+						/>
+					</div>
+					<div className="text-vscode-descriptionForeground text-sm">
+						<Trans i18nKey="settings:autoApprove.apiRequestLimit.description" />
+					</div>
+				</div>
 			</Section>
 		</div>
 	)
