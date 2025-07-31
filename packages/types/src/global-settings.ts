@@ -243,6 +243,13 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	commandTimeoutAllowlist: [],
 	preventCompletionWithOpenTodos: false,
 
+	// Enterprise network configuration
+	connectionKeepAliveEnabled: true,
+	connectionKeepAliveInterval: 30000,
+	connectionRetryEnabled: true,
+	connectionMaxRetries: 3,
+	connectionRetryBaseDelay: 2000,
+
 	browserToolEnabled: false,
 	browserViewportSize: "900x600",
 	screenshotQuality: 75,
