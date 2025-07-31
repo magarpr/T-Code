@@ -723,19 +723,42 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				case "use_mcp_server":
 				case "resume_task":
 				case "mistake_limit_reached":
-					// Only send text/images if they exist
-					if (trimmedInput || (images && images.length > 0)) {
-						vscode.postMessage({
-							type: "askResponse",
-							askResponse: "yesButtonClicked",
-							text: trimmedInput,
-							images: images,
-						})
+					// For tool operations (like file editing), check if we have current input or queued messages
+					if (clineAsk === "tool") {
+						// Get current input from the text area (this includes any text typed while agent was working)
+						const currentInput = text?.trim() || inputValue.trim()
+						const currentImages = images || selectedImages
+
+						// Send the save action with any current input
+						if (currentInput || (currentImages && currentImages.length > 0)) {
+							vscode.postMessage({
+								type: "askResponse",
+								askResponse: "yesButtonClicked",
+								text: currentInput,
+								images: currentImages,
+							})
+						} else {
+							vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
+						}
+
 						// Clear input state after sending
 						setInputValue("")
 						setSelectedImages([])
 					} else {
-						vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
+						// For other operations, use the original logic
+						if (trimmedInput || (images && images.length > 0)) {
+							vscode.postMessage({
+								type: "askResponse",
+								askResponse: "yesButtonClicked",
+								text: trimmedInput,
+								images: images,
+							})
+							// Clear input state after sending
+							setInputValue("")
+							setSelectedImages([])
+						} else {
+							vscode.postMessage({ type: "askResponse", askResponse: "yesButtonClicked" })
+						}
 					}
 					break
 				case "completion_result":
@@ -752,7 +775,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			setClineAsk(undefined)
 			setEnableButtons(false)
 		},
-		[clineAsk, startNewTask],
+		[clineAsk, startNewTask, inputValue, selectedImages, setInputValue, setSelectedImages],
 	)
 
 	const handleSecondaryButtonClick = useCallback(
