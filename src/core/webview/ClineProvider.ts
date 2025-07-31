@@ -1109,6 +1109,8 @@ export class ClineProvider
 	// OpenRouter
 
 	async handleOpenRouterCallback(code: string) {
+		this.log(`[OpenRouter] Handling callback with code: ${code.substring(0, 10)}...`)
+
 		let { apiConfiguration, currentApiConfigName } = await this.getState()
 
 		let apiKey: string
@@ -1116,15 +1118,24 @@ export class ClineProvider
 			const baseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai/api/v1"
 			// Extract the base domain for the auth endpoint
 			const baseUrlDomain = baseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
+
+			this.log(`[OpenRouter] Exchanging code for API key at: ${baseUrlDomain}/api/v1/auth/keys`)
 			const response = await axios.post(`${baseUrlDomain}/api/v1/auth/keys`, { code })
+
 			if (response.data && response.data.key) {
 				apiKey = response.data.key
+				this.log(`[OpenRouter] Successfully received API key: ${apiKey.substring(0, 10)}...`)
 			} else {
 				throw new Error("Invalid response from OpenRouter API")
 			}
 		} catch (error) {
 			this.log(
-				`Error exchanging code for API key: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+				`[OpenRouter] Error exchanging code for API key: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+			)
+
+			// Show user-friendly error message
+			vscode.window.showErrorMessage(
+				`Failed to get OpenRouter API key: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
 			)
 			throw error
 		}
@@ -1136,7 +1147,26 @@ export class ClineProvider
 			openRouterModelId: apiConfiguration?.openRouterModelId || openRouterDefaultModelId,
 		}
 
-		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+		try {
+			await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+			this.log(`[OpenRouter] Successfully updated provider profile with new API key`)
+
+			// Show success message to user
+			vscode.window.showInformationMessage("OpenRouter API key has been successfully configured!")
+
+			// Ensure the webview is updated with the new state
+			await this.postStateToWebview()
+		} catch (error) {
+			this.log(
+				`[OpenRouter] Error updating provider profile: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+			)
+
+			// Show user-friendly error message
+			vscode.window.showErrorMessage(
+				`Failed to save OpenRouter API key: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
+			)
+			throw error
+		}
 	}
 
 	// Glama
