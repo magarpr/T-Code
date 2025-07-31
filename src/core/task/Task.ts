@@ -1737,7 +1737,21 @@ export class Task extends EventEmitter<TaskEvents> {
 				// either use a tool or attempt_completion.
 				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
-				if (!didToolUse) {
+				// Check if this is a Gemini grounding response (contains citations/sources)
+				// Gemini grounding responses include citations that indicate tool usage (search)
+				const hasGeminiGrounding =
+					this.apiConfiguration.apiProvider === "gemini" &&
+					this.assistantMessageContent.some(
+						(block) =>
+							block.type === "text" &&
+							block.content &&
+							(block.content.includes("Sources:") ||
+								block.content.includes("[1]") ||
+								block.content.includes("[2]") ||
+								/\[\d+\]\(https?:\/\/[^\)]+\)/.test(block.content)),
+					)
+
+				if (!didToolUse && !hasGeminiGrounding) {
 					this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
 					this.consecutiveMistakeCount++
 				}
