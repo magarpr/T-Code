@@ -601,15 +601,8 @@ function formatAndCombineResults(files: string[], directories: string[], limit: 
 	const uniquePathsSet = new Set(allPaths)
 	const uniquePaths = Array.from(uniquePathsSet)
 
-	// Sort to ensure directories come first, followed by files
-	uniquePaths.sort((a: string, b: string) => {
-		const aIsDir = a.endsWith("/")
-		const bIsDir = b.endsWith("/")
-
-		if (aIsDir && !bIsDir) return -1
-		if (!aIsDir && bIsDir) return 1
-		return a.localeCompare(b)
-	})
+	// Note: Sorting is handled by formatFilesList with numeric-aware algorithm
+	// to properly handle version-numbered files (e.g., v3.25.1, v3.25.2, etc.)
 
 	const trimmedPaths = uniquePaths.slice(0, limit)
 	return [trimmedPaths, trimmedPaths.length >= limit]
