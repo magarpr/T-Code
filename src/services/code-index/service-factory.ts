@@ -136,7 +136,7 @@ export class CodeIndexServiceFactory {
 			throw new Error(t("embeddings:serviceFactory.qdrantUrlMissing"))
 		}
 
-		// Create QdrantVectorStore with memory optimization always enabled
+		// Create QdrantVectorStore (memory optimization is always enabled via constants)
 		return new QdrantVectorStore(this.workspacePath, config.qdrantUrl, vectorSize, config.qdrantApiKey)
 	}
 

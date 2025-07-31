@@ -101,7 +101,8 @@ export const QDRANT_OPTIMIZER_CONFIG_DEFAULTS = {
 } as const
 
 /**
- * Quantization configuration for additional memory efficiency
+ * Quantization configuration for search operations
+ * These settings are applied during vector search queries to balance memory efficiency and search quality
  */
 export const QDRANT_QUANTIZATION_CONFIG_DEFAULTS = {
 	/**
@@ -119,23 +120,3 @@ export const QDRANT_QUANTIZATION_CONFIG_DEFAULTS = {
 	 */
 	OVERSAMPLING: 2.0,
 } as const
-
-/**
- * Memory optimization configuration interface
- */
-export interface QdrantMemoryOptimizationConfig {
-	/**
-	 * Enable on-disk storage for vectors and indexes
-	 */
-	useOnDiskStorage?: boolean
-
-	/**
-	 * Number of vectors before using memory-mapped files
-	 */
-	memoryMapThreshold?: number
-
-	/**
-	 * HNSW search parameter (ef) - controls search quality vs memory usage
-	 */
-	hnswEfSearch?: number
-}
