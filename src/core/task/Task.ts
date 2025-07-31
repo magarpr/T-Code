@@ -544,7 +544,8 @@ export class Task extends EventEmitter<TaskEvents> {
 	private async addToClineMessages(message: ClineMessage) {
 		this.clineMessages.push(message)
 		const provider = this.providerRef.deref()
-		await provider?.postStateToWebview()
+		// Send only the new message instead of the entire state
+		await provider?.postMessageToWebview({ type: "messageCreated", clineMessage: message })
 		this.emit("message", { action: "created", message })
 		await this.saveClineMessages()
 
@@ -1006,6 +1007,9 @@ export class Task extends EventEmitter<TaskEvents> {
 		// the task first.
 		this.apiConversationHistory = await this.getSavedApiConversationHistory()
 
+		// Send initial state to webview (this will now handle incremental message loading)
+		await this.providerRef.deref()?.postStateToWebview()
+
 		const lastClineMessage = this.clineMessages
 			.slice()
 			.reverse()
@@ -1443,7 +1447,13 @@ export class Task extends EventEmitter<TaskEvents> {
 		} satisfies ClineApiReqInfo)
 
 		await this.saveClineMessages()
-		await provider?.postStateToWebview()
+		// Send only the updated API request message instead of the entire state
+		if (provider && lastApiReqIndex >= 0) {
+			await provider.postMessageToWebview({
+				type: "messageUpdated",
+				clineMessage: this.clineMessages[lastApiReqIndex],
+			})
+		}
 
 		try {
 			let cacheWriteTokens = 0
@@ -1642,6 +1652,7 @@ export class Task extends EventEmitter<TaskEvents> {
 
 					await abortStream(cancelReason, streamingFailedMessage)
 
+					const provider = this.providerRef.deref()
 					const history = await provider?.getTaskWithId(this.taskId)
 
 					if (history) {
@@ -1651,6 +1662,8 @@ export class Task extends EventEmitter<TaskEvents> {
 			} finally {
 				this.isStreaming = false
 			}
+
+			const provider = this.providerRef.deref()
 
 			if (inputTokens > 0 || outputTokens > 0 || cacheWriteTokens > 0 || cacheReadTokens > 0) {
 				TelemetryService.instance.captureLlmCompletion(this.taskId, {
@@ -1701,7 +1714,13 @@ export class Task extends EventEmitter<TaskEvents> {
 
 			updateApiReqMsg()
 			await this.saveClineMessages()
-			await this.providerRef.deref()?.postStateToWebview()
+			// Send only the updated API request message instead of the entire state
+			if (provider && lastApiReqIndex >= 0) {
+				await provider.postMessageToWebview({
+					type: "messageUpdated",
+					clineMessage: this.clineMessages[lastApiReqIndex],
+				})
+			}
 
 			// Now add to apiConversationHistory.
 			// Need to save assistant responses to file before proceeding to
