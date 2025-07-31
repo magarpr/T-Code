@@ -11,6 +11,11 @@ import { TelemetryEventName } from "@roo-code/types"
 const OLLAMA_EMBEDDING_TIMEOUT_MS = 60000 // 60 seconds for embedding requests
 const OLLAMA_VALIDATION_TIMEOUT_MS = 30000 // 30 seconds for validation requests
 
+// Retry configuration
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY_MS = 1000 // 1 second
+const MAX_RETRY_DELAY_MS = 10000 // 10 seconds
+
 /**
  * Implements the IEmbedder interface using a local Ollama instance.
  */
@@ -64,77 +69,154 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 				})
 			: texts
 
-		try {
-			// Note: Standard Ollama API uses 'prompt' for single text, not 'input' for array.
-			// Implementing based on user's specific request structure.
+		let lastError: Error | null = null
+		let retryDelay = INITIAL_RETRY_DELAY_MS
 
-			// Add timeout to prevent indefinite hanging
-			const controller = new AbortController()
-			const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDING_TIMEOUT_MS)
+		for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+			try {
+				// Note: Standard Ollama API uses 'prompt' for single text, not 'input' for array.
+				// Implementing based on user's specific request structure.
 
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					model: modelToUse,
-					input: processedTexts, // Using 'input' as requested
-				}),
-				signal: controller.signal,
-			})
-			clearTimeout(timeoutId)
+				// Add timeout to prevent indefinite hanging
+				const controller = new AbortController()
+				const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDING_TIMEOUT_MS)
 
-			if (!response.ok) {
-				let errorBody = t("embeddings:ollama.couldNotReadErrorBody")
-				try {
-					errorBody = await response.text()
-				} catch (e) {
-					// Ignore error reading body
-				}
-				throw new Error(
-					t("embeddings:ollama.requestFailed", {
-						status: response.status,
-						statusText: response.statusText,
-						errorBody,
+				const response = await fetch(url, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						model: modelToUse,
+						input: processedTexts, // Using 'input' as requested
 					}),
-				)
+					signal: controller.signal,
+				})
+				clearTimeout(timeoutId)
+
+				if (!response.ok) {
+					let errorBody = t("embeddings:ollama.couldNotReadErrorBody")
+					let errorDetails: any = {}
+					try {
+						errorBody = await response.text()
+						// Try to parse as JSON to get more details
+						try {
+							errorDetails = JSON.parse(errorBody)
+						} catch {
+							// Not JSON, use as is
+						}
+					} catch (e) {
+						// Ignore error reading body
+					}
+
+					// Check if it's a model not found error
+					if (
+						response.status === 404 ||
+						errorDetails.error?.includes("model") ||
+						errorDetails.error?.includes("not found")
+					) {
+						throw new Error(t("embeddings:ollama.modelNotFound", { modelId: modelToUse }))
+					}
+
+					throw new Error(
+						t("embeddings:ollama.requestFailed", {
+							status: response.status,
+							statusText: response.statusText,
+							errorBody,
+						}),
+					)
+				}
+
+				const data = await response.json()
+
+				// Log the response structure for debugging
+				if (!data || typeof data !== "object") {
+					console.error("Ollama API response is not an object:", data)
+					throw new Error(t("embeddings:ollama.invalidResponseStructure"))
+				}
+
+				// Extract embeddings using 'embeddings' key as requested
+				const embeddings = data.embeddings
+				if (!embeddings || !Array.isArray(embeddings)) {
+					console.error("Ollama API response structure:", JSON.stringify(data, null, 2))
+					throw new Error(t("embeddings:ollama.invalidResponseStructure"))
+				}
+
+				// Validate that embeddings is an array of arrays (2D array)
+				if (embeddings.length > 0 && !Array.isArray(embeddings[0])) {
+					console.error(
+						"Ollama embeddings format invalid - expected array of arrays, got:",
+						typeof embeddings[0],
+					)
+					throw new Error(t("embeddings:ollama.invalidResponseStructure"))
+				}
+
+				return {
+					embeddings: embeddings,
+				}
+			} catch (error: any) {
+				lastError = error
+
+				// Don't retry for certain errors
+				if (
+					error.message?.includes(t("embeddings:ollama.modelNotFound", { modelId: "" }).split(":")[0]) ||
+					error.message?.includes(t("embeddings:ollama.invalidResponseStructure"))
+				) {
+					break
+				}
+
+				// Check if we should retry
+				if (attempt < MAX_RETRIES) {
+					// Check if it's a transient error that we should retry
+					if (
+						error.name === "AbortError" ||
+						error.message?.includes("fetch failed") ||
+						error.code === "ECONNREFUSED" ||
+						error.code === "ENOTFOUND" ||
+						error.code === "ETIMEDOUT" ||
+						error.code === "ECONNRESET"
+					) {
+						console.log(`Ollama embedding attempt ${attempt} failed, retrying in ${retryDelay}ms...`)
+						await new Promise((resolve) => setTimeout(resolve, retryDelay))
+						retryDelay = Math.min(retryDelay * 2, MAX_RETRY_DELAY_MS) // Exponential backoff
+						continue
+					}
+				}
+
+				// If we're here, we're not retrying
+				break
 			}
-
-			const data = await response.json()
-
-			// Extract embeddings using 'embeddings' key as requested
-			const embeddings = data.embeddings
-			if (!embeddings || !Array.isArray(embeddings)) {
-				throw new Error(t("embeddings:ollama.invalidResponseStructure"))
-			}
-
-			return {
-				embeddings: embeddings,
-			}
-		} catch (error: any) {
-			// Capture telemetry before reformatting the error
-			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-				error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
-				stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
-				location: "OllamaEmbedder:createEmbeddings",
-			})
-
-			// Log the original error for debugging purposes
-			console.error("Ollama embedding failed:", error)
-
-			// Handle specific error types with better messages
-			if (error.name === "AbortError") {
-				throw new Error(t("embeddings:validation.connectionFailed"))
-			} else if (error.message?.includes("fetch failed") || error.code === "ECONNREFUSED") {
-				throw new Error(t("embeddings:ollama.serviceNotRunning", { baseUrl: this.baseUrl }))
-			} else if (error.code === "ENOTFOUND") {
-				throw new Error(t("embeddings:ollama.hostNotFound", { baseUrl: this.baseUrl }))
-			}
-
-			// Re-throw a more specific error for the caller
-			throw new Error(t("embeddings:ollama.embeddingFailed", { message: error.message }))
 		}
+
+		// If we get here, all retries failed
+		if (!lastError) {
+			lastError = new Error("Unknown error in Ollama embedder")
+		}
+		// Capture telemetry before reformatting the error
+		TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+			error: sanitizeErrorMessage(lastError instanceof Error ? lastError.message : String(lastError)),
+			stack: lastError instanceof Error ? sanitizeErrorMessage(lastError.stack || "") : undefined,
+			location: "OllamaEmbedder:createEmbeddings",
+		})
+
+		// Log the original error for debugging purposes
+		console.error("Ollama embedding failed after all retries:", lastError)
+
+		// Handle specific error types with better messages
+		if (lastError.name === "AbortError") {
+			throw new Error(t("embeddings:validation.connectionFailed"))
+		} else if (lastError.message?.includes("fetch failed") || (lastError as any).code === "ECONNREFUSED") {
+			throw new Error(t("embeddings:ollama.serviceNotRunning", { baseUrl: this.baseUrl }))
+		} else if ((lastError as any).code === "ENOTFOUND") {
+			throw new Error(t("embeddings:ollama.hostNotFound", { baseUrl: this.baseUrl }))
+		} else if (lastError.message?.includes(t("embeddings:ollama.modelNotFound", { modelId: "" }).split(":")[0])) {
+			throw lastError // Re-throw model not found as is
+		} else if (lastError.message?.includes(t("embeddings:ollama.invalidResponseStructure"))) {
+			throw lastError // Re-throw invalid response structure as is
+		}
+
+		// Re-throw a more specific error for the caller
+		throw new Error(t("embeddings:ollama.embeddingFailed", { message: lastError.message }))
 	}
 
 	/**
