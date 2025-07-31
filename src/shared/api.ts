@@ -65,6 +65,12 @@ export const getModelMaxOutputTokens = ({
 	settings?: ProviderSettings
 	format?: "anthropic" | "openai" | "gemini" | "openrouter"
 }): number | undefined => {
+	// Special-case: Slack request to cap OpenRouter horizon-alpha default output to 32k
+	// Only applies when routed via OpenRouter and the model id is exactly "openrouter/horizon-alpha"
+	if (format === "openrouter" && modelId === "openrouter/horizon-alpha") {
+		return 32_000
+	}
+
 	// Check for Claude Code specific max output tokens setting
 	if (settings?.apiProvider === "claude-code") {
 		return settings.claudeCodeMaxOutputTokens || CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS
