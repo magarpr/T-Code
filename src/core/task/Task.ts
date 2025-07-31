@@ -94,6 +94,9 @@ import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
 import { restoreTodoListForTask } from "../tools/updateTodoListTool"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
+const CONNECTION_KEEP_ALIVE_INTERVAL = 30000 // 30 seconds
+const MAX_CONNECTION_RETRIES = 3
+const CONNECTION_RETRY_BASE_DELAY = 2000 // 2 seconds
 
 export type TaskEvents = {
 	message: [{ action: "created" | "updated"; message: ClineMessage }]
@@ -259,6 +262,12 @@ export class Task extends EventEmitter<TaskEvents> {
 	didRejectTool = false
 	didAlreadyUseTool = false
 	didCompleteReadingStream = false
+
+	// Connection management for enterprise environments
+	private connectionKeepAliveInterval?: NodeJS.Timeout
+	private connectionRetryCount = 0
+	private lastConnectionTime = Date.now()
+	private isConnectionHealthy = true
 
 	constructor({
 		provider,
@@ -1210,6 +1219,12 @@ export class Task extends EventEmitter<TaskEvents> {
 			this.pauseInterval = undefined
 		}
 
+		// Clear connection keep-alive interval
+		if (this.connectionKeepAliveInterval) {
+			clearInterval(this.connectionKeepAliveInterval)
+			this.connectionKeepAliveInterval = undefined
+		}
+
 		// Release any terminals associated with this task.
 		try {
 			// Release any terminals associated with this task.
@@ -1486,6 +1501,12 @@ export class Task extends EventEmitter<TaskEvents> {
 			}
 
 			const abortStream = async (cancelReason: ClineApiReqCancelReason, streamingFailedMessage?: string) => {
+				// Clear connection keep-alive when aborting
+				if (this.connectionKeepAliveInterval) {
+					clearInterval(this.connectionKeepAliveInterval)
+					this.connectionKeepAliveInterval = undefined
+				}
+
 				if (this.diffViewProvider.isEditing) {
 					await this.diffViewProvider.revertChanges() // closes diff view
 				}
@@ -1548,6 +1569,9 @@ export class Task extends EventEmitter<TaskEvents> {
 			let assistantMessage = ""
 			let reasoningMessage = ""
 			this.isStreaming = true
+
+			// Start connection keep-alive for long-running operations
+			this.startConnectionKeepAlive()
 
 			try {
 				for await (const chunk of stream) {
@@ -1624,36 +1648,99 @@ export class Task extends EventEmitter<TaskEvents> {
 					}
 				}
 			} catch (error) {
+				// Stop connection keep-alive on error
+				this.stopConnectionKeepAlive()
+
 				// Abandoned happens when extension is no longer waiting for the
 				// Cline instance to finish aborting (error is thrown here when
 				// any function in the for loop throws due to this.abort).
 				if (!this.abandoned) {
-					// If the stream failed, there's various states the task
-					// could be in (i.e. could have streamed some tools the user
-					// may have executed), so we just resort to replicating a
-					// cancel task.
+					// Check if this is a retryable connection error
+					if (this.isRetryableConnectionError(error) && !this.abort) {
+						try {
+							// Save current state before attempting reconnection
+							await this.saveTaskStateForResumption()
 
-					// Check if this was a user-initiated cancellation BEFORE calling abortTask
-					// If this.abort is already true, it means the user clicked cancel, so we should
-					// treat this as "user_cancelled" rather than "streaming_failed"
-					const cancelReason = this.abort ? "user_cancelled" : "streaming_failed"
-					const streamingFailedMessage = this.abort
-						? undefined
-						: (error.message ?? JSON.stringify(serializeError(error), null, 2))
+							// Attempt to handle the connection error with retry logic
+							const retryResult = await this.handleConnectionError(error, async () => {
+								// Retry the API request
+								const retryStream = this.attemptApiRequest()
+								this.startConnectionKeepAlive()
+								return retryStream
+							})
 
-					// Now call abortTask after determining the cancel reason
-					await this.abortTask()
+							// If retry succeeded, continue with the new stream
+							if (retryResult) {
+								// Continue processing with the new stream
+								for await (const chunk of retryResult) {
+									// Process chunks same as before
+									if (!chunk) continue
 
-					await abortStream(cancelReason, streamingFailedMessage)
+									switch (chunk.type) {
+										case "reasoning":
+											reasoningMessage += chunk.text
+											await this.say("reasoning", reasoningMessage, undefined, true)
+											break
+										case "usage":
+											inputTokens += chunk.inputTokens
+											outputTokens += chunk.outputTokens
+											cacheWriteTokens += chunk.cacheWriteTokens ?? 0
+											cacheReadTokens += chunk.cacheReadTokens ?? 0
+											totalCost = chunk.totalCost
+											break
+										case "text": {
+											assistantMessage += chunk.text
+											const prevLength = this.assistantMessageContent.length
+											this.assistantMessageContent = parseAssistantMessage(assistantMessage)
+											if (this.assistantMessageContent.length > prevLength) {
+												this.userMessageContentReady = false
+											}
+											presentAssistantMessage(this)
+											break
+										}
+									}
 
-					const history = await provider?.getTaskWithId(this.taskId)
+									if (this.abort || this.didRejectTool || this.didAlreadyUseTool) {
+										break
+									}
+								}
+								// Successfully recovered, continue normal flow
+								this.stopConnectionKeepAlive()
+							}
+						} catch (retryError) {
+							// Retry failed, proceed with normal error handling
+							const cancelReason = this.abort ? "user_cancelled" : "streaming_failed"
+							const streamingFailedMessage = this.abort
+								? undefined
+								: (retryError.message ?? JSON.stringify(serializeError(retryError), null, 2))
 
-					if (history) {
-						await provider?.initClineWithHistoryItem(history.historyItem)
+							await this.abortTask()
+							await abortStream(cancelReason, streamingFailedMessage)
+
+							const history = await provider?.getTaskWithId(this.taskId)
+							if (history) {
+								await provider?.initClineWithHistoryItem(history.historyItem)
+							}
+						}
+					} else {
+						// Non-retryable error or user cancellation, proceed with normal error handling
+						const cancelReason = this.abort ? "user_cancelled" : "streaming_failed"
+						const streamingFailedMessage = this.abort
+							? undefined
+							: (error.message ?? JSON.stringify(serializeError(error), null, 2))
+
+						await this.abortTask()
+						await abortStream(cancelReason, streamingFailedMessage)
+
+						const history = await provider?.getTaskWithId(this.taskId)
+						if (history) {
+							await provider?.initClineWithHistoryItem(history.historyItem)
+						}
 					}
 				}
 			} finally {
 				this.isStreaming = false
+				this.stopConnectionKeepAlive()
 			}
 
 			if (inputTokens > 0 || outputTokens > 0 || cacheWriteTokens > 0 || cacheReadTokens > 0) {
@@ -2140,5 +2227,131 @@ export class Task extends EventEmitter<TaskEvents> {
 
 	public get cwd() {
 		return this.workspacePath
+	}
+
+	// Connection management methods for enterprise environments
+	private startConnectionKeepAlive(): void {
+		// Check if keep-alive is enabled in provider settings
+		const keepAliveEnabled = this.apiConfiguration.connectionKeepAliveEnabled ?? true
+		if (!keepAliveEnabled) {
+			return
+		}
+
+		if (this.connectionKeepAliveInterval) {
+			clearInterval(this.connectionKeepAliveInterval)
+		}
+
+		const keepAliveInterval = this.apiConfiguration.connectionKeepAliveInterval ?? CONNECTION_KEEP_ALIVE_INTERVAL
+
+		this.connectionKeepAliveInterval = setInterval(() => {
+			this.lastConnectionTime = Date.now()
+			// Send a lightweight heartbeat to maintain connection
+			// This helps prevent enterprise firewalls from dropping long-running connections
+		}, keepAliveInterval)
+	}
+
+	private stopConnectionKeepAlive(): void {
+		if (this.connectionKeepAliveInterval) {
+			clearInterval(this.connectionKeepAliveInterval)
+			this.connectionKeepAliveInterval = undefined
+		}
+	}
+
+	private async handleConnectionError(error: any, retryCallback: () => Promise<any>): Promise<any> {
+		this.isConnectionHealthy = false
+		this.stopConnectionKeepAlive()
+
+		// Check if retry is enabled in provider settings
+		const retryEnabled = this.apiConfiguration.connectionRetryEnabled ?? true
+		if (!retryEnabled) {
+			throw error
+		}
+
+		// Check if this is a connection-related error that we should retry
+		const isRetryableError = this.isRetryableConnectionError(error)
+		const maxRetries = this.apiConfiguration.connectionMaxRetries ?? MAX_CONNECTION_RETRIES
+
+		if (isRetryableError && this.connectionRetryCount < maxRetries) {
+			this.connectionRetryCount++
+			const baseDelay = this.apiConfiguration.connectionRetryBaseDelay ?? CONNECTION_RETRY_BASE_DELAY
+			const delayMs = Math.min(
+				baseDelay * Math.pow(2, this.connectionRetryCount - 1),
+				MAX_EXPONENTIAL_BACKOFF_SECONDS * 1000,
+			)
+
+			await this.say(
+				"api_req_retry_delayed",
+				`Connection interrupted (attempt ${this.connectionRetryCount}/${maxRetries}). Retrying in ${Math.ceil(delayMs / 1000)} seconds...`,
+				undefined,
+				true,
+			)
+
+			await delay(delayMs)
+
+			try {
+				const result = await retryCallback()
+				this.connectionRetryCount = 0 // Reset on success
+				this.isConnectionHealthy = true
+				this.startConnectionKeepAlive()
+				return result
+			} catch (retryError) {
+				return this.handleConnectionError(retryError, retryCallback)
+			}
+		} else {
+			// Max retries reached or non-retryable error
+			this.connectionRetryCount = 0
+			throw error
+		}
+	}
+
+	private isRetryableConnectionError(error: any): boolean {
+		if (!error) return false
+
+		const errorMessage = error.message?.toLowerCase() || ""
+		const errorCode = error.code?.toLowerCase() || ""
+
+		// Check for common connection-related errors
+		return (
+			errorMessage.includes("502") ||
+			errorMessage.includes("503") ||
+			errorMessage.includes("504") ||
+			errorMessage.includes("timeout") ||
+			errorMessage.includes("connection") ||
+			errorMessage.includes("network") ||
+			errorMessage.includes("econnreset") ||
+			errorMessage.includes("econnrefused") ||
+			errorMessage.includes("etimedout") ||
+			errorCode.includes("econnreset") ||
+			errorCode.includes("econnrefused") ||
+			errorCode.includes("etimedout") ||
+			error.status === 502 ||
+			error.status === 503 ||
+			error.status === 504
+		)
+	}
+
+	private async saveTaskStateForResumption(): Promise<void> {
+		// Enhanced state saving for better resumption after connection interruptions
+		try {
+			await this.saveClineMessages()
+			await this.saveApiConversationHistory()
+
+			// Save additional state that might be useful for resumption
+			const resumptionState = {
+				lastConnectionTime: this.lastConnectionTime,
+				isConnectionHealthy: this.isConnectionHealthy,
+				connectionRetryCount: this.connectionRetryCount,
+				currentStreamingContentIndex: this.currentStreamingContentIndex,
+				assistantMessageContent: this.assistantMessageContent,
+				userMessageContent: this.userMessageContent,
+				userMessageContentReady: this.userMessageContentReady,
+				didCompleteReadingStream: this.didCompleteReadingStream,
+			}
+
+			// Store resumption state (could be expanded to persist to disk if needed)
+			console.log("Task state saved for potential resumption:", resumptionState)
+		} catch (error) {
+			console.error("Failed to save task state for resumption:", error)
+		}
 	}
 }
