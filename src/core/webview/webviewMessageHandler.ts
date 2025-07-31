@@ -1876,6 +1876,14 @@ export const webviewMessageHandler = async (
 						// Update state after importing
 						const customModes = await provider.customModesManager.getCustomModes()
 						await updateGlobalState("customModes", customModes)
+
+						// Automatically switch to imported mode if modes were imported
+						if (result.importedModes && result.importedModes.length > 0) {
+							// Switch to the first imported mode
+							const modeToSwitchTo = result.importedModes[0]
+							await updateGlobalState("mode", modeToSwitchTo)
+						}
+
 						await provider.postStateToWebview()
 
 						// Send success message to webview
