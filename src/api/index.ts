@@ -116,11 +116,7 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "litellm":
 			return new LiteLLMHandler(options)
 		default:
-			// If apiProvider is undefined, default to claude-code for better user experience
-			if (apiProvider === undefined) {
-				return new ClaudeCodeHandler(options)
-			}
-			// For any unknown provider, throw an error instead of silently defaulting to Anthropic
-			throw new Error(`Unknown API provider: ${apiProvider}. Please check your configuration.`)
+			apiProvider satisfies "gemini-cli" | undefined
+			return new AnthropicHandler(options)
 	}
 }
