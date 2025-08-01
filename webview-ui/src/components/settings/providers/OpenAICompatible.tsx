@@ -180,8 +180,7 @@ export const OpenAICompatible = ({
 			<div>
 				<VSCodeTextField
 					value={apiConfiguration?.openAiRequestTimeout?.toString() || ""}
-					type="number"
-					min="0"
+					type="text"
 					onInput={handleInputChange("openAiRequestTimeout", (e) => {
 						const value = (e.target as HTMLInputElement).value
 						const parsed = parseInt(value)
