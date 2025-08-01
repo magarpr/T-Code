@@ -39,6 +39,7 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements vs
 	private shareService: ShareService | null = null
 	private connectionMonitor: ConnectionMonitor | null = null
 	private queueManager: TelemetryQueueManager | null = null
+	private connectionRestoredDebounceTimer: NodeJS.Timeout | null = null
 	private isInitialized = false
 	private log: (...args: unknown[]) => void
 
@@ -103,26 +104,26 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements vs
 			try {
 				const { ContextProxy } = await import("../../../src/core/config/ContextProxy")
 				isQueueEnabled = ContextProxy.instance.getValue("telemetryQueueEnabled") ?? true
-			} catch (_error) {
+			} catch (error) {
 				// Default to enabled if we can't access settings
-				this.log("[CloudService] Could not access telemetryQueueEnabled setting, defaulting to enabled")
+				this.log("[CloudService] Could not access telemetryQueueEnabled setting:", error)
+				isQueueEnabled = true
 			}
 
 			if (isQueueEnabled) {
 				// Set up connection monitoring with debouncing
-				let connectionRestoredDebounceTimer: NodeJS.Timeout | null = null
 				const connectionRestoredDebounceDelay = 3000 // 3 seconds
 
 				this.connectionMonitor.onConnectionRestored(() => {
 					this.log("[CloudService] Connection restored, scheduling queue processing")
 
 					// Clear any existing timer
-					if (connectionRestoredDebounceTimer) {
-						clearTimeout(connectionRestoredDebounceTimer)
+					if (this.connectionRestoredDebounceTimer) {
+						clearTimeout(this.connectionRestoredDebounceTimer)
 					}
 
 					// Schedule queue processing with debounce
-					connectionRestoredDebounceTimer = setTimeout(() => {
+					this.connectionRestoredDebounceTimer = setTimeout(() => {
 						this.queueManager
 							?.processQueue()
 							.then(() => {
@@ -320,6 +321,11 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements vs
 		}
 		if (this.connectionMonitor) {
 			this.connectionMonitor.dispose()
+		}
+		// Clean up any pending debounce timer
+		if (this.connectionRestoredDebounceTimer) {
+			clearTimeout(this.connectionRestoredDebounceTimer)
+			this.connectionRestoredDebounceTimer = null
 		}
 
 		this.isInitialized = false

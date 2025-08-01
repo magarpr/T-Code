@@ -4,6 +4,7 @@ import { ContextProxy } from "../../../src/core/config/ContextProxy"
 
 export class TelemetryQueueManager {
 	private static instance: TelemetryQueueManager
+	private static readonly ABSOLUTE_MAX_QUEUE_SIZE = 5000
 	private queue: QueuedTelemetryEvent[] = []
 	private isProcessing = false
 	private maxQueueSize = 1000
@@ -37,7 +38,10 @@ export class TelemetryQueueManager {
 	 */
 	public async addToQueue(event: TelemetryEvent, priority: "high" | "normal" = "normal"): Promise<void> {
 		const queuedEvent: QueuedTelemetryEvent = {
-			id: crypto.randomUUID(),
+			id:
+				typeof crypto !== "undefined" && crypto.randomUUID
+					? crypto.randomUUID()
+					: `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			event,
 			timestamp: Date.now(),
 			retryCount: 0,
@@ -185,8 +189,11 @@ export class TelemetryQueueManager {
 
 			if (storedQueue && Array.isArray(storedQueue)) {
 				// Add validation for queue size to prevent memory issues
-				if (storedQueue.length > this.maxQueueSize * 2) {
-					this.log("[TelemetryQueueManager] Queue size exceeds safety limit, truncating to max size")
+				const effectiveMaxSize = Math.min(this.maxQueueSize * 2, TelemetryQueueManager.ABSOLUTE_MAX_QUEUE_SIZE)
+				if (storedQueue.length > effectiveMaxSize) {
+					this.log(
+						`[TelemetryQueueManager] Queue size (${storedQueue.length}) exceeds safety limit (${effectiveMaxSize}), truncating to max size`,
+					)
 					this.queue = (storedQueue as QueuedTelemetryEvent[]).slice(-this.maxQueueSize)
 				} else {
 					this.queue = storedQueue as QueuedTelemetryEvent[]

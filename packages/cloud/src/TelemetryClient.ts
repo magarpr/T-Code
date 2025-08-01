@@ -18,6 +18,7 @@ export class TelemetryClient extends BaseTelemetryClient {
 	private isQueueEnabled: boolean = false
 	private log: (...args: unknown[]) => void
 	private processQueueDebounceTimer: NodeJS.Timeout | null = null
+	private processQueueAbortController: AbortController | null = null
 	private readonly processQueueDebounceDelay = 5000 // 5 seconds
 
 	constructor(
@@ -123,8 +124,16 @@ export class TelemetryClient extends BaseTelemetryClient {
 		if (this.processQueueDebounceTimer) {
 			clearTimeout(this.processQueueDebounceTimer)
 		}
+		if (this.processQueueAbortController) {
+			this.processQueueAbortController.abort()
+		}
+		this.processQueueAbortController = new AbortController()
+		const signal = this.processQueueAbortController.signal
 
 		this.processQueueDebounceTimer = setTimeout(() => {
+			if (signal.aborted) {
+				return
+			}
 			this.queueManager.processQueue().catch((error) => {
 				this.log(`[TelemetryClient#debouncedProcessQueue] Error processing queue: ${error}`)
 			})
@@ -218,6 +227,11 @@ export class TelemetryClient extends BaseTelemetryClient {
 			clearTimeout(this.processQueueDebounceTimer)
 			this.processQueueDebounceTimer = null
 		}
+		// Abort any pending operations
+		if (this.processQueueAbortController) {
+			this.processQueueAbortController.abort()
+			this.processQueueAbortController = null
+		}
 
 		// Process any remaining queued events before shutdown if queue is enabled
 		if (this.isQueueEnabled) {
@@ -244,18 +258,25 @@ export class TelemetryClient extends BaseTelemetryClient {
 
 		// Process each event individually to maintain compatibility
 		for (const queuedEvent of events) {
-			const payload = {
-				type: queuedEvent.event.event,
-				properties: await this.getEventProperties(queuedEvent.event),
-			}
+			try {
+				const payload = {
+					type: queuedEvent.event.event,
+					properties: await this.getEventProperties(queuedEvent.event),
+				}
 
-			const result = rooCodeTelemetryEventSchema.safeParse(payload)
-			if (!result.success) {
-				this.log(`[TelemetryClient#processBatchedEvents] Invalid telemetry event: ${result.error.message}`)
-				continue
-			}
+				const result = rooCodeTelemetryEventSchema.safeParse(payload)
+				if (!result.success) {
+					this.log(`[TelemetryClient#processBatchedEvents] Invalid telemetry event: ${result.error.message}`)
+					continue
+				}
 
-			await this.fetch(`events`, { method: "POST", body: JSON.stringify(result.data) })
+				await this.fetch(`events`, { method: "POST", body: JSON.stringify(result.data) })
+			} catch (error) {
+				// Log the error but continue processing other events
+				this.log(`[TelemetryClient#processBatchedEvents] Error processing event ${queuedEvent.id}: ${error}`)
+				// Re-throw to let the queue manager handle retry logic
+				throw error
+			}
 		}
 	}
 }

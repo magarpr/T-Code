@@ -6,6 +6,7 @@ export class ConnectionMonitor extends EventEmitter {
 	private checkInterval: NodeJS.Timeout | null = null
 	private readonly healthCheckEndpoint = "/api/health"
 	private readonly defaultCheckInterval = 30000 // 30 seconds
+	private readonly defaultTimeoutMs = 5000 // 5 seconds
 
 	constructor() {
 		super()
@@ -17,7 +18,7 @@ export class ConnectionMonitor extends EventEmitter {
 	public async checkConnection(): Promise<boolean> {
 		try {
 			const controller = new AbortController()
-			const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+			const timeoutId = setTimeout(() => controller.abort(), this.defaultTimeoutMs)
 
 			const response = await fetch(`${getRooCodeApiUrl()}${this.healthCheckEndpoint}`, {
 				method: "GET",
