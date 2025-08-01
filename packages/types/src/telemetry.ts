@@ -194,6 +194,24 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 export type RooCodeTelemetryEvent = z.infer<typeof rooCodeTelemetryEventSchema>
 
 /**
+ * Telemetry Queue Types
+ */
+
+export interface QueuedTelemetryEvent {
+	id: string
+	event: TelemetryEvent
+	timestamp: number
+	retryCount: number
+	lastRetryTimestamp?: number
+	priority: "high" | "normal"
+}
+
+export interface TelemetryQueueState {
+	events: QueuedTelemetryEvent[]
+	lastProcessedTimestamp: number
+}
+
+/**
  * TelemetryEventSubscription
  */
 

@@ -541,6 +541,7 @@ describe("ClineProvider", () => {
 			autoCondenseContext: true,
 			autoCondenseContextPercent: 100,
 			cloudIsAuthenticated: false,
+			cloudIsOnline: true,
 			sharingEnabled: false,
 			profileThresholds: {},
 			hasOpenedModeSelector: false,
@@ -1363,6 +1364,7 @@ describe("ClineProvider", () => {
 				enableMcpServerCreation: false,
 				mode: "code" as const,
 				experiments: experimentDefault,
+				cloudIsOnline: true,
 			} as any)
 
 			await handler({ type: "getSystemPrompt", mode: "code" })
@@ -1381,6 +1383,7 @@ describe("ClineProvider", () => {
 
 			// Test with mcpEnabled: false
 			vi.spyOn(provider, "getState").mockResolvedValueOnce({
+				cloudIsOnline: true,
 				apiConfiguration: {
 					apiProvider: "openrouter" as const,
 				},
@@ -1426,6 +1429,7 @@ describe("ClineProvider", () => {
 				},
 				mode: "code" as const,
 				experiments: experimentDefault,
+				cloudIsOnline: true,
 			} as any)
 
 			// Trigger getSystemPrompt
@@ -1460,6 +1464,7 @@ describe("ClineProvider", () => {
 				fuzzyMatchThreshold: 0.8,
 				experiments: experimentDefault,
 				browserToolEnabled: true,
+				cloudIsOnline: true,
 			} as any)
 
 			// Trigger getSystemPrompt
@@ -1494,6 +1499,7 @@ describe("ClineProvider", () => {
 				experiments: experimentDefault,
 				enableMcpServerCreation: true,
 				browserToolEnabled: false,
+				cloudIsOnline: true,
 			} as any)
 
 			// Trigger getSystemPrompt
@@ -1526,6 +1532,7 @@ describe("ClineProvider", () => {
 				mcpEnabled: false,
 				browserViewportSize: "900x600",
 				experiments: experimentDefault,
+				cloudIsOnline: true,
 			} as any)
 
 			// Trigger getSystemPrompt for architect mode
@@ -1555,6 +1562,7 @@ describe("ClineProvider", () => {
 				browserToolEnabled: true,
 				mode: "code", // code mode includes browser tool group
 				experiments: experimentDefault,
+				cloudIsOnline: true,
 			} as any)
 
 			await handler({ type: "getSystemPrompt", mode: "code" })
@@ -1577,6 +1585,7 @@ describe("ClineProvider", () => {
 				browserToolEnabled: false,
 				mode: "code",
 				experiments: experimentDefault,
+				cloudIsOnline: true,
 			} as any)
 
 			await handler({ type: "getSystemPrompt", mode: "code" })
@@ -1997,6 +2006,7 @@ describe("ClineProvider", () => {
 			vi.spyOn(provider, "getState").mockResolvedValue({
 				mode: "code",
 				currentApiConfigName: "test-config",
+				cloudIsOnline: true,
 			} as any)
 
 			// Trigger upsertApiConfiguration
@@ -2639,6 +2649,7 @@ describe("ClineProvider - Router Models", () => {
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
 			},
+			cloudIsOnline: true,
 		} as any)
 
 		const mockModels = {
@@ -2700,6 +2711,7 @@ describe("ClineProvider - Router Models", () => {
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
 			},
+			cloudIsOnline: true,
 		} as any)
 
 		const mockModels = {
@@ -2774,6 +2786,7 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				// No litellm config
 			},
+			cloudIsOnline: true,
 		} as any)
 
 		const mockModels = {
@@ -2810,6 +2823,7 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				// No litellm config
 			},
+			cloudIsOnline: true,
 		} as any)
 
 		const mockModels = {
@@ -2851,6 +2865,7 @@ describe("ClineProvider - Router Models", () => {
 				lmStudioModelId: "model-1",
 				lmStudioBaseUrl: "http://localhost:1234",
 			},
+			cloudIsOnline: true,
 		} as any)
 
 		const mockModels = {

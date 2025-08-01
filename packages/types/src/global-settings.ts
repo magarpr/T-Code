@@ -146,6 +146,17 @@ export const globalSettingsSchema = z.object({
 	hasOpenedModeSelector: z.boolean().optional(),
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
+
+	// Telemetry queue storage
+	telemetryQueue: z.array(z.any()).optional(),
+	telemetryQueueMetadata: z
+		.object({
+			lastProcessedTimestamp: z.number(),
+		})
+		.optional(),
+
+	// Telemetry queue feature flag
+	telemetryQueueEnabled: z.boolean().optional(),
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>

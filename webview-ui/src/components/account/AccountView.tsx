@@ -11,11 +11,12 @@ import { telemetryClient } from "@src/utils/TelemetryClient"
 type AccountViewProps = {
 	userInfo: CloudUserInfo | null
 	isAuthenticated: boolean
+	isOnline?: boolean
 	cloudApiUrl?: string
 	onDone: () => void
 }
 
-export const AccountView = ({ userInfo, isAuthenticated, cloudApiUrl, onDone }: AccountViewProps) => {
+export const AccountView = ({ userInfo, isAuthenticated, isOnline = true, cloudApiUrl, onDone }: AccountViewProps) => {
 	const { t } = useAppTranslation()
 	const wasAuthenticatedRef = useRef(false)
 
@@ -61,6 +62,12 @@ export const AccountView = ({ userInfo, isAuthenticated, cloudApiUrl, onDone }: 
 			</div>
 			{isAuthenticated ? (
 				<>
+					{!isOnline && (
+						<div className="flex items-center gap-2 p-3 mb-4 bg-vscode-inputValidation-warningBackground text-vscode-inputValidation-warningForeground rounded">
+							<span className="codicon codicon-warning"></span>
+							<span className="text-sm">{t("account:offlineWarning")}</span>
+						</div>
+					)}
 					{userInfo && (
 						<div className="flex flex-col items-center mb-6">
 							<div className="w-16 h-16 mb-3 rounded-full overflow-hidden">

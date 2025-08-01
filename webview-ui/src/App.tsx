@@ -71,6 +71,7 @@ const App = () => {
 		machineId,
 		cloudUserInfo,
 		cloudIsAuthenticated,
+		cloudIsOnline,
 		cloudApiUrl,
 		renderContext,
 		mdmCompliant,
@@ -250,6 +251,7 @@ const App = () => {
 				<AccountView
 					userInfo={cloudUserInfo}
 					isAuthenticated={cloudIsAuthenticated}
+					isOnline={cloudIsOnline}
 					cloudApiUrl={cloudApiUrl}
 					onDone={() => switchTab("chat")}
 				/>

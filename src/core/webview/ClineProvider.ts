@@ -1521,6 +1521,7 @@ export class ClineProvider
 			historyPreviewCollapsed,
 			cloudUserInfo,
 			cloudIsAuthenticated,
+			cloudIsOnline,
 			sharingEnabled,
 			organizationAllowList,
 			organizationSettingsVersion,
@@ -1636,6 +1637,7 @@ export class ClineProvider
 			historyPreviewCollapsed: historyPreviewCollapsed ?? false,
 			cloudUserInfo,
 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
+			cloudIsOnline: cloudIsOnline ?? true,
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			organizationSettingsVersion,
@@ -1713,6 +1715,16 @@ export class ClineProvider
 		} catch (error) {
 			console.error(
 				`[getState] failed to get cloud authentication state: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+
+		let cloudIsOnline: boolean = true
+
+		try {
+			cloudIsOnline = CloudService.instance.isOnline()
+		} catch (error) {
+			console.error(
+				`[getState] failed to get cloud online state: ${error instanceof Error ? error.message : String(error)}`,
 			)
 		}
 
@@ -1821,6 +1833,7 @@ export class ClineProvider
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			cloudUserInfo,
 			cloudIsAuthenticated,
+			cloudIsOnline,
 			sharingEnabled,
 			organizationAllowList,
 			organizationSettingsVersion,

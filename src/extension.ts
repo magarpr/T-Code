@@ -82,6 +82,30 @@ export async function activate(context: vscode.ExtensionContext) {
 	cloudService.on("auth-state-changed", postStateListener)
 	cloudService.on("user-info", postStateListener)
 	cloudService.on("settings-updated", postStateListener)
+
+	// Set initial online status context
+	vscode.commands.executeCommand("setContext", "roo-cline.isOnline", cloudService.isOnline())
+
+	// Store event listeners for proper cleanup
+	const connectionRestoredListener = () => {
+		vscode.commands.executeCommand("setContext", "roo-cline.isOnline", true)
+	}
+	const connectionLostListener = () => {
+		vscode.commands.executeCommand("setContext", "roo-cline.isOnline", false)
+	}
+
+	// Update context when connection status changes
+	cloudService.onConnectionRestored(connectionRestoredListener)
+	cloudService.onConnectionLost(connectionLostListener)
+
+	// Add cleanup to subscriptions
+	context.subscriptions.push({
+		dispose: () => {
+			cloudService.removeConnectionListener("connection-restored", connectionRestoredListener)
+			cloudService.removeConnectionListener("connection-lost", connectionLostListener)
+		},
+	})
+
 	// Add to subscriptions for proper cleanup on deactivate
 	context.subscriptions.push(cloudService)
 

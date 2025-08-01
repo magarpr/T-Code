@@ -311,6 +311,7 @@ export type ExtensionState = Pick<
 
 	cloudUserInfo: CloudUserInfo | null
 	cloudIsAuthenticated: boolean
+	cloudIsOnline: boolean
 	cloudApiUrl?: string
 	sharingEnabled: boolean
 	organizationAllowList: OrganizationAllowList

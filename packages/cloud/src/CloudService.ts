@@ -19,6 +19,8 @@ import { CloudSettingsService } from "./CloudSettingsService"
 import { StaticSettingsService } from "./StaticSettingsService"
 import { TelemetryClient } from "./TelemetryClient"
 import { ShareService, TaskNotFoundError } from "./ShareService"
+import { ConnectionMonitor } from "./ConnectionMonitor"
+import { TelemetryQueueManager } from "./TelemetryQueueManager"
 
 type AuthStateChangedPayload = CloudServiceEvents["auth-state-changed"][0]
 type AuthUserInfoPayload = CloudServiceEvents["user-info"][0]
@@ -35,6 +37,8 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements vs
 	private settingsService: SettingsService | null = null
 	private telemetryClient: TelemetryClient | null = null
 	private shareService: ShareService | null = null
+	private connectionMonitor: ConnectionMonitor | null = null
+	private queueManager: TelemetryQueueManager | null = null
 	private isInitialized = false
 	private log: (...args: unknown[]) => void
 
@@ -87,8 +91,59 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements vs
 				this.settingsService = cloudSettingsService
 			}
 
-			this.telemetryClient = new TelemetryClient(this.authService, this.settingsService)
+			this.telemetryClient = new TelemetryClient(this.authService, this.settingsService, false, this.log)
 			this.shareService = new ShareService(this.authService, this.settingsService, this.log)
+
+			// Initialize connection monitor and queue manager
+			this.connectionMonitor = new ConnectionMonitor()
+			this.queueManager = TelemetryQueueManager.getInstance()
+
+			// Check if telemetry queue is enabled
+			let isQueueEnabled = true
+			try {
+				const { ContextProxy } = await import("../../../src/core/config/ContextProxy")
+				isQueueEnabled = ContextProxy.instance.getValue("telemetryQueueEnabled") ?? true
+			} catch (_error) {
+				// Default to enabled if we can't access settings
+				this.log("[CloudService] Could not access telemetryQueueEnabled setting, defaulting to enabled")
+			}
+
+			if (isQueueEnabled) {
+				// Set up connection monitoring with debouncing
+				let connectionRestoredDebounceTimer: NodeJS.Timeout | null = null
+				const connectionRestoredDebounceDelay = 3000 // 3 seconds
+
+				this.connectionMonitor.onConnectionRestored(() => {
+					this.log("[CloudService] Connection restored, scheduling queue processing")
+
+					// Clear any existing timer
+					if (connectionRestoredDebounceTimer) {
+						clearTimeout(connectionRestoredDebounceTimer)
+					}
+
+					// Schedule queue processing with debounce
+					connectionRestoredDebounceTimer = setTimeout(() => {
+						this.queueManager
+							?.processQueue()
+							.then(() => {
+								this.log(
+									"[CloudService] Successfully processed queued events after connection restored",
+								)
+							})
+							.catch((error) => {
+								this.log("[CloudService] Error processing queue after connection restored:", error)
+								// Could implement retry logic here if needed in the future
+							})
+					}, connectionRestoredDebounceDelay)
+				})
+
+				// Start monitoring if authenticated
+				if (this.authService.isAuthenticated()) {
+					this.connectionMonitor.startMonitoring()
+				}
+			} else {
+				this.log("[CloudService] Telemetry queue is disabled")
+			}
 
 			try {
 				TelemetryService.instance.register(this.telemetryClient)
@@ -222,6 +277,34 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements vs
 		return this.shareService!.canShareTask()
 	}
 
+	// Connection Status
+
+	public isOnline(): boolean {
+		this.ensureInitialized()
+		return this.connectionMonitor?.getConnectionStatus() ?? true
+	}
+
+	public onConnectionRestored(callback: () => void): void {
+		this.ensureInitialized()
+		if (this.connectionMonitor) {
+			this.connectionMonitor.onConnectionRestored(callback)
+		}
+	}
+
+	public onConnectionLost(callback: () => void): void {
+		this.ensureInitialized()
+		if (this.connectionMonitor) {
+			this.connectionMonitor.onConnectionLost(callback)
+		}
+	}
+
+	public removeConnectionListener(event: "connection-restored" | "connection-lost", callback: () => void): void {
+		this.ensureInitialized()
+		if (this.connectionMonitor) {
+			this.connectionMonitor.removeListener(event, callback)
+		}
+	}
+
 	// Lifecycle
 
 	public dispose(): void {
@@ -234,6 +317,9 @@ export class CloudService extends EventEmitter<CloudServiceEvents> implements vs
 				this.settingsService.off("settings-updated", this.settingsListener)
 			}
 			this.settingsService.dispose()
+		}
+		if (this.connectionMonitor) {
+			this.connectionMonitor.dispose()
 		}
 
 		this.isInitialized = false

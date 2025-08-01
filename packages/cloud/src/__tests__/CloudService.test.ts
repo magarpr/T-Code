@@ -67,6 +67,13 @@ describe("CloudService", () => {
 	}
 	let mockTelemetryClient: {
 		backfillMessages: ReturnType<typeof vi.fn>
+		capture: ReturnType<typeof vi.fn>
+		setProvider: ReturnType<typeof vi.fn>
+		isTelemetryEnabled: ReturnType<typeof vi.fn>
+		updateTelemetryState: ReturnType<typeof vi.fn>
+		shutdown: ReturnType<typeof vi.fn>
+		processBatchedEvents: ReturnType<typeof vi.fn>
+		debouncedProcessQueue: ReturnType<typeof vi.fn>
 	}
 	let mockTelemetryService: {
 		hasInstance: ReturnType<typeof vi.fn>
@@ -143,6 +150,13 @@ describe("CloudService", () => {
 
 		mockTelemetryClient = {
 			backfillMessages: vi.fn().mockResolvedValue(undefined),
+			capture: vi.fn(),
+			setProvider: vi.fn(),
+			isTelemetryEnabled: vi.fn().mockReturnValue(true),
+			updateTelemetryState: vi.fn(),
+			shutdown: vi.fn(),
+			processBatchedEvents: vi.fn().mockResolvedValue(undefined),
+			debouncedProcessQueue: vi.fn(),
 		}
 
 		mockTelemetryService = {
@@ -155,7 +169,24 @@ describe("CloudService", () => {
 		vi.mocked(WebAuthService).mockImplementation(() => mockAuthService as unknown as WebAuthService)
 		vi.mocked(CloudSettingsService).mockImplementation(() => mockSettingsService as unknown as CloudSettingsService)
 		vi.mocked(ShareService).mockImplementation(() => mockShareService as unknown as ShareService)
-		vi.mocked(TelemetryClient).mockImplementation(() => mockTelemetryClient as unknown as TelemetryClient)
+		vi.mocked(TelemetryClient).mockImplementation((authService, settingsService, debug, log) => {
+			// Create a mock instance with all required methods
+			const instance = {
+				...mockTelemetryClient,
+				log: log || console.log,
+				queueManager: {
+					setProcessCallback: vi.fn(),
+					setLogger: vi.fn(),
+					processQueue: vi.fn().mockResolvedValue(undefined),
+					isErrorEvent: vi.fn().mockReturnValue(false),
+					addToQueue: vi.fn().mockResolvedValue(undefined),
+				},
+				processBatchedEvents: mockTelemetryClient.processBatchedEvents,
+			}
+
+			// Return the instance with bound methods
+			return instance as unknown as TelemetryClient
+		})
 
 		vi.mocked(TelemetryService.hasInstance).mockReturnValue(true)
 		Object.defineProperty(TelemetryService, "instance", {

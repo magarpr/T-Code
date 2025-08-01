@@ -206,6 +206,7 @@ describe("mergeExtensionState", () => {
 			autoCondenseContext: true,
 			autoCondenseContextPercent: 100,
 			cloudIsAuthenticated: false,
+			cloudIsOnline: true,
 			sharingEnabled: false,
 			profileThresholds: {},
 			hasOpenedModeSelector: false, // Add the new required property

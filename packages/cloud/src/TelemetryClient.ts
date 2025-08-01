@@ -1,6 +1,7 @@
 import {
 	TelemetryEventName,
 	type TelemetryEvent,
+	type QueuedTelemetryEvent,
 	rooCodeTelemetryEventSchema,
 	type ClineMessage,
 } from "@roo-code/types"
@@ -9,12 +10,21 @@ import { BaseTelemetryClient } from "@roo-code/telemetry"
 import { getRooCodeApiUrl } from "./Config"
 import type { AuthService } from "./auth"
 import type { SettingsService } from "./SettingsService"
+import { TelemetryQueueManager } from "./TelemetryQueueManager"
+import { ContextProxy } from "../../../src/core/config/ContextProxy"
 
 export class TelemetryClient extends BaseTelemetryClient {
+	private queueManager: TelemetryQueueManager
+	private isQueueEnabled: boolean = false
+	private log: (...args: unknown[]) => void
+	private processQueueDebounceTimer: NodeJS.Timeout | null = null
+	private readonly processQueueDebounceDelay = 5000 // 5 seconds
+
 	constructor(
 		private authService: AuthService,
 		private settingsService: SettingsService,
 		debug = false,
+		log?: (...args: unknown[]) => void,
 	) {
 		super(
 			{
@@ -23,6 +33,21 @@ export class TelemetryClient extends BaseTelemetryClient {
 			},
 			debug,
 		)
+
+		this.log = log || console.log
+
+		// Initialize queue manager
+		this.queueManager = TelemetryQueueManager.getInstance()
+		this.queueManager.setProcessCallback(this.processBatchedEvents.bind(this))
+		this.queueManager.setLogger(this.log)
+
+		// Check if queue is enabled
+		try {
+			this.isQueueEnabled = ContextProxy.instance.getValue("telemetryQueueEnabled") ?? true
+		} catch (_error) {
+			// Default to enabled if we can't access settings
+			this.isQueueEnabled = true
+		}
 	}
 
 	private async fetch(path: string, options: RequestInit) {
@@ -33,7 +58,7 @@ export class TelemetryClient extends BaseTelemetryClient {
 		const token = this.authService.getSessionToken()
 
 		if (!token) {
-			console.error(`[TelemetryClient#fetch] Unauthorized: No session token available.`)
+			this.log(`[TelemetryClient#fetch] Unauthorized: No session token available.`)
 			return
 		}
 
@@ -43,9 +68,7 @@ export class TelemetryClient extends BaseTelemetryClient {
 		})
 
 		if (!response.ok) {
-			console.error(
-				`[TelemetryClient#fetch] ${options.method} ${path} -> ${response.status} ${response.statusText}`,
-			)
+			this.log(`[TelemetryClient#fetch] ${options.method} ${path} -> ${response.status} ${response.statusText}`)
 		}
 	}
 
@@ -70,7 +93,7 @@ export class TelemetryClient extends BaseTelemetryClient {
 		const result = rooCodeTelemetryEventSchema.safeParse(payload)
 
 		if (!result.success) {
-			console.error(
+			this.log(
 				`[TelemetryClient#capture] Invalid telemetry event: ${result.error.message} - ${JSON.stringify(payload)}`,
 			)
 
@@ -79,9 +102,33 @@ export class TelemetryClient extends BaseTelemetryClient {
 
 		try {
 			await this.fetch(`events`, { method: "POST", body: JSON.stringify(result.data) })
+			// Process any queued events on successful send if queue is enabled
+			if (this.isQueueEnabled) {
+				this.debouncedProcessQueue()
+			}
 		} catch (error) {
-			console.error(`[TelemetryClient#capture] Error sending telemetry event: ${error}`)
+			this.log(`[TelemetryClient#capture] Error sending telemetry event: ${error}`)
+			// Add to queue for retry if queue is enabled
+			if (this.isQueueEnabled) {
+				const priority = this.queueManager.isErrorEvent(event.event) ? "high" : "normal"
+				await this.queueManager.addToQueue(event, priority)
+			}
 		}
+	}
+
+	/**
+	 * Debounced queue processing to avoid excessive calls
+	 */
+	private debouncedProcessQueue(): void {
+		if (this.processQueueDebounceTimer) {
+			clearTimeout(this.processQueueDebounceTimer)
+		}
+
+		this.processQueueDebounceTimer = setTimeout(() => {
+			this.queueManager.processQueue().catch((error) => {
+				this.log(`[TelemetryClient#debouncedProcessQueue] Error processing queue: ${error}`)
+			})
+		}, this.processQueueDebounceDelay)
 	}
 
 	public async backfillMessages(messages: ClineMessage[], taskId: string): Promise<void> {
@@ -95,7 +142,7 @@ export class TelemetryClient extends BaseTelemetryClient {
 		const token = this.authService.getSessionToken()
 
 		if (!token) {
-			console.error(`[TelemetryClient#backfillMessages] Unauthorized: No session token available.`)
+			this.log(`[TelemetryClient#backfillMessages] Unauthorized: No session token available.`)
 			return
 		}
 
@@ -133,14 +180,14 @@ export class TelemetryClient extends BaseTelemetryClient {
 			})
 
 			if (!response.ok) {
-				console.error(
+				this.log(
 					`[TelemetryClient#backfillMessages] POST events/backfill -> ${response.status} ${response.statusText}`,
 				)
 			} else if (this.debug) {
 				console.info(`[TelemetryClient#backfillMessages] Successfully uploaded messages for task ${taskId}`)
 			}
 		} catch (error) {
-			console.error(`[TelemetryClient#backfillMessages] Error uploading messages: ${error}`)
+			this.log(`[TelemetryClient#backfillMessages] Error uploading messages: ${error}`)
 		}
 	}
 
@@ -165,5 +212,50 @@ export class TelemetryClient extends BaseTelemetryClient {
 		return true
 	}
 
-	public override async shutdown() {}
+	public override async shutdown() {
+		// Clear any pending debounce timer
+		if (this.processQueueDebounceTimer) {
+			clearTimeout(this.processQueueDebounceTimer)
+			this.processQueueDebounceTimer = null
+		}
+
+		// Process any remaining queued events before shutdown if queue is enabled
+		if (this.isQueueEnabled) {
+			try {
+				await this.queueManager.processQueue()
+			} catch (error) {
+				this.log(`[TelemetryClient#shutdown] Error processing queue: ${error}`)
+			}
+		}
+	}
+
+	/**
+	 * Process batched events from the queue
+	 */
+	private async processBatchedEvents(events: QueuedTelemetryEvent[]): Promise<void> {
+		if (!this.authService.isAuthenticated()) {
+			throw new Error("Not authenticated")
+		}
+
+		const token = this.authService.getSessionToken()
+		if (!token) {
+			throw new Error("No session token available")
+		}
+
+		// Process each event individually to maintain compatibility
+		for (const queuedEvent of events) {
+			const payload = {
+				type: queuedEvent.event.event,
+				properties: await this.getEventProperties(queuedEvent.event),
+			}
+
+			const result = rooCodeTelemetryEventSchema.safeParse(payload)
+			if (!result.success) {
+				this.log(`[TelemetryClient#processBatchedEvents] Invalid telemetry event: ${result.error.message}`)
+				continue
+			}
+
+			await this.fetch(`events`, { method: "POST", body: JSON.stringify(result.data) })
+		}
+	}
 }

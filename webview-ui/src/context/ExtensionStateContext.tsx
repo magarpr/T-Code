@@ -228,6 +228,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
 		cloudUserInfo: null,
 		cloudIsAuthenticated: false,
+		cloudIsOnline: true, // Default cloud online status
 		sharingEnabled: false,
 		organizationAllowList: ORGANIZATION_ALLOW_ALL,
 		organizationSettingsVersion: -1,

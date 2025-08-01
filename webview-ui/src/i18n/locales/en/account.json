@@ -10,5 +10,6 @@
 	"cloudBenefitHistory": "Online task history",
 	"cloudBenefitSharing": "Sharing and collaboration features",
 	"cloudBenefitMetrics": "Task, token, and cost-based usage metrics",
-	"visitCloudWebsite": "Visit Roo Code Cloud"
+	"visitCloudWebsite": "Visit Roo Code Cloud",
+	"offlineWarning": "You are currently offline. Telemetry events will be queued and sent when connection is restored."
 }
