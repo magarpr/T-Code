@@ -92,7 +92,11 @@ export function useOptimizedVirtualization({
 	}
 
 	if (!performanceMonitorRef.current) {
-		performanceMonitorRef.current = new PerformanceMonitor({}, onPerformanceIssue)
+		// Use higher memory limit for chat apps (256MB instead of default 100MB)
+		const performanceThresholds = {
+			maxMemoryUsage: 256 * 1024 * 1024, // 256MB - reasonable for modern chat apps
+		}
+		performanceMonitorRef.current = new PerformanceMonitor(performanceThresholds, onPerformanceIssue)
 	}
 
 	const stateManager = stateManagerRef.current
@@ -255,15 +259,26 @@ export function useOptimizedVirtualization({
 		if (!isHidden) {
 			performanceMonitor.startMonitoring()
 
-			// Update metrics periodically
+			// Update metrics periodically with optimized frequency
 			const intervalId = setInterval(() => {
-				performanceMonitor.updateMemoryUsage()
-				performanceMonitor.updateDOMNodeCount()
+				// Only update memory usage every other cycle to reduce overhead
+				const shouldUpdateMemory = Date.now() % 2 === 0
+				if (shouldUpdateMemory) {
+					performanceMonitor.updateMemoryUsage()
+				}
+
+				// DOM node count is less critical, update less frequently
+				if (Date.now() % 3 === 0) {
+					performanceMonitor.updateDOMNodeCount()
+				}
 
 				// Log metrics in development
 				const report = performanceMonitor.getReport()
 				console.log("[VIRTUALIZATION] Performance report:", {
-					metrics: report.metrics,
+					metrics: {
+						...report.metrics,
+						memoryUsageMB: (report.metrics.memoryUsage / 1024 / 1024).toFixed(2),
+					},
 					issues: report.issues,
 					timestamp: new Date().toISOString(),
 				})

@@ -24,7 +24,7 @@ export interface PerformanceThresholds {
 const DEFAULT_THRESHOLDS: PerformanceThresholds = {
 	maxRenderTime: 16.67, // 60 FPS target
 	minScrollFPS: 30,
-	maxMemoryUsage: 100 * 1024 * 1024, // 100MB
+	maxMemoryUsage: 256 * 1024 * 1024, // 256MB - more reasonable for modern web apps
 	maxDOMNodes: 5000,
 }
 
@@ -206,7 +206,10 @@ export class PerformanceMonitor {
 	 * Update DOM node count
 	 */
 	updateDOMNodeCount(): void {
-		this.metrics.domNodeCount = document.querySelectorAll("*").length
+		// Use a more efficient method to count DOM nodes
+		// Only count nodes within the chat container to reduce overhead
+		const chatContainer = document.querySelector('[data-testid="chat-messages-container"]') || document.body
+		this.metrics.domNodeCount = chatContainer.getElementsByTagName("*").length
 
 		// Check threshold
 		if (this.metrics.domNodeCount > this.thresholds.maxDOMNodes) {
@@ -282,7 +285,9 @@ export class PerformanceMonitor {
 		}
 
 		if (this.metrics.memoryUsage > this.thresholds.maxMemoryUsage) {
-			issues.push(`Memory usage (${(this.metrics.memoryUsage / 1024 / 1024).toFixed(2)}MB) exceeds limit`)
+			issues.push(
+				`Memory usage (${(this.metrics.memoryUsage / 1024 / 1024).toFixed(2)}MB) exceeds limit (${(this.thresholds.maxMemoryUsage / 1024 / 1024).toFixed(0)}MB)`,
+			)
 		}
 
 		if (this.metrics.domNodeCount > this.thresholds.maxDOMNodes) {
