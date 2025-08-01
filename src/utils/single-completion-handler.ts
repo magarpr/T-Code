@@ -17,9 +17,9 @@ export async function singleCompletionHandler(apiConfiguration: ProviderSettings
 	const handler = buildApiHandler(apiConfiguration)
 
 	// Check if handler supports single completions
-	if (!("completePrompt" in handler)) {
+	if (!handler.completePrompt) {
 		throw new Error("The selected API provider does not support prompt enhancement")
 	}
 
-	return (handler as SingleCompletionHandler).completePrompt(promptText)
+	return handler.completePrompt(promptText)
 }

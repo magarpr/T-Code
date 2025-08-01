@@ -64,7 +64,7 @@ export interface ApiHandler {
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
 }
 
-export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
+export function buildApiHandler(configuration: ProviderSettings): ApiHandler & Partial<SingleCompletionHandler> {
 	const { apiProvider, ...options } = configuration
 
 	switch (apiProvider) {
