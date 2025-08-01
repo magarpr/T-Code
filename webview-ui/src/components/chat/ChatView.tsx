@@ -545,8 +545,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		isStreaming,
 		isHidden,
 		onPerformanceIssue: (metric, value) => {
-			console.warn(`ChatView performance issue: ${metric} = ${value}`)
+			console.warn(`[VIRTUALIZATION] ChatView performance issue: ${metric} = ${value}`)
 		},
+	})
+
+	console.log("[VIRTUALIZATION] Virtualization hook initialized:", {
+		messagesCount: modifiedMessages.length,
+		isStreaming,
+		isHidden,
+		viewportConfig,
+		timestamp: new Date().toISOString(),
 	})
 
 	// Sync expanded rows with state manager
@@ -559,6 +567,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				}
 			})
 			setExpandedRows(newExpandedRows)
+
+			console.log("[VIRTUALIZATION] Synced expanded rows with state manager:", {
+				expandedCount: Object.keys(newExpandedRows).length,
+				visibleRange,
+				timestamp: new Date().toISOString(),
+			})
 		}
 	}, [modifiedMessages, stateManager, visibleRange])
 
@@ -1404,9 +1418,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// scrolling - use the optimized versions
 	const scrollToBottomSmooth = useMemo(
 		() =>
-			debounce(() => optimizedScrollToBottom("smooth"), 10, {
-				immediate: true,
-			}),
+			debounce(
+				() => {
+					console.log("[VIRTUALIZATION] Smooth scroll to bottom triggered")
+					optimizedScrollToBottom("smooth")
+				},
+				10,
+				{
+					immediate: true,
+				},
+			),
 		[optimizedScrollToBottom],
 	)
 
@@ -1419,6 +1440,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [scrollToBottomSmooth])
 
 	const scrollToBottomAuto = useCallback(() => {
+		console.log("[VIRTUALIZATION] Auto scroll to bottom triggered")
 		optimizedScrollToBottom("auto")
 	}, [optimizedScrollToBottom])
 
@@ -1580,6 +1602,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const itemContent = useCallback(
 		(index: number, messageOrGroup: ClineMessage | ClineMessage[]) => {
+			console.log("[VIRTUALIZATION] Rendering item at index:", {
+				index,
+				isGroup: Array.isArray(messageOrGroup),
+				messageTs: Array.isArray(messageOrGroup) ? messageOrGroup[0]?.ts : messageOrGroup.ts,
+				timestamp: new Date().toISOString(),
+			})
+
 			// browser session group
 			if (Array.isArray(messageOrGroup)) {
 				return (
@@ -1959,12 +1988,21 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							itemContent={itemContent}
 							onScroll={(e) => {
 								const target = e.currentTarget as HTMLElement
-								handleVirtuosoScroll(target.scrollTop)
-								handleScrollStateChange({
+								const scrollState = {
 									scrollTop: target.scrollTop,
 									scrollHeight: target.scrollHeight,
 									viewportHeight: target.clientHeight,
+								}
+
+								console.log("[VIRTUALIZATION] Virtuoso scroll event:", {
+									...scrollState,
+									distanceFromBottom:
+										scrollState.scrollHeight - scrollState.scrollTop - scrollState.viewportHeight,
+									timestamp: new Date().toISOString(),
 								})
+
+								handleVirtuosoScroll(target.scrollTop)
+								handleScrollStateChange(scrollState)
 							}}
 							rangeChanged={handleRangeChange}
 							atBottomStateChange={(atBottom) => {

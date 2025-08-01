@@ -36,16 +36,34 @@ export class AutoScrollManager {
 		const isScrollingUp = deltaScroll < -5 // Small threshold to avoid noise
 		const significantScroll = Math.abs(deltaScroll) > 10
 
+		console.log("[VIRTUALIZATION] AutoScrollManager.handleScroll:", {
+			scrollTop,
+			scrollHeight,
+			clientHeight,
+			deltaScroll,
+			deltaTime,
+			distanceFromBottom,
+			scrollVelocity: this.scrollVelocity,
+			isScrollingUp,
+			significantScroll,
+			timestamp: new Date().toISOString(),
+		})
+
 		if (isScrollingUp && distanceFromBottom > this.atBottomThreshold) {
+			console.log("[VIRTUALIZATION] User scrolling detected: scrolling up")
 			this.isUserScrolling = true
 			this.isScrolling = true
 		} else if (significantScroll && !this.isNearBottom(scrollTop, scrollHeight, clientHeight)) {
+			console.log("[VIRTUALIZATION] User scrolling detected: significant scroll")
 			this.isUserScrolling = true
 			this.isScrolling = true
 		}
 
 		// Reset user scrolling flag if they scroll to bottom
 		if (distanceFromBottom <= this.atBottomThreshold) {
+			if (this.isUserScrolling) {
+				console.log("[VIRTUALIZATION] User scrolling reset: reached bottom")
+			}
 			this.isUserScrolling = false
 		}
 
@@ -61,6 +79,7 @@ export class AutoScrollManager {
 
 		// Set timeout to detect end of scrolling
 		this.scrollTimeout = setTimeout(() => {
+			console.log("[VIRTUALIZATION] Scrolling ended")
 			this.isScrolling = false
 			this.scrollVelocity = 0
 			this.scrollTimeout = null
@@ -75,7 +94,17 @@ export class AutoScrollManager {
 		// 1. User is manually scrolling
 		// 2. There are expanded messages (user might be reading)
 		// 3. Currently in a scroll animation
-		return !this.isUserScrolling && !hasExpandedMessages && !this.isScrolling
+		const shouldScroll = !this.isUserScrolling && !hasExpandedMessages && !this.isScrolling
+
+		console.log("[VIRTUALIZATION] AutoScrollManager.shouldAutoScroll:", {
+			shouldScroll,
+			isUserScrolling: this.isUserScrolling,
+			hasExpandedMessages,
+			isScrolling: this.isScrolling,
+			timestamp: new Date().toISOString(),
+		})
+
+		return shouldScroll
 	}
 
 	/**
@@ -98,6 +127,7 @@ export class AutoScrollManager {
 	 * Reset user scrolling flag
 	 */
 	resetUserScrolling(): void {
+		console.log("[VIRTUALIZATION] User scrolling reset manually")
 		this.isUserScrolling = false
 	}
 
@@ -105,6 +135,7 @@ export class AutoScrollManager {
 	 * Force user scrolling state (e.g., when user expands a message)
 	 */
 	forceUserScrolling(): void {
+		console.log("[VIRTUALIZATION] User scrolling forced")
 		this.isUserScrolling = true
 	}
 
@@ -127,6 +158,16 @@ export class AutoScrollManager {
 	 */
 	getScrollBehavior(currentTop: number, targetTop: number, maxSmoothDistance: number = 5000): ScrollBehavior {
 		const distance = Math.abs(targetTop - currentTop)
+		const behavior = distance > maxSmoothDistance ? "auto" : "smooth"
+
+		console.log("[VIRTUALIZATION] Scroll behavior calculated:", {
+			currentTop,
+			targetTop,
+			distance,
+			maxSmoothDistance,
+			behavior,
+			timestamp: new Date().toISOString(),
+		})
 
 		// Use instant scroll for large jumps to avoid janky animation
 		if (distance > maxSmoothDistance) {

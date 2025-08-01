@@ -104,18 +104,29 @@ export function useOptimizedVirtualization({
 		const devicePerf = detectDevicePerformance()
 		const hasExpanded = stateManager.hasExpandedMessages()
 
+		console.log("[VIRTUALIZATION] Viewport config calculation:", {
+			devicePerf,
+			hasExpanded,
+			isStreaming,
+			timestamp: new Date().toISOString(),
+		})
+
 		// Streaming takes priority
 		if (isStreaming) {
+			console.log("[VIRTUALIZATION] Using streaming viewport config:", config.viewport.streaming)
 			return config.viewport.streaming
 		}
 
 		// Expanded messages need more buffer
 		if (hasExpanded) {
+			console.log("[VIRTUALIZATION] Using expanded viewport config:", config.viewport.expanded)
 			return config.viewport.expanded
 		}
 
 		// Use device-specific config
-		return getViewportConfigForDevice(devicePerf)
+		const deviceConfig = getViewportConfigForDevice(devicePerf)
+		console.log("[VIRTUALIZATION] Using device-specific viewport config:", deviceConfig)
+		return deviceConfig
 	}, [isStreaming, stateManager, config])
 
 	// Create optimized message groups
@@ -132,6 +143,14 @@ export function useOptimizedVirtualization({
 			// Use stored scroll state
 			const { scrollHeight, viewportHeight } = scrollState
 
+			console.log("[VIRTUALIZATION] Scroll event:", {
+				scrollTop,
+				scrollHeight,
+				viewportHeight,
+				distanceFromBottom: scrollHeight - scrollTop - viewportHeight,
+				timestamp: new Date().toISOString(),
+			})
+
 			scrollManager.handleScroll(scrollTop, scrollHeight, viewportHeight)
 
 			// Update performance metrics
@@ -141,6 +160,12 @@ export function useOptimizedVirtualization({
 			const atBottom = scrollManager.isAtBottom(scrollTop, scrollHeight, viewportHeight)
 			setIsAtBottom(atBottom)
 			setShowScrollToBottom(!atBottom && scrollManager.getState().isUserScrolling)
+
+			console.log("[VIRTUALIZATION] Scroll state updated:", {
+				isAtBottom: atBottom,
+				showScrollToBottom: !atBottom && scrollManager.getState().isUserScrolling,
+				userScrolling: scrollManager.getState().isUserScrolling,
+			})
 		},
 		[scrollState, scrollManager, performanceMonitor],
 	)
@@ -148,29 +173,47 @@ export function useOptimizedVirtualization({
 	// Handle visible range changes
 	const handleRangeChange = useCallback(
 		(range: { startIndex: number; endIndex: number }) => {
+			console.log("[VIRTUALIZATION] Visible range changed:", {
+				startIndex: range.startIndex,
+				endIndex: range.endIndex,
+				totalGroups: messageGroups.length,
+				timestamp: new Date().toISOString(),
+			})
+
 			setVisibleRange(range)
 
 			// Update performance metrics
 			const messageIndices = getVisibleMessageIndices(messageGroups, range)
-			performanceMonitor.updateMessageCounts(
-				messages.length,
-				messageIndices.endIndex - messageIndices.startIndex + 1,
-			)
+			const visibleMessageCount = messageIndices.endIndex - messageIndices.startIndex + 1
+			performanceMonitor.updateMessageCounts(messages.length, visibleMessageCount)
+
+			console.log("[VIRTUALIZATION] Performance metrics updated:", {
+				totalMessages: messages.length,
+				visibleMessages: visibleMessageCount,
+				messageIndices,
+			})
 
 			// Pin important messages in visible range
 			const visibleGroups = messageGroups.slice(range.startIndex, range.endIndex + 1)
+			let pinnedCount = 0
 			visibleGroups.forEach((group) => {
 				group.messages.forEach((msg) => {
 					// Pin error messages and active tools
 					if (msg.ask === "api_req_failed" || msg.say === "error" || (msg.ask === "tool" && !msg.partial)) {
 						stateManager.pinMessage(msg.ts)
+						pinnedCount++
 					}
 				})
 			})
 
+			if (pinnedCount > 0) {
+				console.log("[VIRTUALIZATION] Pinned messages in visible range:", pinnedCount)
+			}
+
 			// Cleanup old states periodically
 			if (Math.random() < 0.1) {
 				// 10% chance on each range change
+				console.log("[VIRTUALIZATION] Running state cleanup")
 				stateManager.cleanup()
 			}
 		},
@@ -218,11 +261,15 @@ export function useOptimizedVirtualization({
 				performanceMonitor.updateDOMNodeCount()
 
 				// Log metrics in development
-				if (process.env.NODE_ENV === "development") {
-					const report = performanceMonitor.getReport()
-					if (report.issues.length > 0) {
-						console.warn("Performance issues detected:", report.issues)
-					}
+				const report = performanceMonitor.getReport()
+				console.log("[VIRTUALIZATION] Performance report:", {
+					metrics: report.metrics,
+					issues: report.issues,
+					timestamp: new Date().toISOString(),
+				})
+
+				if (report.issues.length > 0) {
+					console.warn("[VIRTUALIZATION] Performance issues detected:", report.issues)
 				}
 			}, 5000)
 

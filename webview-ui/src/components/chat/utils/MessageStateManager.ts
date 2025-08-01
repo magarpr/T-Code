@@ -25,11 +25,17 @@ export class MessageStateManager {
 			ttl: ttl,
 			updateAgeOnGet: true,
 			updateAgeOnHas: true,
-			dispose: (value, _key) => {
+			dispose: (value, key) => {
 				// Update expanded count when items are evicted
 				if (value.isExpanded) {
 					this.expandedCount = Math.max(0, this.expandedCount - 1)
 				}
+				console.log("[VIRTUALIZATION] MessageStateManager state evicted:", {
+					messageTs: key,
+					wasExpanded: value.isExpanded,
+					expandedCount: this.expandedCount,
+					timestamp: new Date().toISOString(),
+				})
 			},
 		})
 		this.pinnedMessages = new Set<number>()
@@ -39,7 +45,20 @@ export class MessageStateManager {
 	 * Get the state of a message
 	 */
 	getState(messageTs: number): MessageState | undefined {
-		return this.states.get(messageTs)
+		const state = this.states.get(messageTs)
+		if (state) {
+			console.log("[VIRTUALIZATION] MessageStateManager cache hit:", {
+				messageTs,
+				state,
+				timestamp: new Date().toISOString(),
+			})
+		} else {
+			console.log("[VIRTUALIZATION] MessageStateManager cache miss:", {
+				messageTs,
+				timestamp: new Date().toISOString(),
+			})
+		}
+		return state
 	}
 
 	/**
@@ -69,6 +88,15 @@ export class MessageStateManager {
 		} else if (wasExpanded && !newState.isExpanded) {
 			this.expandedCount = Math.max(0, this.expandedCount - 1)
 		}
+
+		console.log("[VIRTUALIZATION] MessageStateManager.setState:", {
+			messageTs,
+			previousState: existing,
+			newState,
+			expandedCount: this.expandedCount,
+			cacheSize: this.states.size,
+			timestamp: new Date().toISOString(),
+		})
 
 		this.states.set(messageTs, newState)
 	}
@@ -172,6 +200,9 @@ export class MessageStateManager {
 			}
 		})
 
+		const previousSize = this.states.size
+		const previousExpandedCount = this.expandedCount
+
 		// Clear all states
 		this.states.clear()
 		this.expandedCount = 0
@@ -183,13 +214,33 @@ export class MessageStateManager {
 				this.expandedCount++
 			}
 		})
+
+		console.log("[VIRTUALIZATION] MessageStateManager cleared:", {
+			previousSize,
+			previousExpandedCount,
+			newSize: this.states.size,
+			newExpandedCount: this.expandedCount,
+			pinnedCount: this.pinnedMessages.size,
+			timestamp: new Date().toISOString(),
+		})
 	}
 
 	/**
 	 * Cleanup old states (called automatically by LRU cache)
 	 */
 	cleanup(): void {
+		const beforeSize = this.states.size
 		this.states.purgeStale()
+		const afterSize = this.states.size
+
+		if (beforeSize !== afterSize) {
+			console.log("[VIRTUALIZATION] MessageStateManager cleanup:", {
+				beforeSize,
+				afterSize,
+				removed: beforeSize - afterSize,
+				timestamp: new Date().toISOString(),
+			})
+		}
 	}
 
 	/**
