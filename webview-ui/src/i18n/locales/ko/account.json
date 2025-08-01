@@ -10,5 +10,6 @@
 	"cloudBenefitHistory": "온라인 작업 기록",
 	"cloudBenefitSharing": "공유 및 협업 기능",
 	"cloudBenefitMetrics": "작업, 토큰, 비용 기반 사용 메트릭",
-	"visitCloudWebsite": "Roo Code Cloud 방문"
+	"visitCloudWebsite": "Roo Code Cloud 방문",
+	"offlineWarning": "현재 오프라인 상태입니다. 텔레메트리 이벤트는 대기열에 저장되며 연결이 복구되면 전송됩니다."
 }

@@ -10,5 +10,6 @@
 	"cloudBenefitHistory": "Historique des tâches en ligne",
 	"cloudBenefitSharing": "Fonctionnalités de partage et collaboration",
 	"cloudBenefitMetrics": "Métriques d'utilisation basées sur les tâches, tokens et coûts",
-	"visitCloudWebsite": "Visiter Roo Code Cloud"
+	"visitCloudWebsite": "Visiter Roo Code Cloud",
+	"offlineWarning": "Tu es actuellement hors ligne. Les événements de télémétrie seront mis en file d'attente et envoyés lorsque la connexion sera rétablie."
 }

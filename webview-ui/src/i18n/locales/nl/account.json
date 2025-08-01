@@ -10,5 +10,6 @@
 	"cloudBenefitHistory": "Online taakgeschiedenis",
 	"cloudBenefitSharing": "Deel- en samenwerkingsfuncties",
 	"cloudBenefitMetrics": "Taak-, token- en kostengebaseerde gebruiksstatistieken",
-	"visitCloudWebsite": "Bezoek Roo Code Cloud"
+	"visitCloudWebsite": "Bezoek Roo Code Cloud",
+	"offlineWarning": "Je bent momenteel offline. Telemetriegebeurtenissen worden in de wachtrij gezet en verzonden zodra de verbinding is hersteld."
 }
