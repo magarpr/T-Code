@@ -122,6 +122,18 @@ Make Roo Code work your way with:
 
 ---
 
+## Known Issues
+
+### Claude Code Provider - CLAUDE.md Injection
+
+When using the Claude Code Provider, the Claude CLI tool (as of version 1.0.62) automatically injects content from `CLAUDE.md` files if they exist in your repository root. This is a behavior of the Claude CLI tool itself, not Roo Code.
+
+**Important:** If you have a `CLAUDE.md` file in your repository and are using the Claude Code Provider, its contents will be automatically included in the context sent to Claude, even without explicitly reading the file.
+
+For more details, see [docs/claude-code-provider-notes.md](docs/claude-code-provider-notes.md).
+
+---
+
 ## Local Setup & Development
 
 1. **Clone** the repo:
