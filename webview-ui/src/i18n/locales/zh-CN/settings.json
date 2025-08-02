@@ -115,7 +115,11 @@
 			"mistralApiKeyRequired": "需要 Mistral API 密钥",
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
-			"modelDimensionMinValue": "模型维度必须大于 0"
+			"modelDimensionMinValue": "模型维度必须大于 0",
+			"invalidRerankerUrl": "Please enter a valid URL for the reranker service",
+			"rerankerUrlRequired": "Reranker URL is required when using local provider",
+			"rerankerApiKeyRequired": "API key is required for this reranker provider",
+			"rerankerModelRequired": "Reranker model is required"
 		},
 		"advancedConfigLabel": "高级配置",
 		"searchMinScoreLabel": "搜索分数阈值",
@@ -123,11 +127,38 @@
 		"searchMinScoreResetTooltip": "恢复默认值 (0.4)",
 		"searchMaxResultsLabel": "最大搜索结果数",
 		"searchMaxResultsDescription": "查询代码库索引时返回的最大搜索结果数。较高的值提供更多上下文，但可能包含相关性较低的结果。",
-		"resetToDefault": "恢复默认值"
+		"resetToDefault": "恢复默认值",
+		"rerankerConfigLabel": "Search Enhancement (Reranking)",
+		"newFeatureBadge": "New",
+		"enableRerankerLabel": "Enable reranking",
+		"enableRerankerDescription": "Use AI models to re-score search results for better relevance",
+		"rerankerProviderLabel": "Reranker Provider",
+		"rerankerProviders": {
+			"local": "Local (Self-hosted)",
+			"cohere": "Cohere",
+			"openai": "OpenAI",
+			"custom": "Custom"
+		},
+		"rerankerUrlLabel": "Reranker Service URL",
+		"rerankerModelLabel": "Reranker Model",
+		"rerankerModelDescription": "Specify the reranker model to use. Leave empty to use the default model for your provider.",
+		"rerankerModelHelperText": "Common models: ms-marco-MiniLM-L-6-v2, ms-marco-TinyBERT-L-2-v2, cross-encoder/ms-marco-electra-base",
+		"rerankerRecommended": "Recommended",
+		"rerankerFaster": "Faster",
+		"rerankerMoreAccurate": "More Accurate",
+		"rerankerApiKeyLabel": "API Key",
+		"rerankerApiKeyPlaceholder": "Enter API key for reranker service",
+		"rerankerProviderComingSoon": "This reranker provider is coming soon. Please use the local provider for now.",
+		"advancedRerankerSettings": "Advanced Settings",
+		"rerankerTopNLabel": "Candidates to rerank",
+		"rerankerTopNDescription": "Number of initial search results to send for reranking (higher = more accurate but slower)",
+		"rerankerTopKLabel": "Results to return",
+		"rerankerTopKDescription": "Number of final reranked results to return",
+		"rerankerTimeoutLabel": "Timeout",
+		"rerankerTimeoutDescription": "Maximum time to wait for reranking response"
 	},
 	"autoApprove": {
 		"description": "允许 Roo 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
-		"enabled": "自动批准已启用",
 		"toggleAriaLabel": "切换自动批准",
 		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
 		"readOnly": {
