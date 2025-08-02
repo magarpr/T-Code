@@ -36,7 +36,7 @@ export async function fetchInstructionsTool(
 				return
 			}
 
-			// Bow fetch the content and provide it to the agent.
+			// Now fetch the content and provide it to the agent.
 			const provider = cline.providerRef.deref()
 			const mcpHub = provider?.getMcpHub()
 
@@ -46,7 +46,12 @@ export async function fetchInstructionsTool(
 
 			const diffStrategy = cline.diffStrategy
 			const context = provider?.context
-			const content = await fetchInstructions(task, { mcpHub, diffStrategy, context })
+
+			// Get the enableMcpServerCreation setting from provider state
+			const state = await provider?.getState()
+			const enableMcpServerCreation = state?.enableMcpServerCreation ?? true
+
+			const content = await fetchInstructions(task, { mcpHub, diffStrategy, context, enableMcpServerCreation })
 
 			if (!content) {
 				pushToolResult(formatResponse.toolError(`Invalid instructions request: ${task}`))
