@@ -245,8 +245,8 @@ export async function executeCommand(
 		// Check if PREVENT_TERMINAL_DISRUPTION is enabled
 		// This experimental feature allows commands to run in the background without
 		// automatically switching focus to the terminal output, improving workflow continuity
-		const state = await task.providerRef.deref()?.getState()
-		const state = await task.providerRef.deref()?.getState()
+		const provider = task.providerRef.deref()
+		const state = provider ? await provider.getState() : null
 		const preventTerminalDisruption = experiments.isEnabled(
 			state?.experiments ?? {},
 			EXPERIMENT_IDS.PREVENT_TERMINAL_DISRUPTION,
