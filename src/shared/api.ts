@@ -50,7 +50,7 @@ export const shouldUseReasoningEffort = ({
 }): boolean => (!!model.supportsReasoningEffort && !!settings?.reasoningEffort) || !!model.reasoningEffort
 
 export const DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS = 16_384
-export const DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS = 8_192
+export const DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS = 128
 
 // Max Tokens
 
