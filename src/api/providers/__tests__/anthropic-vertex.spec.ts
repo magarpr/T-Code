@@ -757,7 +757,7 @@ describe("VertexHandler", () => {
 				modelMaxTokens: 10000,
 			})
 
-			expect(handlerWithDefaultBudget.getModel().reasoningBudget).toBe(8000) // 80% of 10000
+			expect(handlerWithDefaultBudget.getModel().reasoningBudget).toBe(1024) // Using default thinking tokens
 
 			// Test with minimum thinking budget (should be at least 1024)
 			const handlerWithSmallMaxTokens = new AnthropicVertexHandler({

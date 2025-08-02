@@ -200,10 +200,10 @@ describe("getModelParams", () => {
 				maxTokens: 2000,
 				temperature: 1.0, // Thinking models require temperature 1.0.
 				reasoningEffort: undefined,
-				reasoningBudget: 0.8 * 2000,
+				reasoningBudget: 1024,
 				reasoning: {
 					type: "enabled",
-					budget_tokens: 1600,
+					budget_tokens: 1024,
 				},
 			})
 		})
@@ -220,11 +220,11 @@ describe("getModelParams", () => {
 				model,
 			})
 
-			expect(result.reasoningBudget).toBe(1600) // 80% of 2000
+			expect(result.reasoningBudget).toBe(1024) // Using default thinking tokens
 			expect(result.temperature).toBe(1.0)
 			expect(result.reasoning).toEqual({
 				type: "enabled",
-				budget_tokens: 1600,
+				budget_tokens: 1024,
 			})
 		})
 
@@ -257,10 +257,10 @@ describe("getModelParams", () => {
 				maxTokens: 3000,
 				temperature: 1.0,
 				reasoningEffort: undefined,
-				reasoningBudget: 2400, // 80% of 3000,
+				reasoningBudget: 1024, // Using default thinking tokens
 				reasoning: {
 					type: "enabled",
-					budget_tokens: 2400,
+					budget_tokens: 1024,
 				},
 			})
 		})
@@ -367,10 +367,10 @@ describe("getModelParams", () => {
 				maxTokens: DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS,
 				temperature: 1.0,
 				reasoningEffort: undefined,
-				reasoningBudget: DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS,
+				reasoningBudget: 1024,
 				reasoning: {
 					type: "enabled",
-					budget_tokens: DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS,
+					budget_tokens: 1024,
 				},
 			})
 		})
@@ -557,7 +557,7 @@ describe("getModelParams", () => {
 			})
 
 			expect(result.maxTokens).toBe(16384) // Default value.
-			expect(result.reasoningBudget).toBe(8192) // Default value.
+			expect(result.reasoningBudget).toBe(1024) // Default value.
 		})
 	})
 
@@ -577,7 +577,7 @@ describe("getModelParams", () => {
 				model,
 			})
 
-			expect(result.reasoningBudget).toBe(3200) // 80% of 4000
+			expect(result.reasoningBudget).toBe(1024) // Using default thinking tokens
 			expect(result.reasoningEffort).toBeUndefined()
 			expect(result.temperature).toBe(1.0)
 		})
@@ -717,7 +717,7 @@ describe("getModelParams", () => {
 				model,
 			})
 
-			expect(result.reasoning).toEqual({ max_tokens: 3200 })
+			expect(result.reasoning).toEqual({ max_tokens: 1024 })
 		})
 
 		it("should return undefined reasoning for anthropic with reasoning effort", () => {
