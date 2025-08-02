@@ -17,6 +17,7 @@ import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { Package } from "../../shared/package"
 import { t } from "../../i18n"
+import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 
 class ShellIntegrationError extends Error {}
 
@@ -241,7 +242,17 @@ export async function executeCommand(
 	const terminal = await TerminalRegistry.getOrCreateTerminal(workingDir, !!customCwd, task.taskId, terminalProvider)
 
 	if (terminal instanceof Terminal) {
-		terminal.terminal.show(true)
+		// Check if PREVENT_TERMINAL_DISRUPTION is enabled
+		const state = await task.providerRef.deref()?.getState()
+		const preventTerminalDisruption = experiments.isEnabled(
+			state?.experiments ?? {},
+			EXPERIMENT_IDS.PREVENT_TERMINAL_DISRUPTION,
+		)
+
+		// Only show terminal if PREVENT_TERMINAL_DISRUPTION is not enabled
+		if (!preventTerminalDisruption) {
+			terminal.terminal.show(true)
+		}
 
 		// Update the working directory in case the terminal we asked for has
 		// a different working directory so that the model will know where the
