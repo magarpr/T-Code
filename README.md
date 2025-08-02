@@ -97,6 +97,17 @@ Roo Code comes with powerful [tools](https://docs.roocode.com/basic-usage/how-to
 
 MCP extends Roo Code's capabilities by allowing you to add unlimited custom tools. Integrate with external APIs, connect to databases, or create specialized development tools - MCP provides the framework to expand Roo Code's functionality to meet your specific needs.
 
+### Cloud Integration
+
+Roo Code offers powerful cloud features for teams:
+
+- **[Cloud-Synchronized Profiles](docs/CLOUD_INTEGRATION.md#cloud-synchronized-provider-profiles):** Share API configurations across your team
+- **[Task Sharing](docs/CLOUD_INTEGRATION.md#task-sharing):** Share conversations and results with colleagues
+- **[Organization Settings](docs/CLOUD_INTEGRATION.md#organization-settings):** Centralized configuration management
+- **[Task Analytics](docs/CLOUD_INTEGRATION.md#task-lifecycle-events):** Track usage and performance metrics
+
+See our [Cloud Integration Guide](docs/CLOUD_INTEGRATION.md) and [Quick Start Guide](docs/CLOUD_QUICKSTART.md) for details.
+
 ### Customization
 
 Make Roo Code work your way with:
