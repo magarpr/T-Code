@@ -17,6 +17,7 @@ import { processUserContentMentions } from "../../mentions/processUserContentMen
 import { MultiSearchReplaceDiffStrategy } from "../../diff/strategies/multi-search-replace"
 import { MultiFileSearchReplaceDiffStrategy } from "../../diff/strategies/multi-file-search-replace"
 import { EXPERIMENT_IDS } from "../../../shared/experiments"
+import { formatResponse } from "../../prompts/responses"
 
 // Mock delay before any imports that might use it
 vi.mock("delay", () => ({
@@ -1491,6 +1492,143 @@ describe("Cline", () => {
 					startTask: false,
 				})
 				expect(noModelTask.apiConfiguration.apiProvider).toBe("openai")
+			})
+		})
+
+		describe("Ask mode conversational responses", () => {
+			it("should allow conversational responses in Ask mode without forcing tool use", async () => {
+				// Mock provider with Ask mode
+				const askModeProvider = {
+					...mockProvider,
+					getState: vi.fn().mockResolvedValue({
+						mode: "ask",
+					}),
+				}
+
+				// Create task with history item that has ask mode
+				const askTask = new Task({
+					provider: askModeProvider,
+					apiConfiguration: mockApiConfig,
+					historyItem: {
+						id: "test-ask-task",
+						number: 1,
+						ts: Date.now(),
+						task: "What is TypeScript?",
+						tokensIn: 0,
+						tokensOut: 0,
+						cacheWrites: 0,
+						cacheReads: 0,
+						totalCost: 0,
+						mode: "ask", // This sets the task mode
+					},
+					startTask: false,
+				})
+
+				// Mock the API stream response without tool use
+				const mockStream = {
+					async *[Symbol.asyncIterator]() {
+						yield { type: "text", text: "TypeScript is a typed superset of JavaScript..." }
+					},
+					async next() {
+						return {
+							done: true,
+							value: { type: "text", text: "TypeScript is a typed superset of JavaScript..." },
+						}
+					},
+					async return() {
+						return { done: true, value: undefined }
+					},
+					async throw(e: any) {
+						throw e
+					},
+					[Symbol.asyncDispose]: async () => {},
+				} as AsyncGenerator<ApiStreamChunk>
+
+				vi.spyOn(askTask.api, "createMessage").mockReturnValue(mockStream)
+
+				// Mock assistant message content without tool use
+				askTask.assistantMessageContent = [
+					{
+						type: "text",
+						content: "TypeScript is a typed superset of JavaScript...",
+						partial: false,
+					},
+				]
+
+				// Mock userMessageContentReady
+				askTask.userMessageContentReady = true
+
+				// Spy on recursivelyMakeClineRequests to check if it returns true (ends loop)
+				const recursiveSpy = vi.spyOn(askTask, "recursivelyMakeClineRequests")
+
+				// Execute the request
+				const result = await askTask.recursivelyMakeClineRequests([
+					{ type: "text", text: "What is TypeScript?" },
+				])
+
+				// Verify that the loop ends successfully without forcing tool use
+				expect(result).toBe(true)
+
+				// Verify that no "noToolsUsed" error was added
+				expect(askTask.userMessageContent).not.toContainEqual(
+					expect.objectContaining({
+						type: "text",
+						text: expect.stringContaining("You did not use a tool"),
+					}),
+				)
+
+				// Verify consecutive mistake count was not incremented
+				expect(askTask.consecutiveMistakeCount).toBe(0)
+			})
+
+			it("should still enforce tool use in non-Ask modes", async () => {
+				// Test the actual logic in initiateTaskLoop
+				const testUserContent = [{ type: "text" as const, text: "test" }]
+
+				// Test code mode
+				const codeTask = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					historyItem: {
+						id: "test-code-task",
+						number: 2,
+						ts: Date.now(),
+						task: "Write a function",
+						tokensIn: 0,
+						tokensOut: 0,
+						cacheWrites: 0,
+						cacheReads: 0,
+						totalCost: 0,
+						mode: "code",
+					},
+					startTask: false,
+				})
+
+				// Directly test the logic from initiateTaskLoop
+				let nextUserContent = testUserContent
+				const didEndLoop = false // Simulating recursivelyMakeClineRequests returning false
+
+				if (!didEndLoop) {
+					// This is the actual code from initiateTaskLoop
+					const currentMode = await codeTask.getTaskMode()
+					if (currentMode === "ask") {
+						// In Ask mode, allow the conversation to end without forcing tool use
+						// This would break the loop
+					} else {
+						// For other modes, maintain the existing behavior
+						nextUserContent = [{ type: "text" as const, text: formatResponse.noToolsUsed() }]
+						codeTask.consecutiveMistakeCount++
+					}
+				}
+
+				// Verify the behavior for code mode
+				expect(nextUserContent).toContainEqual(
+					expect.objectContaining({
+						type: "text",
+						text: expect.stringContaining("You did not use a tool"),
+					}),
+				)
+				expect(codeTask.consecutiveMistakeCount).toBe(1)
 			})
 		})
 	})

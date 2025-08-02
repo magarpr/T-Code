@@ -1325,8 +1325,16 @@ export class Task extends EventEmitter<TaskEvents> {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed() }]
-				this.consecutiveMistakeCount++
+				// Check if we're in Ask mode before forcing tool use
+				const currentMode = await this.getTaskMode()
+				if (currentMode === "ask") {
+					// In Ask mode, allow the conversation to end without forcing tool use
+					break
+				} else {
+					// For other modes, maintain the existing behavior
+					nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed() }]
+					this.consecutiveMistakeCount++
+				}
 			}
 		}
 	}
@@ -1740,8 +1748,17 @@ export class Task extends EventEmitter<TaskEvents> {
 				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
 				if (!didToolUse) {
-					this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
-					this.consecutiveMistakeCount++
+					// Check if we're in Ask mode - if so, allow conversational responses without tools
+					const currentMode = await this.getTaskMode()
+					if (currentMode === "ask") {
+						// In Ask mode, we don't force tool use for conversational responses
+						// This prevents the repetitive response issue
+						return true // End the loop successfully
+					} else {
+						// For other modes, maintain the existing behavior
+						this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
+						this.consecutiveMistakeCount++
+					}
 				}
 
 				const recDidEndLoop = await this.recursivelyMakeClineRequests(this.userMessageContent)
