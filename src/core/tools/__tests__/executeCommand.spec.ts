@@ -42,6 +42,7 @@ describe("executeCommand", () => {
 			getState: vitest.fn().mockResolvedValue({
 				terminalOutputLineLimit: 500,
 				terminalShellIntegrationDisabled: false,
+				experiments: {},
 			}),
 		}
 
@@ -50,7 +51,7 @@ describe("executeCommand", () => {
 			cwd: "/test/project",
 			taskId: "test-task-123",
 			providerRef: {
-				deref: vitest.fn().mockResolvedValue(mockProvider),
+				deref: vitest.fn().mockReturnValue(mockProvider),
 			},
 			say: vitest.fn().mockResolvedValue(undefined),
 			terminalProcess: undefined,
