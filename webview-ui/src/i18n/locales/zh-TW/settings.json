@@ -228,6 +228,8 @@
 		"searchProviderPlaceholder": "搜尋供應商",
 		"noProviderMatchFound": "找不到供應商",
 		"noMatchFound": "找不到符合的設定檔",
+		"requestTimeout": "請求逾時 (毫秒)",
+		"requestTimeoutDescription": "API 請求的逾時時間（毫秒）。適用於處理提示需要時間的慢速本地模型。預設值：1800000（30 分鐘）",
 		"vscodeLmDescription": "VS Code 語言模型 API 可以讓您使用其他擴充功能（如 GitHub Copilot）提供的模型。最簡單的方式是從 VS Code Marketplace 安裝 Copilot 和 Copilot Chat 擴充套件。",
 		"awsCustomArnUse": "輸入您要使用的模型的有效 Amazon Bedrock ARN。格式範例：",
 		"awsCustomArnDesc": "確保 ARN 中的區域與您上面選擇的 AWS 區域相符。",

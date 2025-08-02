@@ -228,6 +228,8 @@
 		"searchProviderPlaceholder": "공급자 검색",
 		"noProviderMatchFound": "공급자를 찾을 수 없습니다",
 		"noMatchFound": "일치하는 프로필이 없습니다",
+		"requestTimeout": "요청 시간 초과 (ms)",
+		"requestTimeoutDescription": "API 요청에 대한 시간 초과(밀리초). 프롬프트 처리에 시간이 걸리는 느린 로컬 모델에 유용합니다. 기본값: 1800000 (30분)",
 		"vscodeLmDescription": "VS Code 언어 모델 API를 사용하면 GitHub Copilot을 포함한 기타 VS Code 확장 프로그램이 제공하는 모델을 실행할 수 있습니다. 시작하려면 VS Code 마켓플레이스에서 Copilot 및 Copilot Chat 확장 프로그램을 설치하는 것이 가장 쉽습니다.",
 		"awsCustomArnUse": "사용하려는 모델의 유효한 Amazon Bedrock ARN을 입력하세요. 형식 예시:",
 		"awsCustomArnDesc": "ARN의 리전이 위에서 선택한 AWS 리전과 일치하는지 확인하세요.",

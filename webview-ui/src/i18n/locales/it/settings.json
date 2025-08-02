@@ -226,6 +226,8 @@
 		"cannotDeleteOnlyProfile": "Impossibile eliminare l'unico profilo",
 		"searchPlaceholder": "Cerca profili",
 		"noMatchFound": "Nessun profilo corrispondente trovato",
+		"requestTimeout": "Timeout richiesta (ms)",
+		"requestTimeoutDescription": "Timeout in millisecondi per le richieste API. Utile per modelli locali lenti che richiedono tempo per elaborare i prompt. Predefinito: 1800000 (30 minuti)",
 		"searchProviderPlaceholder": "Cerca fornitori",
 		"noProviderMatchFound": "Nessun fornitore trovato",
 		"vscodeLmDescription": "L'API del Modello di Linguaggio di VS Code consente di eseguire modelli forniti da altre estensioni di VS Code (incluso, ma non limitato a, GitHub Copilot). Il modo più semplice per iniziare è installare le estensioni Copilot e Copilot Chat dal VS Code Marketplace.",

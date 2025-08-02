@@ -232,6 +232,8 @@
 		"searchProviderPlaceholder": "Cari penyedia",
 		"noProviderMatchFound": "Tidak ada penyedia ditemukan",
 		"noMatchFound": "Tidak ada profil yang cocok ditemukan",
+		"requestTimeout": "Batas waktu permintaan (ms)",
+		"requestTimeoutDescription": "Batas waktu dalam milidetik untuk permintaan API. Berguna untuk model lokal yang lambat yang membutuhkan waktu untuk memproses prompt. Default: 1800000 (30 menit)",
 		"vscodeLmDescription": " API Model Bahasa VS Code memungkinkan kamu menjalankan model yang disediakan oleh ekstensi VS Code lainnya (termasuk namun tidak terbatas pada GitHub Copilot). Cara termudah untuk memulai adalah menginstal ekstensi Copilot dan Copilot Chat dari VS Code Marketplace.",
 		"awsCustomArnUse": "Masukkan ARN Amazon Bedrock yang valid untuk model yang ingin kamu gunakan. Contoh format:",
 		"awsCustomArnDesc": "Pastikan region di ARN cocok dengan AWS Region yang kamu pilih di atas.",
