@@ -2,8 +2,8 @@ import * as vscode from "vscode"
 import delay from "delay"
 
 import type { CommandId } from "@roo-code/types"
-import { TelemetryService, QueuedTelemetryClient } from "@roo-code/telemetry"
-import { CloudService } from "@roo-code/cloud"
+import { TelemetryService } from "@roo-code/telemetry"
+import { CloudService, QueuedTelemetryClient } from "@roo-code/cloud"
 
 import { Package } from "../shared/package"
 import { getCommand } from "../utils/commands"
