@@ -22,6 +22,7 @@ export abstract class BaseTerminal implements RooTerminal {
 	public taskId?: string
 	public process?: RooTerminalProcess
 	public completedProcesses: RooTerminalProcess[] = []
+	public activeEnvironment?: string
 
 	constructor(provider: RooTerminalProvider, id: number, cwd: string) {
 		this.provider = provider
@@ -30,6 +31,7 @@ export abstract class BaseTerminal implements RooTerminal {
 		this.busy = false
 		this.running = false
 		this.streamClosed = false
+		this.activeEnvironment = undefined
 	}
 
 	public getCurrentWorkingDirectory(): string {

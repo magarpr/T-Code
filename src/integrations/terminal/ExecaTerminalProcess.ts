@@ -4,6 +4,7 @@ import process from "process"
 
 import type { RooTerminal } from "./types"
 import { BaseTerminalProcess } from "./BaseTerminalProcess"
+import { TerminalRegistry } from "./TerminalRegistry"
 
 export class ExecaTerminalProcess extends BaseTerminalProcess {
 	private terminalRef: WeakRef<RooTerminal>
@@ -34,6 +35,10 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 
 	public override async run(command: string) {
 		this.command = command
+
+		// Check if this is a conda activate/deactivate command
+		const condaActivateMatch = command.match(/^\s*conda\s+activate\s+(.+)$/i)
+		const condaDeactivateMatch = command.match(/^\s*conda\s+deactivate\s*$/i)
 
 		try {
 			this.isHot = true
@@ -145,6 +150,25 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 		this.terminal.setActiveStream(undefined)
 		this.emitRemainingBufferIfListening()
 		this.stopHotTimer()
+
+		// Update the terminal's active environment based on the command and output
+		if (condaActivateMatch) {
+			// Extract the environment name from the command
+			const envName = condaActivateMatch[1].trim()
+			// Check if activation was successful by looking for common error indicators in output
+			const cleanOutput = this.fullOutput.toLowerCase()
+			if (!cleanOutput.includes("error") && !cleanOutput.includes("not found")) {
+				this.terminal.activeEnvironment = envName
+				TerminalRegistry.setLastActiveEnvironment(envName)
+				console.log(`[ExecaTerminalProcess] Conda environment activated: ${envName}`)
+			}
+		} else if (condaDeactivateMatch) {
+			// Clear the active environment on deactivation
+			this.terminal.activeEnvironment = undefined
+			TerminalRegistry.setLastActiveEnvironment(undefined)
+			console.log("[ExecaTerminalProcess] Conda environment deactivated")
+		}
+
 		this.emit("completed", this.fullOutput)
 		this.emit("continue")
 		this.subprocess = undefined

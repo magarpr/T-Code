@@ -13,6 +13,7 @@ import { inspect } from "util"
 import type { ExitCodeDetails } from "./types"
 import { BaseTerminalProcess } from "./BaseTerminalProcess"
 import { Terminal } from "./Terminal"
+import { TerminalRegistry } from "./TerminalRegistry"
 
 export class TerminalProcess extends BaseTerminalProcess {
 	private terminalRef: WeakRef<Terminal>
@@ -46,6 +47,10 @@ export class TerminalProcess extends BaseTerminalProcess {
 
 	public override async run(command: string) {
 		this.command = command
+
+		// Check if this is a conda activate/deactivate command
+		const condaActivateMatch = command.match(/^\s*conda\s+activate\s+(.+)$/i)
+		const condaDeactivateMatch = command.match(/^\s*conda\s+deactivate\s*$/i)
 
 		const terminal = this.terminal.terminal
 
@@ -246,6 +251,24 @@ export class TerminalProcess extends BaseTerminalProcess {
 
 		if (match !== undefined) {
 			this.fullOutput = match
+		}
+
+		// Update the terminal's active environment based on the command and output
+		if (condaActivateMatch) {
+			// Extract the environment name from the command
+			const envName = condaActivateMatch[1].trim()
+			// Check if activation was successful by looking for common success indicators in output
+			const cleanOutput = this.removeEscapeSequences(this.fullOutput).toLowerCase()
+			if (!cleanOutput.includes("error") && !cleanOutput.includes("not found")) {
+				this.terminal.activeEnvironment = envName
+				TerminalRegistry.setLastActiveEnvironment(envName)
+				console.log(`[TerminalProcess] Conda environment activated: ${envName}`)
+			}
+		} else if (condaDeactivateMatch) {
+			// Clear the active environment on deactivation
+			this.terminal.activeEnvironment = undefined
+			TerminalRegistry.setLastActiveEnvironment(undefined)
+			console.log("[TerminalProcess] Conda environment deactivated")
 		}
 
 		// For now we don't want this delaying requests since we don't send

@@ -22,6 +22,7 @@ export class TerminalRegistry {
 	private static nextTerminalId = 1
 	private static disposables: vscode.Disposable[] = []
 	private static isInitialized = false
+	private static lastActiveEnvironment?: string
 
 	public static initialize() {
 		if (this.isInitialized) {
@@ -160,7 +161,7 @@ export class TerminalRegistry {
 		let terminal: RooTerminal | undefined
 
 		// First priority: Find a terminal already assigned to this task with
-		// matching directory.
+		// matching directory and environment.
 		if (taskId) {
 			terminal = terminals.find((t) => {
 				if (t.busy || t.taskId !== taskId || t.provider !== provider) {
@@ -173,11 +174,34 @@ export class TerminalRegistry {
 					return false
 				}
 
-				return arePathsEqual(vscode.Uri.file(cwd).fsPath, terminalCwd)
+				// Prefer terminals with matching environment
+				const envMatch = this.lastActiveEnvironment ? t.activeEnvironment === this.lastActiveEnvironment : true
+
+				return arePathsEqual(vscode.Uri.file(cwd).fsPath, terminalCwd) && envMatch
 			})
 		}
 
-		// Second priority: Find any available terminal with matching directory.
+		// Second priority: Find any available terminal with matching directory and environment.
+		if (!terminal) {
+			terminal = terminals.find((t) => {
+				if (t.busy || t.provider !== provider) {
+					return false
+				}
+
+				const terminalCwd = t.getCurrentWorkingDirectory()
+
+				if (!terminalCwd) {
+					return false
+				}
+
+				// Prefer terminals with matching environment
+				const envMatch = this.lastActiveEnvironment ? t.activeEnvironment === this.lastActiveEnvironment : true
+
+				return arePathsEqual(vscode.Uri.file(cwd).fsPath, terminalCwd) && envMatch
+			})
+		}
+
+		// Third priority: Find any available terminal with matching directory (ignore environment).
 		if (!terminal) {
 			terminal = terminals.find((t) => {
 				if (t.busy || t.provider !== provider) {
@@ -194,8 +218,14 @@ export class TerminalRegistry {
 			})
 		}
 
-		// Third priority: Find any non-busy terminal (only if directory is not
-		// required).
+		// Fourth priority: Find any non-busy terminal with matching environment (only if directory is not required).
+		if (!terminal && !requiredCwd && this.lastActiveEnvironment) {
+			terminal = terminals.find(
+				(t) => !t.busy && t.provider === provider && t.activeEnvironment === this.lastActiveEnvironment,
+			)
+		}
+
+		// Fifth priority: Find any non-busy terminal (only if directory is not required).
 		if (!terminal && !requiredCwd) {
 			terminal = terminals.find((t) => !t.busy && t.provider === provider)
 		}
@@ -332,5 +362,22 @@ export class TerminalRegistry {
 	private static removeTerminal(id: number) {
 		ShellIntegrationManager.zshCleanupTmpDir(id)
 		this.terminals = this.terminals.filter((t) => t.id !== id)
+	}
+
+	/**
+	 * Updates the last active conda environment
+	 * @param environment The environment name or undefined to clear
+	 */
+	public static setLastActiveEnvironment(environment?: string): void {
+		this.lastActiveEnvironment = environment
+		console.log(`[TerminalRegistry] Last active environment updated: ${environment || "none"}`)
+	}
+
+	/**
+	 * Gets the last active conda environment
+	 * @returns The last active environment name or undefined
+	 */
+	public static getLastActiveEnvironment(): string | undefined {
+		return this.lastActiveEnvironment
 	}
 }
