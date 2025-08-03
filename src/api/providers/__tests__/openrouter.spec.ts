@@ -265,6 +265,199 @@ describe("OpenRouterHandler", () => {
 			const generator = handler.createMessage("test", [])
 			await expect(generator.next()).rejects.toThrow("OpenRouter API Error 500: API Error")
 		})
+
+		it("parses <think> blocks correctly", async () => {
+			const handler = new OpenRouterHandler(mockOptions)
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "test-id",
+						choices: [{ delta: { content: "Before <think>This is thinking content</think> After" } }],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 10, completion_tokens: 20 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should have 3 text/reasoning chunks and 1 usage chunk
+			expect(chunks).toHaveLength(4)
+			expect(chunks[0]).toEqual({ type: "text", text: "Before " })
+			expect(chunks[1]).toEqual({ type: "reasoning", text: "This is thinking content" })
+			expect(chunks[2]).toEqual({ type: "text", text: " After" })
+			expect(chunks[3]).toEqual({
+				type: "usage",
+				inputTokens: 10,
+				outputTokens: 20,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
+
+		it("parses <tool_call> blocks correctly", async () => {
+			const handler = new OpenRouterHandler(mockOptions)
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "test-id",
+						choices: [
+							{ delta: { content: "Text before <tool_call>Tool call content</tool_call> text after" } },
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 10, completion_tokens: 20 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should have 3 text chunks (before, tool call formatted, after) and 1 usage chunk
+			expect(chunks).toHaveLength(4)
+			expect(chunks[0]).toEqual({ type: "text", text: "Text before " })
+			expect(chunks[1]).toEqual({ type: "text", text: "[Tool Call]: Tool call content" })
+			expect(chunks[2]).toEqual({ type: "text", text: " text after" })
+			expect(chunks[3]).toEqual({
+				type: "usage",
+				inputTokens: 10,
+				outputTokens: 20,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
+
+		it("handles nested and multiple XML blocks", async () => {
+			const handler = new OpenRouterHandler(mockOptions)
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									content: "<think>First think</think> middle <tool_call>Tool usage</tool_call>",
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: { content: " <think>Second think</think> end" } }],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 10, completion_tokens: 20 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Verify all chunks are parsed correctly
+			expect(chunks).toContainEqual({ type: "reasoning", text: "First think" })
+			expect(chunks).toContainEqual({ type: "text", text: " middle " })
+			expect(chunks).toContainEqual({ type: "text", text: "[Tool Call]: Tool usage" })
+			expect(chunks).toContainEqual({ type: "text", text: " " })
+			expect(chunks).toContainEqual({ type: "reasoning", text: "Second think" })
+			expect(chunks).toContainEqual({ type: "text", text: " end" })
+			expect(chunks).toContainEqual({
+				type: "usage",
+				inputTokens: 10,
+				outputTokens: 20,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
+
+		it("handles incomplete XML blocks across chunks", async () => {
+			const handler = new OpenRouterHandler(mockOptions)
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "test-id",
+						choices: [{ delta: { content: "Start <thi" } }],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: { content: "nk>Thinking content</thi" } }],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: { content: "nk> End" } }],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 10, completion_tokens: 20 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should correctly parse the thinking block even when split across chunks
+			expect(chunks).toContainEqual({ type: "text", text: "Start " })
+			expect(chunks).toContainEqual({ type: "reasoning", text: "Thinking content" })
+			expect(chunks).toContainEqual({ type: "text", text: " End" })
+			expect(chunks).toContainEqual({
+				type: "usage",
+				inputTokens: 10,
+				outputTokens: 20,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
 	})
 
 	describe("completePrompt", () => {

@@ -18,6 +18,7 @@ import { addCacheBreakpoints as addAnthropicCacheBreakpoints } from "../transfor
 import { addCacheBreakpoints as addGeminiCacheBreakpoints } from "../transform/caching/gemini"
 import type { OpenRouterReasoningParams } from "../transform/reasoning"
 import { getModelParams } from "../transform/model-params"
+import { XmlMatcher } from "../../utils/xml-matcher"
 
 import { getModels } from "./fetchers/modelCache"
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
@@ -137,6 +138,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const stream = await this.client.chat.completions.create(completionParams)
 
 		let lastUsage: CompletionUsage | undefined = undefined
+		let buffer = ""
 
 		for await (const chunk of stream) {
 			// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
@@ -153,12 +155,75 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 
 			if (delta?.content) {
-				yield { type: "text", text: delta.content }
+				buffer += delta.content
+
+				// Process complete XML blocks
+				let processed = true
+				while (processed) {
+					processed = false
+
+					// Check for complete <think> blocks
+					const thinkMatch = buffer.match(/^(.*?)<think>([\s\S]*?)<\/think>(.*)$/s)
+					if (thinkMatch) {
+						const [, before, content, after] = thinkMatch
+						if (before) {
+							yield { type: "text", text: before }
+						}
+						yield { type: "reasoning", text: content }
+						buffer = after
+						processed = true
+						continue
+					}
+
+					// Check for complete <tool_call> blocks
+					const toolMatch = buffer.match(/^(.*?)<tool_call>([\s\S]*?)<\/tool_call>(.*)$/s)
+					if (toolMatch) {
+						const [, before, content, after] = toolMatch
+						if (before) {
+							yield { type: "text", text: before }
+						}
+						yield { type: "text", text: `[Tool Call]: ${content}` }
+						buffer = after
+						processed = true
+						continue
+					}
+
+					// Check if we have an incomplete tag at the end
+					const incompleteTag = buffer.match(/^(.*?)(<(?:think|tool_call)[^>]*(?:>[\s\S]*)?)?$/s)
+					if (incompleteTag && incompleteTag[2]) {
+						// We have an incomplete tag, yield the text before it and keep the tag in buffer
+						const [, before, tag] = incompleteTag
+						if (before) {
+							yield { type: "text", text: before }
+							buffer = tag
+						}
+						break
+					}
+
+					// No tags found or incomplete, yield all content except potential start of a tag
+					const tagStart = buffer.lastIndexOf("<")
+					if (tagStart === -1) {
+						// No < found, yield all
+						if (buffer) {
+							yield { type: "text", text: buffer }
+							buffer = ""
+						}
+					} else if (tagStart > 0) {
+						// Yield content before the <
+						yield { type: "text", text: buffer.substring(0, tagStart) }
+						buffer = buffer.substring(tagStart)
+					}
+				}
 			}
 
 			if (chunk.usage) {
 				lastUsage = chunk.usage
 			}
+		}
+
+		// Process any remaining content in the buffer
+		if (buffer) {
+			yield { type: "text", text: buffer }
 		}
 
 		if (lastUsage) {
