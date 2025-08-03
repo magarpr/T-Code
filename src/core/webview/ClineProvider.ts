@@ -740,6 +740,18 @@ export class ClineProvider
 			experiments,
 		} = await this.getState()
 
+		// Restore parent and root tasks if their IDs are stored in the history item
+		let rootTask: Task | undefined = historyItem.rootTask
+		let parentTask: Task | undefined = historyItem.parentTask
+
+		// If we don't have the actual task objects but have their IDs, try to find them in the stack
+		if (!rootTask && historyItem.rootTaskId) {
+			rootTask = this.clineStack.find((task) => task.taskId === historyItem.rootTaskId)
+		}
+		if (!parentTask && historyItem.parentTaskId) {
+			parentTask = this.clineStack.find((task) => task.taskId === historyItem.parentTaskId)
+		}
+
 		const task = new Task({
 			provider: this,
 			apiConfiguration,
@@ -749,8 +761,8 @@ export class ClineProvider
 			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			historyItem,
 			experiments,
-			rootTask: historyItem.rootTask,
-			parentTask: historyItem.parentTask,
+			rootTask,
+			parentTask,
 			taskNumber: historyItem.number,
 			onCreated: (instance) => this.emit(RooCodeEventName.TaskCreated, instance),
 		})
@@ -1344,6 +1356,23 @@ export class ClineProvider
 		if (id !== this.getCurrentCline()?.taskId) {
 			// Non-current task.
 			const { historyItem } = await this.getTaskWithId(id)
+
+			// Check if this task has parent/child relationships that need to be restored
+			if (historyItem.taskHierarchy && historyItem.taskHierarchy.length > 0) {
+				// Restore the entire task hierarchy from root to this task
+				const taskHistory = this.getGlobalState("taskHistory") ?? []
+
+				// First, restore all parent tasks in the hierarchy
+				for (const taskId of historyItem.taskHierarchy) {
+					const parentHistoryItem = taskHistory.find((item: HistoryItem) => item.id === taskId)
+					if (parentHistoryItem && !this.clineStack.find((task) => task.taskId === taskId)) {
+						// This parent task is not in the stack, so restore it
+						await this.initClineWithHistoryItem(parentHistoryItem)
+					}
+				}
+			}
+
+			// Now restore the requested task
 			await this.initClineWithHistoryItem(historyItem) // Clears existing task.
 		}
 

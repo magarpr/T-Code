@@ -129,6 +129,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	readonly taskNumber: number
 	readonly workspacePath: string
 
+	// Store task IDs for persistence
+	readonly rootTaskId: string | undefined = undefined
+	readonly parentTaskId: string | undefined = undefined
+
 	/**
 	 * The mode associated with this task. Persisted across sessions
 	 * to maintain user context when reopening tasks from history.
@@ -306,6 +310,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.rootTask = rootTask
 		this.parentTask = parentTask
 		this.taskNumber = taskNumber
+
+		// Store task IDs for persistence
+		this.rootTaskId = rootTask?.taskId
+		this.parentTaskId = parentTask?.taskId
 
 		// Store the task's mode when it's created.
 		// For history items, use the stored mode; for new tasks, we'll set it
@@ -582,6 +590,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				globalStoragePath: this.globalStoragePath,
 				workspace: this.cwd,
 				mode: this._taskMode || defaultModeSlug, // Use the task's own mode, not the current provider mode
+				parentTaskId: this.parentTaskId,
+				rootTaskId: this.rootTaskId,
+				taskHierarchy: this.getTaskHierarchy(),
 			})
 
 			this.emit(RooCodeEventName.TaskTokenUsageUpdated, this.taskId, tokenUsage)
@@ -2151,5 +2162,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	public get cwd() {
 		return this.workspacePath
+	}
+
+	// Get task hierarchy for persistence
+	public getTaskHierarchy(): string[] {
+		const hierarchy: string[] = []
+		let currentTask: Task | undefined = this.parentTask
+
+		while (currentTask) {
+			hierarchy.unshift(currentTask.taskId)
+			currentTask = currentTask.parentTask
+		}
+
+		return hierarchy
 	}
 }

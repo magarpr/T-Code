@@ -19,6 +19,9 @@ export type TaskMetadataOptions = {
 	globalStoragePath: string
 	workspace: string
 	mode?: string
+	parentTaskId?: string
+	rootTaskId?: string
+	taskHierarchy?: string[]
 }
 
 export async function taskMetadata({
@@ -28,6 +31,9 @@ export async function taskMetadata({
 	globalStoragePath,
 	workspace,
 	mode,
+	parentTaskId,
+	rootTaskId,
+	taskHierarchy,
 }: TaskMetadataOptions) {
 	const taskDir = await getTaskDirectoryPath(globalStoragePath, taskId)
 
@@ -95,6 +101,9 @@ export async function taskMetadata({
 		size: taskDirSize,
 		workspace,
 		mode,
+		parentTaskId,
+		rootTaskId,
+		taskHierarchy,
 	}
 
 	return { historyItem, tokenUsage }
