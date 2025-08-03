@@ -14,6 +14,8 @@ import { RefreshTimer } from "./RefreshTimer"
 import type { SettingsService } from "./SettingsService"
 
 const ORGANIZATION_SETTINGS_CACHE_KEY = "organization-settings"
+const MAX_FETCH_RETRIES = 3
+const INITIAL_RETRY_DELAY = 1000 // 1 second
 
 export interface SettingsServiceEvents {
 	"settings-updated": [
@@ -73,6 +75,67 @@ export class CloudSettingsService extends EventEmitter<SettingsServiceEvents> im
 		}
 	}
 
+	/**
+	 * Performs network diagnostics to help debug connectivity issues
+	 */
+	private async performNetworkDiagnostics(url: string): Promise<void> {
+		this.log("[cloud-settings] Performing network diagnostics...")
+
+		// Check if we're in a proxy environment
+		const httpProxy = process.env.HTTP_PROXY || process.env.http_proxy
+		const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy
+		const noProxy = process.env.NO_PROXY || process.env.no_proxy
+
+		if (httpProxy || httpsProxy) {
+			this.log("  Proxy configuration detected:")
+			if (httpProxy) this.log(`    HTTP_PROXY: ${httpProxy}`)
+			if (httpsProxy) this.log(`    HTTPS_PROXY: ${httpsProxy}`)
+			if (noProxy) this.log(`    NO_PROXY: ${noProxy}`)
+		}
+
+		// Log Node.js version (can affect fetch behavior)
+		this.log(`  Node.js version: ${process.version}`)
+
+		// Log VSCode version
+		this.log(`  VSCode version: ${vscode.version}`)
+
+		// Try to parse the URL to check components
+		try {
+			const parsedUrl = new URL(url)
+			this.log(`  URL components:`)
+			this.log(`    Protocol: ${parsedUrl.protocol}`)
+			this.log(`    Hostname: ${parsedUrl.hostname}`)
+			this.log(`    Port: ${parsedUrl.port || "(default)"}`)
+			this.log(`    Path: ${parsedUrl.pathname}`)
+		} catch (e) {
+			this.log(`  Failed to parse URL: ${e}`)
+		}
+	}
+
+	/**
+	 * Attempts to fetch with retry logic and enhanced error handling
+	 */
+	private async fetchWithRetry(url: string, options: RequestInit, retryCount: number = 0): Promise<Response> {
+		try {
+			const response = await fetch(url, options)
+			return response
+		} catch (error) {
+			if (retryCount >= MAX_FETCH_RETRIES) {
+				throw error
+			}
+
+			const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount)
+			this.log(
+				`[cloud-settings] Fetch failed, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_FETCH_RETRIES})`,
+			)
+
+			// Wait before retrying
+			await new Promise((resolve) => setTimeout(resolve, delay))
+
+			return this.fetchWithRetry(url, options, retryCount + 1)
+		}
+	}
+
 	private async fetchSettings(): Promise<boolean> {
 		const token = this.authService.getSessionToken()
 
@@ -80,8 +143,13 @@ export class CloudSettingsService extends EventEmitter<SettingsServiceEvents> im
 			return false
 		}
 
+		const apiUrl = getRooCodeApiUrl()
+		const fullUrl = `${apiUrl}/api/organization-settings`
+
 		try {
-			const response = await fetch(`${getRooCodeApiUrl()}/api/organization-settings`, {
+			this.log(`[cloud-settings] Attempting to fetch from: ${fullUrl}`)
+
+			const response = await this.fetchWithRetry(fullUrl, {
 				headers: {
 					Authorization: `Bearer ${token}`,
 				},
@@ -119,7 +187,39 @@ export class CloudSettingsService extends EventEmitter<SettingsServiceEvents> im
 
 			return true
 		} catch (error) {
-			this.log("[cloud-settings] Error fetching organization settings:", error)
+			// Enhanced error logging with more details
+			if (error instanceof Error) {
+				this.log("[cloud-settings] Error fetching organization settings:")
+				this.log("  Error name:", error.name)
+				this.log("  Error message:", error.message)
+
+				// Check for specific error types
+				if (error.message.includes("fetch failed")) {
+					this.log("  This appears to be a network connectivity issue.")
+					this.log("  Possible causes:")
+					this.log("    - Network proxy configuration")
+					this.log("    - Firewall blocking the request")
+					this.log("    - DNS resolution issues")
+					this.log("    - VSCode extension host network restrictions")
+					this.log(`  Target URL: ${fullUrl}`)
+
+					// Perform additional network diagnostics
+					await this.performNetworkDiagnostics(fullUrl)
+
+					// Log additional error details if available
+					if ("cause" in error && error.cause) {
+						this.log("  Underlying cause:", error.cause)
+					}
+				}
+
+				// Log stack trace for debugging
+				if (error.stack) {
+					this.log("  Stack trace:", error.stack)
+				}
+			} else {
+				this.log("[cloud-settings] Unknown error type:", error)
+			}
+
 			return false
 		}
 	}

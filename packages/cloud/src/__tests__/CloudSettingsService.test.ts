@@ -347,18 +347,119 @@ describe("CloudSettingsService", () => {
 		})
 
 		it("should handle fetch errors gracefully", async () => {
+			vi.useFakeTimers()
 			mockAuthService.getSessionToken.mockReturnValue("valid-token")
+
+			// Mock fetch to always fail
 			vi.mocked(fetch).mockRejectedValue(new Error("Network error"))
 
 			// Get the callback function passed to RefreshTimer
 			const timerCallback = vi.mocked(RefreshTimer).mock.calls[0][0].callback
-			const result = await timerCallback()
+			const resultPromise = timerCallback()
+
+			// Advance through all retries
+			await vi.advanceTimersByTimeAsync(1000) // First retry
+			await vi.advanceTimersByTimeAsync(2000) // Second retry
+			await vi.advanceTimersByTimeAsync(4000) // Third retry
+
+			const result = await resultPromise
 
 			expect(result).toBe(false)
-			expect(mockLog).toHaveBeenCalledWith(
-				"[cloud-settings] Error fetching organization settings:",
-				expect.any(Error),
-			)
+			expect(mockLog).toHaveBeenCalledWith("[cloud-settings] Error fetching organization settings:")
+			expect(mockLog).toHaveBeenCalledWith("  Error name:", "Error")
+			expect(mockLog).toHaveBeenCalledWith("  Error message:", "Network error")
+
+			vi.useRealTimers()
+		})
+
+		it("should retry on fetch failure with exponential backoff", async () => {
+			vi.useFakeTimers()
+			mockAuthService.getSessionToken.mockReturnValue("valid-token")
+
+			// Mock fetch to fail twice then succeed
+			vi.mocked(fetch)
+				.mockRejectedValueOnce(new Error("fetch failed"))
+				.mockRejectedValueOnce(new Error("fetch failed"))
+				.mockResolvedValueOnce({
+					ok: true,
+					json: vi.fn().mockResolvedValue(mockSettings),
+				} as unknown as Response)
+
+			// Get the callback function passed to RefreshTimer
+			const timerCallback = vi.mocked(RefreshTimer).mock.calls[0][0].callback
+			const resultPromise = timerCallback()
+
+			// First retry after 1 second
+			await vi.advanceTimersByTimeAsync(1000)
+
+			// Second retry after 2 seconds (exponential backoff)
+			await vi.advanceTimersByTimeAsync(2000)
+
+			const result = await resultPromise
+
+			expect(result).toBe(true)
+			expect(fetch).toHaveBeenCalledTimes(3)
+			expect(mockLog).toHaveBeenCalledWith("[cloud-settings] Fetch failed, retrying in 1000ms (attempt 1/3)")
+			expect(mockLog).toHaveBeenCalledWith("[cloud-settings] Fetch failed, retrying in 2000ms (attempt 2/3)")
+
+			vi.useRealTimers()
+		})
+
+		it("should fail after max retries", async () => {
+			vi.useFakeTimers()
+			mockAuthService.getSessionToken.mockReturnValue("valid-token")
+
+			// Mock fetch to always fail
+			vi.mocked(fetch).mockRejectedValue(new Error("fetch failed"))
+
+			// Get the callback function passed to RefreshTimer
+			const timerCallback = vi.mocked(RefreshTimer).mock.calls[0][0].callback
+			const resultPromise = timerCallback()
+
+			// Advance through all retries
+			await vi.advanceTimersByTimeAsync(1000) // First retry
+			await vi.advanceTimersByTimeAsync(2000) // Second retry
+			await vi.advanceTimersByTimeAsync(4000) // Third retry
+
+			const result = await resultPromise
+
+			expect(result).toBe(false)
+			expect(fetch).toHaveBeenCalledTimes(4) // Initial + 3 retries
+			expect(mockLog).toHaveBeenCalledWith("  This appears to be a network connectivity issue.")
+
+			vi.useRealTimers()
+		})
+
+		it("should perform network diagnostics on fetch failed error", async () => {
+			vi.useFakeTimers()
+			mockAuthService.getSessionToken.mockReturnValue("valid-token")
+			const fetchError = new Error("fetch failed")
+			vi.mocked(fetch).mockRejectedValue(fetchError)
+
+			// Mock environment variables
+			process.env.HTTPS_PROXY = "http://proxy.example.com:8080"
+
+			// Get the callback function passed to RefreshTimer
+			const timerCallback = vi.mocked(RefreshTimer).mock.calls[0][0].callback
+			const resultPromise = timerCallback()
+
+			// Advance through all retries
+			await vi.advanceTimersByTimeAsync(1000) // First retry
+			await vi.advanceTimersByTimeAsync(2000) // Second retry
+			await vi.advanceTimersByTimeAsync(4000) // Third retry
+
+			const result = await resultPromise
+
+			expect(result).toBe(false)
+			expect(mockLog).toHaveBeenCalledWith("[cloud-settings] Performing network diagnostics...")
+			expect(mockLog).toHaveBeenCalledWith("  Proxy configuration detected:")
+			expect(mockLog).toHaveBeenCalledWith("    HTTPS_PROXY: http://proxy.example.com:8080")
+			expect(mockLog).toHaveBeenCalledWith(expect.stringContaining("  Node.js version:"))
+			expect(mockLog).toHaveBeenCalledWith(expect.stringContaining("  VSCode version:"))
+
+			// Clean up
+			delete process.env.HTTPS_PROXY
+			vi.useRealTimers()
 		})
 
 		it("should handle invalid response format", async () => {
