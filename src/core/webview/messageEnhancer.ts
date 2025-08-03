@@ -1,4 +1,4 @@
-import { ProviderSettings, ClineMessage, GlobalState, TelemetryEventName } from "@roo-code/types"
+import { ProviderSettings, ClineMessage, GlobalState, TelemetryEventName, getModelId } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { supportPrompt } from "../../shared/support-prompt"
 import { singleCompletionHandler } from "../../utils/single-completion-handler"
@@ -58,6 +58,55 @@ export class MessageEnhancer {
 				}
 			}
 
+			// Check if external MCP server is enabled
+			if (configToUse.enhancePrompt?.useExternalServer && configToUse.enhancePrompt?.endpoint) {
+				try {
+					// Prepare context messages for external server
+					const contextMessages =
+						currentClineMessages
+							?.filter((msg) => {
+								if (msg.type === "ask" && msg.text) return true
+								if (msg.type === "say" && msg.say === "text" && msg.text) return true
+								return false
+							})
+							.slice(-10)
+							.map((msg) => ({
+								role: msg.type === "ask" ? "user" : "assistant",
+								content: msg.text || "",
+							})) || []
+
+					// Make request to external MCP server
+					const response = await fetch(configToUse.enhancePrompt.endpoint, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							prompt: text,
+							context: contextMessages,
+							model: getModelId(configToUse) || "unknown",
+						}),
+					})
+
+					if (!response.ok) {
+						throw new Error(`External server returned ${response.status}: ${response.statusText}`)
+					}
+
+					const result = await response.json()
+
+					if (result.enhancedPrompt) {
+						return {
+							success: true,
+							enhancedText: result.enhancedPrompt,
+						}
+					} else {
+						throw new Error("External server response missing 'enhancedPrompt' field")
+					}
+				} catch (err) {
+					console.error("Failed to enhance prompt via external server:", err)
+					// Fallback to default logic
+				}
+			}
+
+			// Default internal enhancement logic
 			// Prepare the prompt to enhance
 			let promptToEnhance = text
 

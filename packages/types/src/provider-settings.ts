@@ -77,6 +77,14 @@ const baseProviderSettingsSchema = z.object({
 	reasoningEffort: reasoningEffortsSchema.optional(),
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
+
+	// External MCP server settings for enhance prompt
+	enhancePrompt: z
+		.object({
+			useExternalServer: z.boolean().optional(),
+			endpoint: z.string().url().optional(),
+		})
+		.optional(),
 })
 
 // Several of the providers share common model config properties.
