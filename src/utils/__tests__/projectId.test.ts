@@ -76,6 +76,7 @@ describe("projectId", () => {
 
 	describe("generateProjectId", () => {
 		it("should generate and save a new project ID", async () => {
+			vi.mocked(fileExistsAtPath).mockResolvedValue(false)
 			vi.mocked(fs.writeFile).mockResolvedValue()
 
 			const result = await generateProjectId(mockWorkspaceRoot)
@@ -84,7 +85,18 @@ describe("projectId", () => {
 			expect(fs.writeFile).toHaveBeenCalledWith(mockProjectIdPath, result, "utf8")
 		})
 
+		it("should return existing project ID if already exists", async () => {
+			vi.mocked(fileExistsAtPath).mockResolvedValue(true)
+			vi.mocked(fs.readFile).mockResolvedValue(mockProjectId)
+
+			const result = await generateProjectId(mockWorkspaceRoot)
+
+			expect(result).toBe(mockProjectId)
+			expect(fs.writeFile).not.toHaveBeenCalled()
+		})
+
 		it("should throw error if write fails", async () => {
+			vi.mocked(fileExistsAtPath).mockResolvedValue(false)
 			vi.mocked(fs.writeFile).mockRejectedValue(new Error("Write failed"))
 
 			await expect(generateProjectId(mockWorkspaceRoot)).rejects.toThrow("Write failed")

@@ -1643,6 +1643,16 @@ export class ClineProvider
 		const currentMode = mode ?? defaultModeSlug
 		const hasSystemPromptOverride = await this.hasFileBasedSystemPromptOverride(currentMode)
 
+		// Get the workspace storage key (project ID or workspace path)
+		const { getWorkspaceStorageKey } = await import("../../utils/projectId")
+		const workspaceStorageKey = await getWorkspaceStorageKey(cwd)
+
+		// Filter task history to only show tasks for the current workspace
+		const filteredTaskHistory = (taskHistory || [])
+			.filter((item: HistoryItem) => item.workspace === workspaceStorageKey)
+			.filter((item: HistoryItem) => item.ts && item.task)
+			.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts)
+
 		return {
 			version: this.context.extension?.packageJSON?.version ?? "",
 			apiConfiguration,
@@ -1664,12 +1674,10 @@ export class ClineProvider
 			autoCondenseContextPercent: autoCondenseContextPercent ?? 100,
 			uriScheme: vscode.env.uriScheme,
 			currentTaskItem: this.getCurrentCline()?.taskId
-				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentCline()?.taskId)
+				? filteredTaskHistory.find((item: HistoryItem) => item.id === this.getCurrentCline()?.taskId)
 				: undefined,
 			clineMessages: this.getCurrentCline()?.clineMessages || [],
-			taskHistory: (taskHistory || [])
-				.filter((item: HistoryItem) => item.ts && item.task)
-				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
+			taskHistory: filteredTaskHistory,
 			soundEnabled: soundEnabled ?? false,
 			ttsEnabled: ttsEnabled ?? false,
 			ttsSpeed: ttsSpeed ?? 1.0,
@@ -2113,6 +2121,32 @@ export class ClineProvider
 			...(todos && { todos }),
 			...gitInfo,
 		}
+	}
+
+	/**
+	 * Migrate existing tasks to use the new project ID
+	 * @param workspacePath The workspace path to migrate from
+	 * @param projectId The new project ID to migrate to
+	 * @returns The number of tasks migrated
+	 */
+	async migrateTasksToProjectId(workspacePath: string, projectId: string): Promise<number> {
+		const taskHistory = this.getGlobalState("taskHistory") ?? []
+		let migratedCount = 0
+
+		// Update all tasks that match the workspace path
+		const updatedHistory = taskHistory.map((item: HistoryItem) => {
+			if (item.workspace === workspacePath) {
+				migratedCount++
+				return { ...item, workspace: projectId }
+			}
+			return item
+		})
+
+		if (migratedCount > 0) {
+			await this.updateGlobalState("taskHistory", updatedHistory)
+		}
+
+		return migratedCount
 	}
 }
 

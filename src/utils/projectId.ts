@@ -38,11 +38,18 @@ export async function getProjectId(workspaceRoot: string): Promise<string | null
 
 /**
  * Generates a new project ID and writes it to the .rooprojectid file.
+ * If a project ID already exists, returns the existing one.
  *
  * @param workspaceRoot The root directory of the workspace
- * @returns The generated project ID
+ * @returns The generated or existing project ID
  */
 export async function generateProjectId(workspaceRoot: string): Promise<string> {
+	// Check if project ID already exists
+	const existingId = await getProjectId(workspaceRoot)
+	if (existingId) {
+		return existingId
+	}
+
 	const projectId = uuidv4()
 	const projectIdPath = path.join(workspaceRoot, PROJECT_ID_FILENAME)
 

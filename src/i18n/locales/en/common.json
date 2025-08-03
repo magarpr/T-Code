@@ -120,7 +120,11 @@
 		"image_copied_to_clipboard": "Image data URI copied to clipboard",
 		"image_saved": "Image saved to {{path}}",
 		"mode_exported": "Mode '{{mode}}' exported successfully",
-		"mode_imported": "Mode imported successfully"
+		"mode_imported": "Mode imported successfully",
+		"project_id_generated": "Project ID generated: {{projectId}}",
+		"project_id_already_exists": "Project ID already exists: {{projectId}}",
+		"project_id_generated_with_migration": "Project ID generated: {{projectId}}. Migrated {{count}} task(s) to use the new ID.",
+		"project_id_generation_failed": "Failed to generate project ID: {{error}}"
 	},
 	"answers": {
 		"yes": "Yes",

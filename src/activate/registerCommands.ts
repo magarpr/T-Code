@@ -228,13 +228,38 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 		}
 
 		try {
-			const projectId = await generateProjectId(workspacePath)
-			vscode.window.showInformationMessage(t("common:info.project_id_generated", { projectId }))
+			// Check if project ID already exists
+			const { getProjectId } = await import("../utils/projectId")
+			const existingId = await getProjectId(workspacePath)
 
-			// Notify the provider to update any cached state
+			if (existingId) {
+				vscode.window.showInformationMessage(
+					t("common:info.project_id_already_exists", { projectId: existingId }),
+				)
+				return
+			}
+
+			const projectId = await generateProjectId(workspacePath)
+
+			// Migrate existing tasks to use the new project ID
 			const visibleProvider = getVisibleProviderOrLog(outputChannel)
 			if (visibleProvider) {
+				const migrated = await visibleProvider.migrateTasksToProjectId(workspacePath, projectId)
+
+				if (migrated > 0) {
+					vscode.window.showInformationMessage(
+						t("common:info.project_id_generated_with_migration", {
+							projectId,
+							count: migrated,
+						}),
+					)
+				} else {
+					vscode.window.showInformationMessage(t("common:info.project_id_generated", { projectId }))
+				}
+
 				await visibleProvider.postStateToWebview()
+			} else {
+				vscode.window.showInformationMessage(t("common:info.project_id_generated", { projectId }))
 			}
 		} catch (error) {
 			vscode.window.showErrorMessage(
