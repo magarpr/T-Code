@@ -269,4 +269,91 @@ describe("CommandPatternSelector", () => {
 		expect(screen.getByText("npm install express")).toBeInTheDocument()
 		expect(screen.queryByDisplayValue("npm install react")).not.toBeInTheDocument()
 	})
+
+	it("should not show full command as first pattern when it contains separators", () => {
+		const propsWithSeparators = {
+			...defaultProps,
+			command: "npm install && npm test",
+			patterns: [
+				{ pattern: "npm install", description: "Install npm packages" },
+				{ pattern: "npm test", description: "Run tests" },
+			],
+		}
+
+		render(
+			<TestWrapper>
+				<CommandPatternSelector {...propsWithSeparators} />
+			</TestWrapper>,
+		)
+
+		// Click to expand the component
+		const expandButton = screen.getByRole("button")
+		fireEvent.click(expandButton)
+
+		// The full command with separators should NOT be shown
+		expect(screen.queryByText("npm install && npm test")).not.toBeInTheDocument()
+
+		// But the individual patterns should be shown
+		expect(screen.getByText("npm install")).toBeInTheDocument()
+		expect(screen.getByText("npm test")).toBeInTheDocument()
+	})
+
+	it("should show full command when it does not contain separators", () => {
+		const propsWithoutSeparators = {
+			...defaultProps,
+			command: "npm install express",
+			patterns: [
+				{ pattern: "npm install", description: "Install npm packages" },
+				{ pattern: "npm", description: "NPM command" },
+			],
+		}
+
+		render(
+			<TestWrapper>
+				<CommandPatternSelector {...propsWithoutSeparators} />
+			</TestWrapper>,
+		)
+
+		// Click to expand the component
+		const expandButton = screen.getByRole("button")
+		fireEvent.click(expandButton)
+
+		// The full command without separators should be shown
+		expect(screen.getByText("npm install express")).toBeInTheDocument()
+
+		// And the patterns should also be shown
+		expect(screen.getByText("npm install")).toBeInTheDocument()
+		expect(screen.getByText("npm")).toBeInTheDocument()
+	})
+
+	it("should handle various separator types correctly", () => {
+		const testCases = [
+			{ command: "git add . && git commit", shouldShowFull: false },
+			{ command: "ls -la || echo 'failed'", shouldShowFull: false },
+			{ command: "cd /tmp; rm file.txt", shouldShowFull: false },
+			{ command: "ps aux | grep node", shouldShowFull: false },
+			{ command: "npm start &", shouldShowFull: false },
+			{ command: "git commit -m 'feat: add feature'", shouldShowFull: true },
+		]
+
+		testCases.forEach(({ command, shouldShowFull }) => {
+			const { unmount } = render(
+				<TestWrapper>
+					<CommandPatternSelector {...defaultProps} command={command} patterns={[]} />
+				</TestWrapper>,
+			)
+
+			// Click to expand the component
+			const expandButton = screen.getByRole("button")
+			fireEvent.click(expandButton)
+
+			if (shouldShowFull) {
+				expect(screen.getByText(command)).toBeInTheDocument()
+			} else {
+				expect(screen.queryByText(command)).not.toBeInTheDocument()
+			}
+
+			unmount()
+		})
+	})
 })

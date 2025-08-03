@@ -35,17 +35,26 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 		window.postMessage({ type: "action", action: "settingsButtonClicked", values: { section: "autoApprove" } })
 	}
 
-	// Create a combined list with full command first, then patterns
+	// Create a combined list with full command first (only if it doesn't contain separators), then patterns
 	const allPatterns = useMemo(() => {
 		// Trim the command to ensure consistency with extracted patterns
 		const trimmedCommand = command.trim()
-		const fullCommandPattern: CommandPattern = { pattern: trimmedCommand }
+
+		// Check if command contains separators (&&, ||, ;, |, &)
+		const containsSeparators = /(?:&&|\|\||;|\||&)/.test(trimmedCommand)
 
 		// Create a set to track unique patterns we've already seen
 		const seenPatterns = new Set<string>()
-		seenPatterns.add(trimmedCommand) // Add the trimmed full command first
 
-		// Filter out any patterns that are duplicates or are the same as the full command
+		// Only add the full command if it doesn't contain separators
+		const patternsToShow: CommandPattern[] = []
+		if (!containsSeparators) {
+			const fullCommandPattern: CommandPattern = { pattern: trimmedCommand }
+			patternsToShow.push(fullCommandPattern)
+			seenPatterns.add(trimmedCommand)
+		}
+
+		// Filter out any patterns that are duplicates
 		const uniquePatterns = patterns.filter((p) => {
 			if (seenPatterns.has(p.pattern)) {
 				return false
@@ -54,7 +63,7 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 			return true
 		})
 
-		return [fullCommandPattern, ...uniquePatterns]
+		return [...patternsToShow, ...uniquePatterns]
 	}, [command, patterns])
 
 	const getPatternStatus = (pattern: string): "allowed" | "denied" | "none" => {
