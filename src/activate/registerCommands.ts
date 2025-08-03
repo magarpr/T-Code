@@ -16,6 +16,8 @@ import { CodeIndexManager } from "../services/code-index/manager"
 import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
+import { generateProjectId } from "../utils/projectId"
+import { getWorkspacePath } from "../utils/path"
 
 /**
  * Helper to get the visible ClineProvider instance or log if not found.
@@ -217,6 +219,30 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 		}
 
 		visibleProvider.postMessageToWebview({ type: "acceptInput" })
+	},
+	generateProjectId: async () => {
+		const workspacePath = getWorkspacePath()
+		if (!workspacePath) {
+			vscode.window.showErrorMessage(t("common:errors.no_workspace"))
+			return
+		}
+
+		try {
+			const projectId = await generateProjectId(workspacePath)
+			vscode.window.showInformationMessage(t("common:info.project_id_generated", { projectId }))
+
+			// Notify the provider to update any cached state
+			const visibleProvider = getVisibleProviderOrLog(outputChannel)
+			if (visibleProvider) {
+				await visibleProvider.postStateToWebview()
+			}
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				t("common:errors.project_id_generation_failed", {
+					error: error instanceof Error ? error.message : String(error),
+				}),
+			)
+		}
 	},
 })
 

@@ -67,6 +67,7 @@ import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 // utils
 import { calculateApiCostAnthropic } from "../../shared/cost"
 import { getWorkspacePath } from "../../utils/path"
+import { getWorkspaceStorageKey } from "../../utils/projectId"
 
 // prompts
 import { formatResponse } from "../prompts/responses"
@@ -575,12 +576,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				globalStoragePath: this.globalStoragePath,
 			})
 
+			// Use project ID if available, otherwise fall back to workspace path
+			const workspaceStorageKey = await getWorkspaceStorageKey(this.cwd)
+
 			const { historyItem, tokenUsage } = await taskMetadata({
 				messages: this.clineMessages,
 				taskId: this.taskId,
 				taskNumber: this.taskNumber,
 				globalStoragePath: this.globalStoragePath,
-				workspace: this.cwd,
+				workspace: workspaceStorageKey,
 				mode: this._taskMode || defaultModeSlug, // Use the task's own mode, not the current provider mode
 			})
 
