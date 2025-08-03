@@ -29,6 +29,8 @@ import { CodeIndexManager } from "./services/code-index/manager"
 import { MdmService } from "./services/mdm/MdmService"
 import { migrateSettings } from "./utils/migrateSettings"
 import { autoImportSettings } from "./utils/autoImportSettings"
+import { autoGenerateProjectIdIfNeeded } from "./utils/autoGenerateProjectId"
+import { detectAndHandleMovedProject } from "./utils/detectMovedProject"
 import { API } from "./extension/api"
 
 import {
@@ -178,6 +180,34 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerCodeActions(context)
 	registerTerminalActions(context)
+
+	// Check for automatic project ID generation
+	try {
+		await autoGenerateProjectIdIfNeeded()
+
+		// If a project ID was generated, trigger migration
+		const { getProjectId } = await import("./utils/projectId")
+		const { getWorkspacePath } = await import("./utils/path")
+		const workspacePath = getWorkspacePath()
+		const projectId = await getProjectId(workspacePath)
+
+		if (projectId && provider) {
+			// Migrate existing tasks to use the new project ID
+			const migratedCount = await provider.migrateTasksToProjectId(workspacePath, projectId)
+			if (migratedCount > 0) {
+				outputChannel.appendLine(`Migrated ${migratedCount} tasks to use project ID: ${projectId}`)
+			}
+		}
+	} catch (error) {
+		outputChannel.appendLine(`Failed to auto-generate project ID: ${error}`)
+	}
+
+	// Check if this is a moved project
+	try {
+		await detectAndHandleMovedProject(provider)
+	} catch (error) {
+		outputChannel.appendLine(`Failed to detect moved project: ${error}`)
+	}
 
 	// Allows other extensions to activate once Roo is ready.
 	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)

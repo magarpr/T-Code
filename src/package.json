@@ -396,6 +396,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "%settings.useAgentRules.description%"
+				},
+				"roo-cline.autoGenerateProjectId": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.autoGenerateProjectId.description%"
 				}
 			}
 		}
