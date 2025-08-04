@@ -76,12 +76,9 @@ export function getApiMetrics(messages: ClineMessage[]) {
 				const { tokensIn, tokensOut, cacheWrites, cacheReads, apiProtocol } = parsedText
 
 				// Calculate context tokens based on API protocol
-				if (apiProtocol === "anthropic") {
-					result.contextTokens = (tokensIn || 0) + (tokensOut || 0) + (cacheWrites || 0) + (cacheReads || 0)
-				} else {
-					// For OpenAI (or when protocol is not specified)
-					result.contextTokens = (tokensIn || 0) + (tokensOut || 0)
-				}
+				// Context tokens should only include input tokens (the actual context size)
+				// Output tokens, cache writes, and cache reads are not part of the context
+				result.contextTokens = typeof tokensIn === "number" ? tokensIn : 0
 			} catch (error) {
 				console.error("Error parsing JSON:", error)
 				continue
