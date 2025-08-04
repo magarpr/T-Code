@@ -207,5 +207,7 @@
 		"descriptionNoRules": "このカスタムモードを削除してもよろしいですか？",
 		"confirm": "削除",
 		"cancel": "キャンセル"
-	}
+	},
+	"defaultModesVisibility": "デフォルトモードの表示",
+	"defaultModesVisibilityDescription": "モードセレクターに表示するデフォルトモードを選択してください"
 }

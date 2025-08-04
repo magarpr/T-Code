@@ -207,5 +207,7 @@
 		"descriptionNoRules": "您確定要刪除此自訂模式嗎？",
 		"confirm": "刪除",
 		"cancel": "取消"
-	}
+	},
+	"defaultModesVisibility": "預設模式可見性",
+	"defaultModesVisibilityDescription": "選擇在模式選擇器中顯示哪些預設模式"
 }

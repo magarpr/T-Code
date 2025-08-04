@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Tem certeza de que deseja excluir este modo personalizado?",
 		"confirm": "Excluir",
 		"cancel": "Cancelar"
-	}
+	},
+	"defaultModesVisibility": "Visibilidade dos modos padrão",
+	"defaultModesVisibilityDescription": "Escolha quais modos padrão exibir no seletor de modos"
 }

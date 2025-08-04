@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Weet je zeker dat je deze aangepaste modus wilt verwijderen?",
 		"confirm": "Verwijderen",
 		"cancel": "Annuleren"
-	}
+	},
+	"defaultModesVisibility": "Zichtbaarheid standaardmodi",
+	"defaultModesVisibilityDescription": "Kies welke standaardmodi worden weergegeven in de moduskiezer"
 }

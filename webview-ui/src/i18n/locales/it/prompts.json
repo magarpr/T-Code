@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Sei sicuro di voler eliminare questa modalità personalizzata?",
 		"confirm": "Elimina",
 		"cancel": "Annulla"
-	}
+	},
+	"defaultModesVisibility": "Visibilità delle modalità predefinite",
+	"defaultModesVisibilityDescription": "Scegli quali modalità predefinite mostrare nel selettore di modalità"
 }

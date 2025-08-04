@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Möchten Sie diesen benutzerdefinierten Modus wirklich löschen?",
 		"confirm": "Löschen",
 		"cancel": "Abbrechen"
-	}
+	},
+	"defaultModesVisibility": "Sichtbarkeit der Standardmodi",
+	"defaultModesVisibilityDescription": "Wählen Sie aus, welche Standardmodi im Modusauswähler angezeigt werden sollen"
 }

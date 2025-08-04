@@ -207,5 +207,7 @@
 		"descriptionNoRules": "क्या आप वाकई इस कस्टम मोड को हटाना चाहते हैं?",
 		"confirm": "हटाएं",
 		"cancel": "रद्द करें"
-	}
+	},
+	"defaultModesVisibility": "डिफ़ॉल्ट मोड दृश्यता",
+	"defaultModesVisibilityDescription": "मोड चयनकर्ता में दिखाने के लिए डिफ़ॉल्ट मोड चुनें"
 }

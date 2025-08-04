@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Bạn có chắc chắn muốn xóa chế độ tùy chỉnh này không?",
 		"confirm": "Xóa",
 		"cancel": "Hủy"
-	}
+	},
+	"defaultModesVisibility": "Hiển thị chế độ mặc định",
+	"defaultModesVisibilityDescription": "Chọn chế độ mặc định nào sẽ hiển thị trong bộ chọn chế độ"
 }

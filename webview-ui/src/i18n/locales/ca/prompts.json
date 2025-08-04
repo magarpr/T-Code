@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Esteu segur que voleu suprimir aquest mode personalitzat?",
 		"confirm": "Suprimeix",
 		"cancel": "Cancel·la"
-	}
+	},
+	"defaultModesVisibility": "Visibilitat dels modes predeterminats",
+	"defaultModesVisibilityDescription": "Trieu quins modes predeterminats mostrar al selector de modes"
 }

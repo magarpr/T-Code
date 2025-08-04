@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Apakah Anda yakin ingin menghapus mode kustom ini?",
 		"confirm": "Hapus",
 		"cancel": "Batal"
-	}
+	},
+	"defaultModesVisibility": "Visibilitas Mode Default",
+	"defaultModesVisibilityDescription": "Pilih mode default mana yang akan ditampilkan di pemilih mode"
 }

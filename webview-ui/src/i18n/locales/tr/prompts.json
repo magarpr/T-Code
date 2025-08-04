@@ -207,5 +207,7 @@
 		"descriptionNoRules": "Bu özel modu silmek istediğinizden emin misiniz?",
 		"confirm": "Sil",
 		"cancel": "İptal"
-	}
+	},
+	"defaultModesVisibility": "Varsayılan Mod Görünürlüğü",
+	"defaultModesVisibilityDescription": "Mod seçicide hangi varsayılan modların gösterileceğini seçin"
 }
