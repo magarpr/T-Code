@@ -61,13 +61,17 @@ export function sourcemapPlugin(): Plugin {
 						let jsContent = fs.readFileSync(jsPath, "utf8")
 
 						// Check if the source map is already referenced
-						if (!jsContent.includes("//# sourceMappingURL=")) {
+						// Check for existing source map reference and update it if needed
+						const sourceMappingURLRegex = /\/\/# sourceMappingURL=.*/
+						if (sourceMappingURLRegex.test(jsContent)) {
+							// Update existing reference to use correct format
+							jsContent = jsContent.replace(sourceMappingURLRegex, `//# sourceMappingURL=${jsFile}.map`)
+							fs.writeFileSync(jsPath, jsContent)
+							console.log(`Updated source map reference in ${jsFile}`)
+						} else {
+							// Add source map reference if missing
 							console.log(`Adding source map reference to ${jsFile}`)
-
-							// Add source map reference
 							jsContent += `\n//# sourceMappingURL=${jsFile}.map\n`
-
-							// Write the updated JS file
 							fs.writeFileSync(jsPath, jsContent)
 						}
 
@@ -97,6 +101,22 @@ export function sourcemapPlugin(): Plugin {
 					} else {
 						console.log(`No source map found for ${jsFile}`)
 					}
+				}
+
+				// Create index.map.json and index.sourcemap files for compatibility
+				const indexJsPath = path.join(assetsDir, "index.js")
+				const indexMapPath = path.join(assetsDir, "index.js.map")
+
+				if (fs.existsSync(indexJsPath) && fs.existsSync(indexMapPath)) {
+					// Copy index.js.map to index.map.json for compatibility
+					const indexMapJsonPath = path.join(assetsDir, "index.map.json")
+					fs.copyFileSync(indexMapPath, indexMapJsonPath)
+					console.log("Created index.map.json for compatibility")
+
+					// Also create index.sourcemap
+					const indexSourcemapPath = path.join(assetsDir, "index.sourcemap")
+					fs.copyFileSync(indexMapPath, indexSourcemapPath)
+					console.log("Created index.sourcemap for compatibility")
 				}
 
 				// Create a special file to enable source map loading in production
