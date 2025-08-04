@@ -153,7 +153,30 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 					totalCost: this.calculateCost({ info, inputTokens, outputTokens, cacheReadTokens }),
 				}
 			}
-		} catch (error) {
+		} catch (error: any) {
+			// Preserve the original error structure for retry logic
+			if (error.status === 429) {
+				// Check if this is a rate limit or quota exhaustion
+				const errorMessage = error.message || ""
+				const isQuotaExhausted = errorMessage.includes("quota") || errorMessage.includes("billing")
+
+				// Create an enhanced error that preserves the original structure
+				const enhancedError = new Error(
+					isQuotaExhausted
+						? t("common:errors.gemini.quota_exhausted", { error: errorMessage })
+						: t("common:errors.gemini.rate_limit", { error: errorMessage }),
+				)
+
+				// Preserve the original error properties for retry logic
+				Object.assign(enhancedError, {
+					status: error.status,
+					errorDetails: error.errorDetails,
+					message: error.message,
+				})
+
+				throw enhancedError
+			}
+
 			if (error instanceof Error) {
 				throw new Error(t("common:errors.gemini.generate_stream", { error: error.message }))
 			}
@@ -235,7 +258,30 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 			}
 
 			return text
-		} catch (error) {
+		} catch (error: any) {
+			// Preserve the original error structure for retry logic
+			if (error.status === 429) {
+				// Check if this is a rate limit or quota exhaustion
+				const errorMessage = error.message || ""
+				const isQuotaExhausted = errorMessage.includes("quota") || errorMessage.includes("billing")
+
+				// Create an enhanced error that preserves the original structure
+				const enhancedError = new Error(
+					isQuotaExhausted
+						? t("common:errors.gemini.quota_exhausted", { error: errorMessage })
+						: t("common:errors.gemini.rate_limit", { error: errorMessage }),
+				)
+
+				// Preserve the original error properties for retry logic
+				Object.assign(enhancedError, {
+					status: error.status,
+					errorDetails: error.errorDetails,
+					message: error.message,
+				})
+
+				throw enhancedError
+			}
+
 			if (error instanceof Error) {
 				throw new Error(t("common:errors.gemini.generate_complete_prompt", { error: error.message }))
 			}

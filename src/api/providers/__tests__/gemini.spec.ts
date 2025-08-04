@@ -102,6 +102,67 @@ describe("GeminiHandler", () => {
 				}
 			}).rejects.toThrow()
 		})
+
+		it("should handle rate limit errors with retry information", async () => {
+			const mockError: any = new Error("Rate limit exceeded")
+			mockError.status = 429
+			mockError.errorDetails = [
+				{
+					"@type": "type.googleapis.com/google.rpc.RetryInfo",
+					retryDelay: "40s",
+				},
+			]
+			;(handler["client"].models.generateContentStream as any).mockRejectedValue(mockError)
+
+			const stream = handler.createMessage(systemPrompt, mockMessages)
+
+			await expect(async () => {
+				for await (const _chunk of stream) {
+					// Should throw before yielding any chunks
+				}
+			}).rejects.toThrow(t("common:errors.gemini.rate_limit"))
+		})
+
+		it("should handle quota exhaustion errors", async () => {
+			const mockError: any = new Error(
+				"You exceeded your current quota, please check your plan and billing details",
+			)
+			mockError.status = 429
+			mockError.message = "You exceeded your current quota, please check your plan and billing details"
+			;(handler["client"].models.generateContentStream as any).mockRejectedValue(mockError)
+
+			const stream = handler.createMessage(systemPrompt, mockMessages)
+
+			await expect(async () => {
+				for await (const _chunk of stream) {
+					// Should throw before yielding any chunks
+				}
+			}).rejects.toThrow(t("common:errors.gemini.quota_exhausted"))
+		})
+
+		it("should preserve error details for retry logic", async () => {
+			const mockError: any = new Error("Rate limit exceeded")
+			mockError.status = 429
+			mockError.errorDetails = [
+				{
+					"@type": "type.googleapis.com/google.rpc.RetryInfo",
+					retryDelay: "60s",
+				},
+			]
+			;(handler["client"].models.generateContentStream as any).mockRejectedValue(mockError)
+
+			const stream = handler.createMessage(systemPrompt, mockMessages)
+
+			try {
+				for await (const _chunk of stream) {
+					// Should throw before yielding any chunks
+				}
+			} catch (error: any) {
+				expect(error.status).toBe(429)
+				expect(error.errorDetails).toBeDefined()
+				expect(error.errorDetails[0].retryDelay).toBe("60s")
+			}
+		})
 	})
 
 	describe("completePrompt", () => {
@@ -131,6 +192,33 @@ describe("GeminiHandler", () => {
 
 			await expect(handler.completePrompt("Test prompt")).rejects.toThrow(
 				t("common:errors.gemini.generate_complete_prompt", { error: "Gemini API error" }),
+			)
+		})
+
+		it("should handle rate limit errors in completePrompt", async () => {
+			const mockError: any = new Error("Rate limit exceeded")
+			mockError.status = 429
+			mockError.errorDetails = [
+				{
+					"@type": "type.googleapis.com/google.rpc.RetryInfo",
+					retryDelay: "30s",
+				},
+			]
+			;(handler["client"].models.generateContent as any).mockRejectedValue(mockError)
+
+			await expect(handler.completePrompt("Test prompt")).rejects.toThrow(t("common:errors.gemini.rate_limit"))
+		})
+
+		it("should handle quota exhaustion errors in completePrompt", async () => {
+			const mockError: any = new Error(
+				"You exceeded your current quota, please check your plan and billing details",
+			)
+			mockError.status = 429
+			mockError.message = "You exceeded your current quota, please check your plan and billing details"
+			;(handler["client"].models.generateContent as any).mockRejectedValue(mockError)
+
+			await expect(handler.completePrompt("Test prompt")).rejects.toThrow(
+				t("common:errors.gemini.quota_exhausted"),
 			)
 		})
 
