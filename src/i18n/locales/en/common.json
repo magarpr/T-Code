@@ -190,5 +190,11 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Prevent task completion when there are incomplete todos in the todo list"
 		}
+	},
+	"projectId": {
+		"noWorkspace": "No workspace folder found",
+		"alreadyExists": "Project already has a unique ID",
+		"generated": "Project ID generated successfully",
+		"generateError": "Failed to generate project ID: {{error}}"
 	}
 }

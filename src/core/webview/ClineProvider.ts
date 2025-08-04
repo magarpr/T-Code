@@ -1367,12 +1367,33 @@ export class ClineProvider
 		apiConversationHistory: Anthropic.MessageParam[]
 	}> {
 		const history = this.getGlobalState("taskHistory") ?? []
-		const historyItem = history.find((item) => item.id === id)
+
+		// First try to find by task ID
+		let historyItem = history.find((item) => item.id === id)
+
+		// If not found by ID and the ID looks like a project ID (UUID format),
+		// try to find by project ID
+		if (!historyItem && id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+			// Get the current workspace root
+			const workspaceRoot = this.cwd
+			if (workspaceRoot) {
+				// Check if this workspace has the given project ID
+				const { getProjectId } = await import("../../utils/projectId")
+				const currentProjectId = await getProjectId(workspaceRoot)
+
+				if (currentProjectId === id) {
+					// Find the most recent task for this project ID
+					historyItem = history
+						.filter((item) => item.projectId === id)
+						.sort((a, b) => (b.ts || 0) - (a.ts || 0))[0]
+				}
+			}
+		}
 
 		if (historyItem) {
 			const { getTaskDirectoryPath } = await import("../../utils/storage")
 			const globalStoragePath = this.contextProxy.globalStorageUri.fsPath
-			const taskDirPath = await getTaskDirectoryPath(globalStoragePath, id)
+			const taskDirPath = await getTaskDirectoryPath(globalStoragePath, historyItem.id)
 			const apiConversationHistoryFilePath = path.join(taskDirPath, GlobalFileNames.apiConversationHistory)
 			const uiMessagesFilePath = path.join(taskDirPath, GlobalFileNames.uiMessages)
 			const fileExists = await fileExistsAtPath(apiConversationHistoryFilePath)
@@ -1392,7 +1413,9 @@ export class ClineProvider
 
 		// if we tried to get a task that doesn't exist, remove it from state
 		// FIXME: this seems to happen sometimes when the json file doesnt save to disk for some reason
-		await this.deleteTaskFromState(id)
+		if (historyItem) {
+			await this.deleteTaskFromState(historyItem.id)
+		}
 		throw new Error("Task not found")
 	}
 

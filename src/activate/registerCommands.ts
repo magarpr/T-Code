@@ -218,6 +218,31 @@ const getCommandsMap = ({ context, outputChannel, provider }: RegisterCommandOpt
 
 		visibleProvider.postMessageToWebview({ type: "acceptInput" })
 	},
+	generateProjectId: async () => {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]
+		if (!workspaceFolder) {
+			vscode.window.showErrorMessage(t("projectId.noWorkspace"))
+			return
+		}
+
+		try {
+			const { generateProjectId, hasProjectId } = await import("../utils/projectId")
+
+			// Check if project already has an ID
+			const hasId = await hasProjectId(workspaceFolder.uri.fsPath)
+			if (hasId) {
+				vscode.window.showInformationMessage(t("projectId.alreadyExists"))
+				return
+			}
+
+			// Generate new project ID
+			await generateProjectId(workspaceFolder.uri.fsPath)
+			vscode.window.showInformationMessage(t("projectId.generated"))
+		} catch (error) {
+			outputChannel.appendLine(`Error generating project ID: ${error}`)
+			vscode.window.showErrorMessage(t("projectId.generateError", { error: String(error) }))
+		}
+	},
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {

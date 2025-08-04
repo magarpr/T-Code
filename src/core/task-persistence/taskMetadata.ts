@@ -8,6 +8,7 @@ import { combineCommandSequences } from "../../shared/combineCommandSequences"
 import { getApiMetrics } from "../../shared/getApiMetrics"
 import { findLastIndex } from "../../shared/array"
 import { getTaskDirectoryPath } from "../../utils/storage"
+import { getProjectId } from "../../utils/projectId"
 import { t } from "../../i18n"
 
 const taskSizeCache = new NodeCache({ stdTTL: 30, checkperiod: 5 * 60 })
@@ -79,6 +80,9 @@ export async function taskMetadata({
 		}
 	}
 
+	// Get project ID if available
+	const projectId = await getProjectId(workspace)
+
 	// Create historyItem once with pre-calculated values
 	const historyItem: HistoryItem = {
 		id: taskId,
@@ -94,6 +98,7 @@ export async function taskMetadata({
 		totalCost: tokenUsage.totalCost,
 		size: taskDirSize,
 		workspace,
+		projectId: projectId || undefined,
 		mode,
 	}
 
