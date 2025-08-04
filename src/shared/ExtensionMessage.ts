@@ -262,6 +262,7 @@ export type ExtensionState = Pick<
 	// | "customModes" // Optional in GlobalSettings, required here.
 	| "customModePrompts"
 	| "customSupportPrompts"
+	| "hiddenDefaultModes"
 	| "enhancementApiConfigId"
 	| "condensingApiConfigId"
 	| "customCondensingPrompt"

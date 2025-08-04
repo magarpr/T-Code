@@ -10,7 +10,7 @@ import {
 import { Trans } from "react-i18next"
 import { ChevronDown, X, Upload, Download } from "lucide-react"
 
-import { ModeConfig, GroupEntry, PromptComponent, ToolGroup, modeConfigSchema } from "@roo-code/types"
+import { ModeConfig, GroupEntry, PromptComponent, ToolGroup, modeConfigSchema, DEFAULT_MODES } from "@roo-code/types"
 
 import {
 	Mode,
@@ -75,6 +75,8 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		customInstructions,
 		setCustomInstructions,
 		customModes,
+		hiddenDefaultModes,
+		setHiddenDefaultModes,
 	} = useExtensionState()
 
 	// Use a local state to track the visually active mode
@@ -85,7 +87,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 	const [visualMode, setVisualMode] = useState(mode)
 
 	// Memoize modes to preserve array order
-	const modes = useMemo(() => getAllModes(customModes), [customModes])
+	const modes = useMemo(() => getAllModes(customModes, hiddenDefaultModes), [customModes, hiddenDefaultModes])
 
 	const [isDialogOpen, setIsDialogOpen] = useState(false)
 	const [selectedPromptContent, setSelectedPromptContent] = useState("")
@@ -701,6 +703,48 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							</PopoverContent>
 						</Popover>
 					</div>
+
+					{/* Default Modes Visibility Settings */}
+					<div className="mb-3">
+						<div className="font-bold mb-1">{t("prompts:modes.defaultModesVisibility")}</div>
+						<div className="text-sm text-vscode-descriptionForeground mb-2">
+							{t("prompts:modes.defaultModesVisibilityDescription")}
+						</div>
+						<div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+							{DEFAULT_MODES.map((defaultMode) => (
+								<VSCodeCheckbox
+									key={defaultMode.slug}
+									checked={!hiddenDefaultModes.includes(defaultMode.slug)}
+									onChange={(e: Event | React.FormEvent<HTMLElement>) => {
+										const target =
+											(e as CustomEvent)?.detail?.target || (e.target as HTMLInputElement)
+										const checked = target.checked
+										if (checked) {
+											// Remove from hidden modes
+											const newHiddenModes = hiddenDefaultModes.filter(
+												(slug) => slug !== defaultMode.slug,
+											)
+											setHiddenDefaultModes(newHiddenModes)
+											vscode.postMessage({
+												type: "hiddenDefaultModes",
+												hiddenModes: newHiddenModes,
+											})
+										} else {
+											// Add to hidden modes
+											const newHiddenModes = [...hiddenDefaultModes, defaultMode.slug]
+											setHiddenDefaultModes(newHiddenModes)
+											vscode.postMessage({
+												type: "hiddenDefaultModes",
+												hiddenModes: newHiddenModes,
+											})
+										}
+									}}>
+									{defaultMode.name}
+								</VSCodeCheckbox>
+							))}
+						</div>
+					</div>
+
 					{/* API Configuration - Moved Here */}
 					<div className="mb-3">
 						<div className="font-bold mb-1">{t("prompts:apiConfiguration.title")}</div>

@@ -139,6 +139,7 @@ export const globalSettingsSchema = z.object({
 	customModes: z.array(modeConfigSchema).optional(),
 	customModePrompts: customModePromptsSchema.optional(),
 	customSupportPrompts: customSupportPromptsSchema.optional(),
+	hiddenDefaultModes: z.array(z.string()).optional(),
 	enhancementApiConfigId: z.string().optional(),
 	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),

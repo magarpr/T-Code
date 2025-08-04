@@ -10,7 +10,9 @@
 		"editProjectModes": "Edit Project Modes (.roomodes)",
 		"createModeHelpText": "Modes are specialized personas that tailor Roo's behavior. <0>Learn about Using Modes</0> or <1>Customizing Modes.</1>",
 		"selectMode": "Search modes",
-		"noMatchFound": "No modes found"
+		"noMatchFound": "No modes found",
+		"defaultModesVisibility": "Default Modes Visibility",
+		"defaultModesVisibilityDescription": "Choose which default modes to show in the mode selector"
 	},
 	"apiConfiguration": {
 		"title": "API Configuration",

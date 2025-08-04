@@ -86,13 +86,18 @@ export function getModeConfig(slug: string, customModes?: ModeConfig[]): ModeCon
 }
 
 // Get all available modes, with custom modes overriding built-in modes
-export function getAllModes(customModes?: ModeConfig[]): ModeConfig[] {
+export function getAllModes(customModes?: ModeConfig[], hiddenDefaultModes?: string[]): ModeConfig[] {
+	// Start with built-in modes, filtering out hidden ones
+	const visibleBuiltInModes = hiddenDefaultModes?.length
+		? modes.filter((mode) => !hiddenDefaultModes.includes(mode.slug))
+		: [...modes]
+
 	if (!customModes?.length) {
-		return [...modes]
+		return visibleBuiltInModes
 	}
 
-	// Start with built-in modes
-	const allModes = [...modes]
+	// Start with visible built-in modes
+	const allModes = [...visibleBuiltInModes]
 
 	// Process custom modes
 	customModes.forEach((customMode) => {

@@ -2568,5 +2568,11 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "hiddenDefaultModes":
+			if (message.hiddenModes !== undefined) {
+				await updateGlobalState("hiddenDefaultModes", message.hiddenModes)
+				await provider.postStateToWebview()
+			}
+			break
 	}
 }
