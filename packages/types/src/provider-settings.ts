@@ -36,6 +36,7 @@ export const providerNames = [
 	"huggingface",
 	"cerebras",
 	"sambanova",
+	"fireworks",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -257,6 +258,10 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 	sambaNovaApiKey: z.string().optional(),
 })
 
+const fireworksSchema = apiModelIdProviderModelSchema.extend({
+	fireworksApiKey: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -290,6 +295,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
 	cerebrasSchema.merge(z.object({ apiProvider: z.literal("cerebras") })),
 	sambaNovaSchema.merge(z.object({ apiProvider: z.literal("sambanova") })),
+	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
 	defaultSchema,
 ])
 
@@ -323,6 +329,7 @@ export const providerSettingsSchema = z.object({
 	...litellmSchema.shape,
 	...cerebrasSchema.shape,
 	...sambaNovaSchema.shape,
+	...fireworksSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 })
 

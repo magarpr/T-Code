@@ -33,6 +33,7 @@ import {
 	ClaudeCodeHandler,
 	SambaNovaHandler,
 	DoubaoHandler,
+	FireworksHandler,
 } from "./providers"
 
 export interface SingleCompletionHandler {
@@ -124,6 +125,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new CerebrasHandler(options)
 		case "sambanova":
 			return new SambaNovaHandler(options)
+		case "fireworks":
+			return new FireworksHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)
