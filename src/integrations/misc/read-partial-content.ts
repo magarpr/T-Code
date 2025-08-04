@@ -47,7 +47,7 @@ export async function readPartialContent(filePath: string, maxChars: number): Pr
 			encoding: "utf8",
 			highWaterMark: 16 * 1024, // Smaller 16KB chunks for better control
 			start: 0,
-			end: Math.max(0, Math.min(maxChars * 2, maxChars + 1024 * 1024)), // Read at most 2x maxChars or maxChars + 1MB buffer
+			end: Math.max(0, Math.min(maxChars * 2, maxChars + 1024 * 1024)), // Heuristic: read at most the lesser of (2x maxChars) or (maxChars + 1MB), but never less than 0, to balance memory use and ensure enough data for multi-byte chars
 		})
 
 		let content = ""
