@@ -1676,7 +1676,7 @@ export class ClineProvider
 				}
 				return allMessages
 			})(),
-			totalClineMessages: this.getCurrentCline()?.clineMessages.length || 0,
+			totalClineMessages: this.getCurrentCline()?.clineMessages?.length || 0,
 			taskHistory: (taskHistory || [])
 				.filter((item: HistoryItem) => item.ts && item.task)
 				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
