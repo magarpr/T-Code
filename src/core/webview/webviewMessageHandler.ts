@@ -694,6 +694,48 @@ export const webviewMessageHandler = async (
 				})
 			}
 			break
+		case "requestBedrockModelCapabilities":
+			// Handle request for Bedrock model capabilities
+			if (message.values?.customArn) {
+				try {
+					const { apiConfiguration } = await provider.getState()
+
+					// Only process if using bedrock provider
+					if (apiConfiguration.apiProvider === "bedrock") {
+						// Import the bedrock handler dynamically
+						const { AwsBedrockHandler } = await import("../../api/providers/bedrock")
+
+						// Create a temporary handler instance to get model info
+						const tempHandler = new AwsBedrockHandler({
+							...apiConfiguration,
+							awsCustomArn: message.values.customArn,
+						})
+
+						// Get the model info which includes capabilities
+						const modelInfo = tempHandler.getModel()
+
+						// Send the capabilities back to the webview
+						await provider.postMessageToWebview({
+							type: "bedrockModelCapabilities",
+							values: {
+								customArn: message.values.customArn,
+								modelInfo: modelInfo.info,
+							},
+						})
+					}
+				} catch (error) {
+					provider.log(`Error getting Bedrock model capabilities: ${error}`)
+					// Send error response
+					await provider.postMessageToWebview({
+						type: "bedrockModelCapabilities",
+						values: {
+							customArn: message.values.customArn,
+							error: error instanceof Error ? error.message : String(error),
+						},
+					})
+				}
+			}
+			break
 		case "openImage":
 			openImage(message.text!, { values: message.values })
 			break

@@ -68,6 +68,7 @@ export interface WebviewMessage {
 		| "requestLmStudioModels"
 		| "requestVsCodeLmModels"
 		| "requestHuggingFaceModels"
+		| "requestBedrockModelCapabilities"
 		| "openImage"
 		| "saveImage"
 		| "openFile"

@@ -51,6 +51,7 @@ import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "./useRouterModels"
 import { useOpenRouterModelProviders } from "./useOpenRouterModelProviders"
 import { useLmStudioModels } from "./useLmStudioModels"
+import { useBedrockModelCapabilities } from "./useBedrockModelCapabilities"
 
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
@@ -60,6 +61,12 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const routerModels = useRouterModels()
 	const openRouterModelProviders = useOpenRouterModelProviders(openRouterModelId)
 	const lmStudioModels = useLmStudioModels(lmStudioModelId)
+
+	// Always call the hook, but only use it when needed
+	const isBedrockCustomArn = provider === "bedrock" && apiConfiguration?.apiModelId === "custom-arn"
+	const bedrockCapabilities = useBedrockModelCapabilities(
+		isBedrockCustomArn ? apiConfiguration?.awsCustomArn : undefined,
+	)
 
 	const { id, info } =
 		apiConfiguration &&
@@ -72,6 +79,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 					routerModels: routerModels.data,
 					openRouterModelProviders: openRouterModelProviders.data,
 					lmStudioModels: lmStudioModels.data,
+					bedrockCapabilities,
 				})
 			: { id: anthropicDefaultModelId, info: undefined }
 
@@ -96,12 +104,14 @@ function getSelectedModel({
 	routerModels,
 	openRouterModelProviders,
 	lmStudioModels,
+	bedrockCapabilities,
 }: {
 	provider: ProviderName
 	apiConfiguration: ProviderSettings
 	routerModels: RouterModels
 	openRouterModelProviders: Record<string, ModelInfo>
 	lmStudioModels: ModelRecord | undefined
+	bedrockCapabilities?: ModelInfo
 }): { id: string; info: ModelInfo | undefined } {
 	// the `undefined` case are used to show the invalid selection to prevent
 	// users from seeing the default model if their selection is invalid
@@ -174,6 +184,12 @@ function getSelectedModel({
 
 			// Special case for custom ARN.
 			if (id === "custom-arn") {
+				// If we have capabilities from backend, use them
+				if (bedrockCapabilities) {
+					return { id, info: bedrockCapabilities }
+				}
+
+				// Otherwise fall back to defaults (this ensures UI doesn't break while loading)
 				return {
 					id,
 					info: { maxTokens: 5000, contextWindow: 128_000, supportsPromptCache: false, supportsImages: true },

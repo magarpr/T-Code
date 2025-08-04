@@ -120,6 +120,7 @@ export interface ExtensionMessage {
 		| "showEditMessageDialog"
 		| "commands"
 		| "insertTextIntoTextarea"
+		| "bedrockModelCapabilities"
 	text?: string
 	payload?: any // Add a generic payload for now, can refine later
 	action?:
