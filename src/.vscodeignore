@@ -14,11 +14,12 @@
 !dist
 
 # Include the built webview
-!**/*.map
 !webview-ui/audio
 !webview-ui/build/assets/*.js
+!webview-ui/build/assets/*.map
 !webview-ui/build/assets/*.ttf
 !webview-ui/build/assets/*.css
+!webview-ui/build/assets/chunk-*.js
 !webview-ui/build/assets/fonts/*.woff
 !webview-ui/build/assets/fonts/*.woff2
 !webview-ui/build/assets/fonts/*.ttf

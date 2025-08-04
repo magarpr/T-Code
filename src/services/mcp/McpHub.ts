@@ -590,9 +590,12 @@ export class McpHub {
 				const isAlreadyWrapped =
 					configInjected.command.toLowerCase() === "cmd.exe" || configInjected.command.toLowerCase() === "cmd"
 
-				const command = isWindows && !isAlreadyWrapped ? "cmd.exe" : configInjected.command
+				// Check if the command is npx or other npm-related commands that might be scripts
+				const isNpmCommand = ["npx", "npm", "pnpm", "yarn"].includes(configInjected.command.toLowerCase())
+
+				const command = isWindows && !isAlreadyWrapped && isNpmCommand ? "cmd.exe" : configInjected.command
 				const args =
-					isWindows && !isAlreadyWrapped
+					isWindows && !isAlreadyWrapped && isNpmCommand
 						? ["/c", configInjected.command, ...(configInjected.args || [])]
 						: configInjected.args
 
