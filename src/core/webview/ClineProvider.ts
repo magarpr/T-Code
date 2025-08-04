@@ -29,6 +29,7 @@ import {
 	glamaDefaultModelId,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
+	providerNames,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -1004,6 +1005,35 @@ export class ClineProvider
 
 	async activateProviderProfile(args: { name: string } | { id: string }) {
 		const { name, id, ...providerSettings } = await this.providerSettingsManager.activateProfile(args)
+
+		// Check if the provider is still supported
+		if (providerSettings.apiProvider && !providerNames.includes(providerSettings.apiProvider)) {
+			this.log(
+				`Provider '${providerSettings.apiProvider}' is no longer supported. Cannot activate profile '${name}'.`,
+			)
+
+			// Find the first valid config
+			const listApiConfig = await this.providerSettingsManager.listConfig()
+			const validConfig = listApiConfig.find(
+				(config) => !config.apiProvider || providerNames.includes(config.apiProvider),
+			)
+
+			if (validConfig) {
+				// Recursively call with the valid config
+				await this.activateProviderProfile({ name: validConfig.name })
+
+				// Show a notification to the user
+				vscode.window.showWarningMessage(
+					`Provider '${providerSettings.apiProvider}' is no longer supported. Switched to '${validConfig.name}'.`,
+				)
+				return
+			} else {
+				// No valid config found, this is a critical error
+				throw new Error(
+					`No valid provider configuration found. Provider '${providerSettings.apiProvider}' is no longer supported.`,
+				)
+			}
+		}
 
 		// See `upsertProviderProfile` for a description of what this is doing.
 		await Promise.all([

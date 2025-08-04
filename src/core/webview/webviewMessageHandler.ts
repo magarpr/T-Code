@@ -12,6 +12,7 @@ import {
 	type GlobalState,
 	type ClineMessage,
 	TelemetryEventName,
+	providerNames,
 } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -259,6 +260,42 @@ export const webviewMessageHandler = async (
 							if (name) {
 								await provider.activateProviderProfile({ name })
 								return
+							}
+						} else {
+							// Config exists, but we need to check if the provider is still valid
+							const currentConfig = await provider.providerSettingsManager.getProfile({
+								name: currentConfigName,
+							})
+
+							// Check if the provider is no longer supported (e.g., "gemini-cli")
+							if (currentConfig.apiProvider && !providerNames.includes(currentConfig.apiProvider)) {
+								provider.log(
+									`Provider '${currentConfig.apiProvider}' is no longer supported. Falling back to first available provider.`,
+								)
+
+								// Find the first config with a valid provider
+								const validConfig = listApiConfig.find(
+									(config) => !config.apiProvider || providerNames.includes(config.apiProvider),
+								)
+
+								if (validConfig) {
+									await updateGlobalState("currentApiConfigName", validConfig.name)
+									await provider.activateProviderProfile({ name: validConfig.name })
+
+									// Show a notification to the user
+									vscode.window.showWarningMessage(
+										`Your previous provider '${currentConfig.apiProvider}' is no longer supported. Switched to '${validConfig.name}'.`,
+									)
+									return
+								} else {
+									// No valid config found, use the first one anyway
+									const firstConfig = listApiConfig[0]
+									if (firstConfig) {
+										await updateGlobalState("currentApiConfigName", firstConfig.name)
+										await provider.activateProviderProfile({ name: firstConfig.name })
+										return
+									}
+								}
 							}
 						}
 					}

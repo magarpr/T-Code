@@ -2,6 +2,17 @@ import type { Mock } from "vitest"
 
 // Mock dependencies - must come before imports
 vi.mock("../../../api/providers/fetchers/modelCache")
+vi.mock("../../../integrations/theme/getTheme", () => ({
+	getTheme: vi.fn().mockResolvedValue("dark"),
+}))
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			updateTelemetryState: vi.fn(),
+		},
+		hasInstance: vi.fn().mockReturnValue(true),
+	},
+}))
 
 import { webviewMessageHandler } from "../webviewMessageHandler"
 import type { ClineProvider } from "../ClineProvider"
@@ -35,6 +46,16 @@ const mockClineProvider = {
 	getCurrentCline: vi.fn(),
 	getTaskWithId: vi.fn(),
 	initClineWithHistoryItem: vi.fn(),
+	providerSettingsManager: {
+		listConfig: vi.fn(),
+		hasConfig: vi.fn(),
+		getProfile: vi.fn(),
+	},
+	activateProviderProfile: vi.fn(),
+	getMcpHub: vi.fn().mockReturnValue(null),
+	getStateToPostToWebview: vi.fn().mockResolvedValue({
+		telemetrySetting: "disabled",
+	}),
 } as unknown as ClineProvider
 
 import { t } from "../../../i18n"
@@ -43,9 +64,13 @@ vi.mock("vscode", () => ({
 	window: {
 		showInformationMessage: vi.fn(),
 		showErrorMessage: vi.fn(),
+		showWarningMessage: vi.fn(),
 	},
 	workspace: {
 		workspaceFolders: [{ uri: { fsPath: "/mock/workspace" } }],
+		getConfiguration: vi.fn().mockReturnValue({
+			get: vi.fn().mockReturnValue("dark"),
+		}),
 	},
 }))
 
@@ -484,6 +509,154 @@ describe("webviewMessageHandler - deleteCustomMode", () => {
 		)
 		// No error response is sent anymore - we just continue with deletion
 		expect(mockClineProvider.postMessageToWebview).not.toHaveBeenCalled()
+	})
+})
+
+describe("webviewMessageHandler - provider fallback", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		// Mock custom modes to return empty array
+		vi.mocked(mockClineProvider.customModesManager.getCustomModes).mockResolvedValue([])
+		// Mock the promise chain to resolve immediately
+		vi.mocked(mockClineProvider.providerSettingsManager.listConfig).mockImplementation(() => {
+			// Return a promise that resolves after a tick
+			return new Promise((resolve) => {
+				setImmediate(() => {
+					resolve([
+						{ name: "config1", apiProvider: "anthropic" as const, id: "id1" },
+						{ name: "config2", apiProvider: "openai" as const, id: "id2" },
+					])
+				})
+			})
+		})
+	})
+
+	it("should fallback to first valid provider when current provider is removed", async () => {
+		// Mock that the current config exists
+		vi.mocked(mockClineProvider.providerSettingsManager.hasConfig).mockResolvedValue(true)
+
+		// Mock the current config has a removed provider (gemini-cli)
+		vi.mocked(mockClineProvider.providerSettingsManager.getProfile).mockResolvedValue({
+			name: "current-config",
+			apiProvider: "gemini-cli" as any, // This provider no longer exists
+			id: "current-id",
+		} as any)
+
+		// Mock getValue to return the current config name
+		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue("current-config")
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "webviewDidLaunch",
+		})
+
+		// Wait for promises to resolve
+		await new Promise((resolve) => setImmediate(resolve))
+
+		// Verify it detected the invalid provider and switched to the first valid one
+		expect(mockClineProvider.log).toHaveBeenCalledWith(
+			"Provider 'gemini-cli' is no longer supported. Falling back to first available provider.",
+		)
+		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "config1")
+		expect(mockClineProvider.activateProviderProfile).toHaveBeenCalledWith({ name: "config1" })
+		expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+			"Your previous provider 'gemini-cli' is no longer supported. Switched to 'config1'.",
+		)
+	})
+
+	it("should handle case when no valid provider config exists", async () => {
+		// Mock the list of configurations - all have removed providers
+		vi.mocked(mockClineProvider.providerSettingsManager.listConfig).mockImplementation(() => {
+			return new Promise((resolve) => {
+				setImmediate(() => {
+					resolve([
+						{ name: "config1", apiProvider: "gemini-cli" as any, id: "id1" },
+						{ name: "config2", apiProvider: "another-removed" as any, id: "id2" },
+					])
+				})
+			})
+		})
+
+		// Mock that the current config exists
+		vi.mocked(mockClineProvider.providerSettingsManager.hasConfig).mockResolvedValue(true)
+
+		// Mock the current config has a removed provider
+		vi.mocked(mockClineProvider.providerSettingsManager.getProfile).mockResolvedValue({
+			name: "current-config",
+			apiProvider: "gemini-cli" as any,
+			id: "current-id",
+		} as any)
+
+		// Mock getValue to return the current config name
+		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue("current-config")
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "webviewDidLaunch",
+		})
+
+		// Wait for promises to resolve
+		await new Promise((resolve) => setImmediate(resolve))
+
+		// Should still try to use the first config even if it's invalid
+		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "config1")
+		expect(mockClineProvider.activateProviderProfile).toHaveBeenCalledWith({ name: "config1" })
+	})
+
+	it("should not check provider validity if config doesn't exist", async () => {
+		// Mock that the current config does NOT exist
+		vi.mocked(mockClineProvider.providerSettingsManager.hasConfig).mockResolvedValue(false)
+
+		// Mock getValue to return a non-existent config name
+		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue("non-existent-config")
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "webviewDidLaunch",
+		})
+
+		// Wait for promises to resolve
+		await new Promise((resolve) => setImmediate(resolve))
+
+		// Should fallback to first config without checking provider validity
+		expect(mockClineProvider.providerSettingsManager.getProfile).not.toHaveBeenCalled()
+		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "config1")
+		expect(mockClineProvider.activateProviderProfile).toHaveBeenCalledWith({ name: "config1" })
+	})
+
+	it("should handle configs without apiProvider field", async () => {
+		// Mock the list of configurations
+		vi.mocked(mockClineProvider.providerSettingsManager.listConfig).mockImplementation(() => {
+			return new Promise((resolve) => {
+				setImmediate(() => {
+					resolve([
+						{ name: "config1", id: "id1" }, // No apiProvider field
+						{ name: "config2", apiProvider: "openai" as const, id: "id2" },
+					])
+				})
+			})
+		})
+
+		// Mock that the current config exists
+		vi.mocked(mockClineProvider.providerSettingsManager.hasConfig).mockResolvedValue(true)
+
+		// Mock the current config has a removed provider
+		vi.mocked(mockClineProvider.providerSettingsManager.getProfile).mockResolvedValue({
+			name: "current-config",
+			apiProvider: "gemini-cli" as any,
+			id: "current-id",
+		} as any)
+
+		// Mock getValue to return the current config name
+		vi.mocked(mockClineProvider.contextProxy.getValue).mockReturnValue("current-config")
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "webviewDidLaunch",
+		})
+
+		// Wait for promises to resolve
+		await new Promise((resolve) => setImmediate(resolve))
+
+		// Should select config1 which has no apiProvider (considered valid)
+		expect(mockClineProvider.contextProxy.setValue).toHaveBeenCalledWith("currentApiConfigName", "config1")
+		expect(mockClineProvider.activateProviderProfile).toHaveBeenCalledWith({ name: "config1" })
 	})
 })
 
