@@ -2057,62 +2057,37 @@ export const webviewMessageHandler = async (
 				// Update webview state
 				await provider.postStateToWebview()
 
-				// Then handle validation and initialization
-				if (provider.codeIndexManager) {
-					// If embedder provider changed, perform proactive validation
-					if (embedderProviderChanged) {
-						try {
-							// Force handleSettingsChange which will trigger validation
-							await provider.codeIndexManager.handleSettingsChange()
-						} catch (error) {
-							// Validation failed - the error state is already set by handleSettingsChange
-							provider.log(
-								`Embedder validation failed after provider change: ${error instanceof Error ? error.message : String(error)}`,
-							)
-							// Send validation error to webview
-							await provider.postMessageToWebview({
-								type: "indexingStatusUpdate",
-								values: provider.codeIndexManager.getCurrentStatus(),
-							})
-							// Exit early - don't try to start indexing with invalid configuration
-							break
-						}
-					} else {
-						// No provider change, just handle settings normally
+				// If the feature is being disabled, we don't need to validate or show workspace errors
+				if (!settings.codebaseIndexEnabled) {
+					// If there's a code index manager, let it handle the disable
+					if (provider.codeIndexManager) {
 						try {
 							await provider.codeIndexManager.handleSettingsChange()
 						} catch (error) {
-							// Log but don't fail - settings are saved
+							// Log but don't fail - settings are saved and feature is disabled
 							provider.log(
-								`Settings change handling error: ${error instanceof Error ? error.message : String(error)}`,
+								`Settings change handling error while disabling: ${error instanceof Error ? error.message : String(error)}`,
 							)
 						}
 					}
+					// Clear any error status when disabling
+					await provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: {
+							systemStatus: "Standby",
+							message: "",
+							processedItems: 0,
+							totalItems: 0,
+							currentItemUnit: "items",
+						},
+					})
+					break
+				}
 
-					// Wait a bit more to ensure everything is ready
-					await new Promise((resolve) => setTimeout(resolve, 200))
-
-					// Auto-start indexing if now enabled and configured
-					if (provider.codeIndexManager.isFeatureEnabled && provider.codeIndexManager.isFeatureConfigured) {
-						if (!provider.codeIndexManager.isInitialized) {
-							try {
-								await provider.codeIndexManager.initialize(provider.contextProxy)
-								provider.log(`Code index manager initialized after settings save`)
-							} catch (error) {
-								provider.log(
-									`Code index initialization failed: ${error instanceof Error ? error.message : String(error)}`,
-								)
-								// Send error status to webview
-								await provider.postMessageToWebview({
-									type: "indexingStatusUpdate",
-									values: provider.codeIndexManager.getCurrentStatus(),
-								})
-							}
-						}
-					}
-				} else {
-					// No workspace open - send error status
-					provider.log("Cannot save code index settings: No workspace folder open")
+				// Feature is being enabled - check if we have a workspace
+				if (!provider.codeIndexManager) {
+					// No workspace open - send error status only when trying to enable
+					provider.log("Cannot enable code indexing: No workspace folder open")
 					await provider.postMessageToWebview({
 						type: "indexingStatusUpdate",
 						values: {
@@ -2123,6 +2098,60 @@ export const webviewMessageHandler = async (
 							currentItemUnit: "items",
 						},
 					})
+					break
+				}
+
+				// We have a workspace and feature is enabled - proceed with validation and initialization
+				// If embedder provider changed, perform proactive validation
+				if (embedderProviderChanged) {
+					try {
+						// Force handleSettingsChange which will trigger validation
+						await provider.codeIndexManager.handleSettingsChange()
+					} catch (error) {
+						// Validation failed - the error state is already set by handleSettingsChange
+						provider.log(
+							`Embedder validation failed after provider change: ${error instanceof Error ? error.message : String(error)}`,
+						)
+						// Send validation error to webview
+						await provider.postMessageToWebview({
+							type: "indexingStatusUpdate",
+							values: provider.codeIndexManager.getCurrentStatus(),
+						})
+						// Exit early - don't try to start indexing with invalid configuration
+						break
+					}
+				} else {
+					// No provider change, just handle settings normally
+					try {
+						await provider.codeIndexManager.handleSettingsChange()
+					} catch (error) {
+						// Log but don't fail - settings are saved
+						provider.log(
+							`Settings change handling error: ${error instanceof Error ? error.message : String(error)}`,
+						)
+					}
+				}
+
+				// Wait a bit more to ensure everything is ready
+				await new Promise((resolve) => setTimeout(resolve, 200))
+
+				// Auto-start indexing if now enabled and configured
+				if (provider.codeIndexManager.isFeatureEnabled && provider.codeIndexManager.isFeatureConfigured) {
+					if (!provider.codeIndexManager.isInitialized) {
+						try {
+							await provider.codeIndexManager.initialize(provider.contextProxy)
+							provider.log(`Code index manager initialized after settings save`)
+						} catch (error) {
+							provider.log(
+								`Code index initialization failed: ${error instanceof Error ? error.message : String(error)}`,
+							)
+							// Send error status to webview
+							await provider.postMessageToWebview({
+								type: "indexingStatusUpdate",
+								values: provider.codeIndexManager.getCurrentStatus(),
+							})
+						}
+					}
 				}
 			} catch (error) {
 				provider.log(`Error saving code index settings: ${error.message || error}`)
@@ -2138,17 +2167,35 @@ export const webviewMessageHandler = async (
 		case "requestIndexingStatus": {
 			const manager = provider.codeIndexManager
 			if (!manager) {
-				// No workspace open - send error status
-				provider.postMessageToWebview({
-					type: "indexingStatusUpdate",
-					values: {
-						systemStatus: "Error",
-						message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
-						processedItems: 0,
-						totalItems: 0,
-						currentItemUnit: "items",
-					},
-				})
+				// No workspace open - check if feature is enabled
+				const codebaseIndexConfig = getGlobalState("codebaseIndexConfig") || {}
+				const isEnabled = codebaseIndexConfig.codebaseIndexEnabled ?? true
+
+				if (isEnabled) {
+					// Feature is enabled but no workspace - show error
+					provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: {
+							systemStatus: "Error",
+							message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+							processedItems: 0,
+							totalItems: 0,
+							currentItemUnit: "items",
+						},
+					})
+				} else {
+					// Feature is disabled - show standby status
+					provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: {
+							systemStatus: "Standby",
+							message: "",
+							processedItems: 0,
+							totalItems: 0,
+							currentItemUnit: "items",
+						},
+					})
+				}
 				return
 			}
 			const status = manager.getCurrentStatus()
@@ -2214,14 +2261,24 @@ export const webviewMessageHandler = async (
 			try {
 				const manager = provider.codeIndexManager
 				if (!manager) {
-					provider.log("Cannot clear index data: No workspace folder open")
-					provider.postMessageToWebview({
-						type: "indexCleared",
-						values: {
-							success: false,
-							error: t("embeddings:orchestrator.indexingRequiresWorkspace"),
-						},
-					})
+					// No workspace open - check if feature is enabled
+					const codebaseIndexConfig = getGlobalState("codebaseIndexConfig") || {}
+					const isEnabled = codebaseIndexConfig.codebaseIndexEnabled ?? true
+
+					if (isEnabled) {
+						// Only show error if feature is enabled
+						provider.log("Cannot clear index data: No workspace folder open")
+						provider.postMessageToWebview({
+							type: "indexCleared",
+							values: {
+								success: false,
+								error: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+							},
+						})
+					} else {
+						// Feature is disabled, just return success
+						provider.postMessageToWebview({ type: "indexCleared", values: { success: true } })
+					}
 					return
 				}
 				await manager.clearIndexData()
