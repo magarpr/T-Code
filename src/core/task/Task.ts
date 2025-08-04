@@ -1346,8 +1346,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed() }]
-				this.consecutiveMistakeCount++
+				// In Ask mode, we allow responses without tool usage since it's designed
+				// to provide direct answers, especially when using features like Google Gemini's grounding
+				const currentMode = await this.getTaskMode()
+				const isAskMode = currentMode === "ask"
+
+				if (!isAskMode) {
+					nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed() }]
+					this.consecutiveMistakeCount++
+				} else {
+					// For Ask mode, end the loop gracefully without error
+					break
+				}
 			}
 		}
 	}
@@ -1781,7 +1791,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// either use a tool or attempt_completion.
 				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
-				if (!didToolUse) {
+				// In Ask mode, we allow responses without tool usage since it's designed
+				// to provide direct answers, especially when using features like Google Gemini's grounding
+				const currentMode = await this.getTaskMode()
+				const isAskMode = currentMode === "ask"
+
+				if (!didToolUse && !isAskMode) {
 					this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
 					this.consecutiveMistakeCount++
 				}
