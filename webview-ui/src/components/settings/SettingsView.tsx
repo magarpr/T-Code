@@ -229,7 +229,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 				// Don't treat initial sync from undefined to a defined value as a user change
 				// This prevents the dirty state when the component initializes and auto-syncs the model ID
-				const isInitialSync = previousValue === undefined && value !== undefined
+				// Exception: openRouterSpecificProvider should always trigger change detection
+				const isInitialSync =
+					previousValue === undefined && value !== undefined && field !== "openRouterSpecificProvider"
 
 				if (!isInitialSync) {
 					setChangeDetected(true)
