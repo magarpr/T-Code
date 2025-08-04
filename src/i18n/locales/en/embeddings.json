@@ -59,6 +59,7 @@
 		"fileWatcherStarted": "File watcher started.",
 		"fileWatcherStopped": "File watcher stopped.",
 		"failedDuringInitialScan": "Failed during initial scan: {{errorMessage}}",
+		"rateLimitError": "Indexing paused due to rate limit: {{errorMessage}}. Progress has been preserved. Please try again later.",
 		"unknownError": "Unknown error",
 		"indexingRequiresWorkspace": "Indexing requires an open workspace folder"
 	}

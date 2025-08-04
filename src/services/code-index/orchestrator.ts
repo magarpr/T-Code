@@ -8,6 +8,7 @@ import { CacheManager } from "./cache-manager"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { t } from "../../i18n"
+import { extractStatusCode } from "./shared/validation-helpers"
 
 /**
  * Manages the code indexing workflow, coordinating between different services and managers.
@@ -210,25 +211,37 @@ export class CodeIndexOrchestrator {
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "startIndexing",
 			})
-			try {
-				await this.vectorStore.clearCollection()
-			} catch (cleanupError) {
-				console.error("[CodeIndexOrchestrator] Failed to clean up after error:", cleanupError)
-				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-					error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-					stack: cleanupError instanceof Error ? cleanupError.stack : undefined,
-					location: "startIndexing.cleanup",
-				})
+
+			// Check if this is a rate limit error (429)
+			const statusCode = extractStatusCode(error)
+			const isRateLimitError = statusCode === 429
+
+			// Only clear vector store and cache if it's NOT a rate limit error
+			if (!isRateLimitError) {
+				try {
+					await this.vectorStore.clearCollection()
+				} catch (cleanupError) {
+					console.error("[CodeIndexOrchestrator] Failed to clean up after error:", cleanupError)
+					TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+						error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+						stack: cleanupError instanceof Error ? cleanupError.stack : undefined,
+						location: "startIndexing.cleanup",
+					})
+				}
+
+				await this.cacheManager.clearCacheFile()
 			}
 
-			await this.cacheManager.clearCacheFile()
+			// Set appropriate error message based on error type
+			const errorMessage = isRateLimitError
+				? t("embeddings:orchestrator.rateLimitError", {
+						errorMessage: error.message || t("embeddings:orchestrator.unknownError"),
+					})
+				: t("embeddings:orchestrator.failedDuringInitialScan", {
+						errorMessage: error.message || t("embeddings:orchestrator.unknownError"),
+					})
 
-			this.stateManager.setSystemState(
-				"Error",
-				t("embeddings:orchestrator.failedDuringInitialScan", {
-					errorMessage: error.message || t("embeddings:orchestrator.unknownError"),
-				}),
-			)
+			this.stateManager.setSystemState("Error", errorMessage)
 			this.stopWatcher()
 		} finally {
 			this._isProcessing = false
