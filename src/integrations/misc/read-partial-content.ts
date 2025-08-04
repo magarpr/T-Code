@@ -57,8 +57,8 @@ export async function readPartialContent(filePath: string, maxChars: number): Pr
 		let hasContent = false
 
 		stream.on("data", (chunk: string | Buffer) => {
-			// Early exit if stream was already destroyed
-			if (streamDestroyed) {
+			// Check stream state immediately
+			if (streamDestroyed || stream.destroyed) {
 				return
 			}
 
@@ -95,11 +95,8 @@ export async function readPartialContent(filePath: string, maxChars: number): Pr
 				}
 
 				// Count newlines in the chunk we're adding
-				for (let i = 0; i < chunkToAdd.length; i++) {
-					if (chunkToAdd[i] === "\n") {
-						currentLine++
-					}
-				}
+				const newlineCount = (chunkToAdd.match(/\n/g) || []).length
+				currentLine += newlineCount
 
 				content += chunkToAdd
 
@@ -114,11 +111,8 @@ export async function readPartialContent(filePath: string, maxChars: number): Pr
 						// Recount lines in the final content
 						currentLine = 1
 						hasContent = content.length > 0
-						for (let i = 0; i < content.length; i++) {
-							if (content[i] === "\n") {
-								currentLine++
-							}
-						}
+						const finalNewlineCount = (content.match(/\n/g) || []).length
+						currentLine += finalNewlineCount
 					}
 
 					resolve({
