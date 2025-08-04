@@ -197,6 +197,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
 		prevApiConfigName.current = currentApiConfigName
 		setChangeDetected(false)
+		// Reset user modified fields when loading new configuration
+		setUserModifiedFields(new Set())
 	}, [currentApiConfigName, extensionState, isChangeDetected])
 
 	// Bust the cache when settings are imported.
@@ -204,6 +206,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		if (settingsImportedAt) {
 			setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
 			setChangeDetected(false)
+			// Reset user modified fields when importing settings
+			setUserModifiedFields(new Set())
 		}
 	}, [settingsImportedAt, extensionState])
 
@@ -218,8 +222,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		})
 	}, [])
 
+	// Track which fields have been explicitly set by user interaction
+	const [userModifiedFields, setUserModifiedFields] = useState<Set<keyof ProviderSettings>>(new Set())
+
 	const setApiConfigurationField = useCallback(
-		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => {
+		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K], isUserAction: boolean = true) => {
 			setCachedState((prevState) => {
 				if (prevState.apiConfiguration?.[field] === value) {
 					return prevState
@@ -227,11 +234,15 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 				const previousValue = prevState.apiConfiguration?.[field]
 
+				// Track if this field has been modified by the user
+				if (isUserAction) {
+					setUserModifiedFields((prev) => new Set(prev).add(field))
+				}
+
 				// Don't treat initial sync from undefined to a defined value as a user change
-				// This prevents the dirty state when the component initializes and auto-syncs the model ID
-				// Exception: openRouterSpecificProvider should always trigger change detection
+				// unless this field has been explicitly modified by the user before
 				const isInitialSync =
-					previousValue === undefined && value !== undefined && field !== "openRouterSpecificProvider"
+					previousValue === undefined && value !== undefined && !userModifiedFields.has(field)
 
 				if (!isInitialSync) {
 					setChangeDetected(true)
@@ -239,7 +250,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				return { ...prevState, apiConfiguration: { ...prevState.apiConfiguration, [field]: value } }
 			})
 		},
-		[],
+		[userModifiedFields],
 	)
 
 	const setExperimentEnabled: SetExperimentEnabled = useCallback((id: ExperimentId, enabled: boolean) => {
@@ -348,6 +359,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
 			setChangeDetected(false)
+			// Reset user modified fields after saving
+			setUserModifiedFields(new Set())
 		}
 	}
 
@@ -371,6 +384,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				// Discard changes: Reset state and flag
 				setCachedState(extensionState) // Revert to original state
 				setChangeDetected(false) // Reset change flag
+				setUserModifiedFields(new Set()) // Reset user modified fields
 				confirmDialogHandler.current?.() // Execute the pending action (e.g., tab switch)
 			}
 			// If confirm is false (Cancel), do nothing, dialog closes automatically
