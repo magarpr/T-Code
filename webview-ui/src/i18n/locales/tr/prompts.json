@@ -10,7 +10,9 @@
 		"editGlobalModes": "Global modları düzenle",
 		"editProjectModes": "Proje modlarını düzenle (.roomodes)",
 		"createModeHelpText": "Modlar, Roo'nun davranışını uyarlayan özel kişiliklerdir. <0>Modları Kullanma Hakkında Bilgi Edinin</0> veya <1>Modları Özelleştirme.</1>",
-		"selectMode": "Modları Ara"
+		"selectMode": "Modları Ara",
+		"defaultModesVisibility": "Varsayılan Mod Görünürlüğü",
+		"defaultModesVisibilityDescription": "Mod seçicide hangi varsayılan modların gösterileceğini seçin"
 	},
 	"apiConfiguration": {
 		"title": "API Yapılandırması",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Bu özel modu silmek istediğinizden emin misiniz?",
 		"confirm": "Sil",
 		"cancel": "İptal"
-	},
-	"defaultModesVisibility": "Varsayılan Mod Görünürlüğü",
-	"defaultModesVisibilityDescription": "Mod seçicide hangi varsayılan modların gösterileceğini seçin"
+	}
 }

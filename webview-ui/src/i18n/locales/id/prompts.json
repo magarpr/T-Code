@@ -10,7 +10,9 @@
 		"editGlobalModes": "Edit Mode Global",
 		"editProjectModes": "Edit Mode Proyek (.roomodes)",
 		"createModeHelpText": "Mode adalah persona khusus yang menyesuaikan perilaku Roo Code. <0>Pelajari tentang Menggunakan Mode</0> atau <1>Menyesuaikan Mode.</1>",
-		"selectMode": "Cari mode"
+		"selectMode": "Cari mode",
+		"defaultModesVisibility": "Visibilitas Mode Default",
+		"defaultModesVisibilityDescription": "Pilih mode default mana yang akan ditampilkan di pemilih mode"
 	},
 	"apiConfiguration": {
 		"title": "Konfigurasi API",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Apakah Anda yakin ingin menghapus mode kustom ini?",
 		"confirm": "Hapus",
 		"cancel": "Batal"
-	},
-	"defaultModesVisibility": "Visibilitas Mode Default",
-	"defaultModesVisibilityDescription": "Pilih mode default mana yang akan ditampilkan di pemilih mode"
+	}
 }

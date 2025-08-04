@@ -10,7 +10,9 @@
 		"editGlobalModes": "Globale modi bewerken",
 		"editProjectModes": "Projectmodi bewerken (.roomodes)",
 		"createModeHelpText": "Modi zijn gespecialiseerde persona's die het gedrag van Roo aanpassen. <0>Meer informatie over het gebruik van modi</0> of <1>het aanpassen van modi.</1>",
-		"selectMode": "Modus zoeken"
+		"selectMode": "Modus zoeken",
+		"defaultModesVisibility": "Zichtbaarheid standaardmodi",
+		"defaultModesVisibilityDescription": "Kies welke standaardmodi worden weergegeven in de moduskiezer"
 	},
 	"apiConfiguration": {
 		"title": "API-configuratie",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Weet je zeker dat je deze aangepaste modus wilt verwijderen?",
 		"confirm": "Verwijderen",
 		"cancel": "Annuleren"
-	},
-	"defaultModesVisibility": "Zichtbaarheid standaardmodi",
-	"defaultModesVisibilityDescription": "Kies welke standaardmodi worden weergegeven in de moduskiezer"
+	}
 }

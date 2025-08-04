@@ -10,7 +10,9 @@
 		"editGlobalModes": "Editar modes globals",
 		"editProjectModes": "Editar modes de projecte (.roomodes)",
 		"createModeHelpText": "Els modes són persones especialitzades que adapten el comportament de Roo. <0>Aprèn sobre l'ús de modes</0> o <1>Personalització de modes.</1>",
-		"selectMode": "Cerqueu modes"
+		"selectMode": "Cerqueu modes",
+		"defaultModesVisibility": "Visibilitat dels modes predeterminats",
+		"defaultModesVisibilityDescription": "Trieu quins modes predeterminats mostrar al selector de modes"
 	},
 	"apiConfiguration": {
 		"title": "Configuració d'API",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Esteu segur que voleu suprimir aquest mode personalitzat?",
 		"confirm": "Suprimeix",
 		"cancel": "Cancel·la"
-	},
-	"defaultModesVisibility": "Visibilitat dels modes predeterminats",
-	"defaultModesVisibilityDescription": "Trieu quins modes predeterminats mostrar al selector de modes"
+	}
 }

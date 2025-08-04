@@ -10,7 +10,9 @@
 		"editGlobalModes": "ग्लोबल मोड्स संपादित करें",
 		"editProjectModes": "प्रोजेक्ट मोड्स संपादित करें (.roomodes)",
 		"createModeHelpText": "मोड विशेष व्यक्तित्व हैं जो Roo के व्यवहार को अनुकूलित करते हैं। <0>मोड का उपयोग करने के बारे में जानें</0> या <1>मोड को अनुकूलित करना।</1>",
-		"selectMode": "मोड खोजें"
+		"selectMode": "मोड खोजें",
+		"defaultModesVisibility": "डिफ़ॉल्ट मोड दृश्यता",
+		"defaultModesVisibilityDescription": "मोड चयनकर्ता में दिखाने के लिए डिफ़ॉल्ट मोड चुनें"
 	},
 	"apiConfiguration": {
 		"title": "API कॉन्फ़िगरेशन",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "क्या आप वाकई इस कस्टम मोड को हटाना चाहते हैं?",
 		"confirm": "हटाएं",
 		"cancel": "रद्द करें"
-	},
-	"defaultModesVisibility": "डिफ़ॉल्ट मोड दृश्यता",
-	"defaultModesVisibilityDescription": "मोड चयनकर्ता में दिखाने के लिए डिफ़ॉल्ट मोड चुनें"
+	}
 }

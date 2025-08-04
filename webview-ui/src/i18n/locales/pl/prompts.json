@@ -10,7 +10,9 @@
 		"editGlobalModes": "Edytuj tryby globalne",
 		"editProjectModes": "Edytuj tryby projektu (.roomodes)",
 		"createModeHelpText": "Tryby to wyspecjalizowane persony, które dostosowują zachowanie Roo. <0>Dowiedz się o używaniu trybów</0> lub <1>dostosowywaniu trybów.</1>",
-		"selectMode": "Szukaj trybów"
+		"selectMode": "Szukaj trybów",
+		"defaultModesVisibility": "Widoczność domyślnych trybów",
+		"defaultModesVisibilityDescription": "Wybierz, które domyślne tryby mają być wyświetlane w selektorze trybów"
 	},
 	"apiConfiguration": {
 		"title": "Konfiguracja API",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Czy na pewno chcesz usunąć ten niestandardowy tryb?",
 		"confirm": "Usuń",
 		"cancel": "Anuluj"
-	},
-	"defaultModesVisibility": "Widoczność domyślnych trybów",
-	"defaultModesVisibilityDescription": "Wybierz, które domyślne tryby mają być wyświetlane w selektorze trybów"
+	}
 }

@@ -10,7 +10,9 @@
 		"editGlobalModes": "Globale Modi bearbeiten",
 		"editProjectModes": "Projektmodi bearbeiten (.roomodes)",
 		"createModeHelpText": "Modi sind spezialisierte Personas, die Roos Verhalten anpassen. <0>Erfahre mehr über die Verwendung von Modi</0> oder <1>die Anpassung von Modi.</1>",
-		"selectMode": "Modi suchen"
+		"selectMode": "Modi suchen",
+		"defaultModesVisibility": "Sichtbarkeit der Standardmodi",
+		"defaultModesVisibilityDescription": "Wählen Sie aus, welche Standardmodi im Modusauswähler angezeigt werden sollen"
 	},
 	"apiConfiguration": {
 		"title": "API-Konfiguration",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Möchten Sie diesen benutzerdefinierten Modus wirklich löschen?",
 		"confirm": "Löschen",
 		"cancel": "Abbrechen"
-	},
-	"defaultModesVisibility": "Sichtbarkeit der Standardmodi",
-	"defaultModesVisibilityDescription": "Wählen Sie aus, welche Standardmodi im Modusauswähler angezeigt werden sollen"
+	}
 }

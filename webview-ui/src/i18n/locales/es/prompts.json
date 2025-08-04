@@ -10,7 +10,9 @@
 		"editGlobalModes": "Editar modos globales",
 		"editProjectModes": "Editar modos del proyecto (.roomodes)",
 		"createModeHelpText": "Los modos son personas especializadas que adaptan el comportamiento de Roo. <0>Aprende sobre el uso de modos</0> o <1>Personalización de modos.</1>",
-		"selectMode": "Buscar modos"
+		"selectMode": "Buscar modos",
+		"defaultModesVisibility": "Visibilidad de modos predeterminados",
+		"defaultModesVisibilityDescription": "Elija qué modos predeterminados mostrar en el selector de modos"
 	},
 	"apiConfiguration": {
 		"title": "Configuración de API",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "¿Estás seguro de que quieres eliminar este modo personalizado?",
 		"confirm": "Eliminar",
 		"cancel": "Cancelar"
-	},
-	"defaultModesVisibility": "Visibilidad de modos predeterminados",
-	"defaultModesVisibilityDescription": "Elija qué modos predeterminados mostrar en el selector de modos"
+	}
 }

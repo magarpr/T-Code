@@ -10,7 +10,9 @@
 		"editGlobalModes": "グローバルモードを編集",
 		"editProjectModes": "プロジェクトモードを編集 (.roomodes)",
 		"createModeHelpText": "モードはRooの振る舞いを調整する専門的なペルソナです。<0>モードの使用について学ぶ</0>か、<1>モードのカスタマイズについて学ぶ</1>。",
-		"selectMode": "モードを検索"
+		"selectMode": "モードを検索",
+		"defaultModesVisibility": "デフォルトモードの表示",
+		"defaultModesVisibilityDescription": "モードセレクターに表示するデフォルトモードを選択してください"
 	},
 	"apiConfiguration": {
 		"title": "API設定",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "このカスタムモードを削除してもよろしいですか？",
 		"confirm": "削除",
 		"cancel": "キャンセル"
-	},
-	"defaultModesVisibility": "デフォルトモードの表示",
-	"defaultModesVisibilityDescription": "モードセレクターに表示するデフォルトモードを選択してください"
+	}
 }

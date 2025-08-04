@@ -10,7 +10,9 @@
 		"editGlobalModes": "Modifica modalità globali",
 		"editProjectModes": "Modifica modalità di progetto (.roomodes)",
 		"createModeHelpText": "Le modalità sono personas specializzate che personalizzano il comportamento di Roo. <0>Scopri di più sull'uso delle modalità</0> o <1>sulla personalizzazione delle modalità.</1>",
-		"selectMode": "Cerca modalità"
+		"selectMode": "Cerca modalità",
+		"defaultModesVisibility": "Visibilità delle modalità predefinite",
+		"defaultModesVisibilityDescription": "Scegli quali modalità predefinite mostrare nel selettore di modalità"
 	},
 	"apiConfiguration": {
 		"title": "Configurazione API",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Sei sicuro di voler eliminare questa modalità personalizzata?",
 		"confirm": "Elimina",
 		"cancel": "Annulla"
-	},
-	"defaultModesVisibility": "Visibilità delle modalità predefinite",
-	"defaultModesVisibilityDescription": "Scegli quali modalità predefinite mostrare nel selettore di modalità"
+	}
 }

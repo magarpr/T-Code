@@ -10,7 +10,9 @@
 		"editGlobalModes": "Chỉnh sửa chế độ toàn cục",
 		"editProjectModes": "Chỉnh sửa chế độ dự án (.roomodes)",
 		"createModeHelpText": "Chế độ là các vai trò chuyên biệt điều chỉnh hành vi của Roo. <0>Tìm hiểu về Sử dụng Chế độ</0> hoặc <1>Tùy chỉnh Chế độ.</1>",
-		"selectMode": "Tìm kiếm chế độ"
+		"selectMode": "Tìm kiếm chế độ",
+		"defaultModesVisibility": "Hiển thị chế độ mặc định",
+		"defaultModesVisibilityDescription": "Chọn chế độ mặc định nào sẽ hiển thị trong bộ chọn chế độ"
 	},
 	"apiConfiguration": {
 		"title": "Cấu hình API",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "Bạn có chắc chắn muốn xóa chế độ tùy chỉnh này không?",
 		"confirm": "Xóa",
 		"cancel": "Hủy"
-	},
-	"defaultModesVisibility": "Hiển thị chế độ mặc định",
-	"defaultModesVisibilityDescription": "Chọn chế độ mặc định nào sẽ hiển thị trong bộ chọn chế độ"
+	}
 }

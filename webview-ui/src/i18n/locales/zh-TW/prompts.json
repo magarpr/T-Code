@@ -10,7 +10,9 @@
 		"editGlobalModes": "編輯全域模式",
 		"editProjectModes": "編輯專案模式 (.roomodes)",
 		"createModeHelpText": "模式是 Roo 的專屬角色，用於客製化其行為。<0>了解如何使用模式</0>或<1>自訂模式。</1>",
-		"selectMode": "搜尋模式"
+		"selectMode": "搜尋模式",
+		"defaultModesVisibility": "預設模式可見性",
+		"defaultModesVisibilityDescription": "選擇在模式選擇器中顯示哪些預設模式"
 	},
 	"apiConfiguration": {
 		"title": "API 設定",
@@ -207,7 +209,5 @@
 		"descriptionNoRules": "您確定要刪除此自訂模式嗎？",
 		"confirm": "刪除",
 		"cancel": "取消"
-	},
-	"defaultModesVisibility": "預設模式可見性",
-	"defaultModesVisibilityDescription": "選擇在模式選擇器中顯示哪些預設模式"
+	}
 }
