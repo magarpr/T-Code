@@ -391,6 +391,51 @@
 					"type": "boolean",
 					"default": true,
 					"description": "%settings.useAgentRules.description%"
+				},
+				"roo-cline.aiTabCompletion.enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.aiTabCompletion.enabled.description%"
+				},
+				"roo-cline.aiTabCompletion.provider": {
+					"type": "string",
+					"enum": [
+						"anthropic",
+						"openai",
+						"openrouter",
+						"bedrock",
+						"ollama",
+						"lmstudio",
+						"vscode-lm"
+					],
+					"default": "anthropic",
+					"description": "%settings.aiTabCompletion.provider.description%"
+				},
+				"roo-cline.aiTabCompletion.model": {
+					"type": "string",
+					"default": "claude-3-haiku-20240307",
+					"description": "%settings.aiTabCompletion.model.description%"
+				},
+				"roo-cline.aiTabCompletion.debounceDelay": {
+					"type": "number",
+					"default": 300,
+					"minimum": 100,
+					"maximum": 1000,
+					"description": "%settings.aiTabCompletion.debounceDelay.description%"
+				},
+				"roo-cline.aiTabCompletion.maxTokens": {
+					"type": "number",
+					"default": 150,
+					"minimum": 50,
+					"maximum": 500,
+					"description": "%settings.aiTabCompletion.maxTokens.description%"
+				},
+				"roo-cline.aiTabCompletion.temperature": {
+					"type": "number",
+					"default": 0.2,
+					"minimum": 0,
+					"maximum": 1,
+					"description": "%settings.aiTabCompletion.temperature.description%"
 				}
 			}
 		}

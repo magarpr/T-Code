@@ -30,6 +30,7 @@ import { MdmService } from "./services/mdm/MdmService"
 import { migrateSettings } from "./utils/migrateSettings"
 import { autoImportSettings } from "./utils/autoImportSettings"
 import { API } from "./extension/api"
+import { AiCompletionProvider } from "./integrations/completion/AiCompletionProvider"
 
 import {
 	handleUri,
@@ -191,6 +192,45 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerCodeActions(context)
 	registerTerminalActions(context)
+
+	// Register AI completion provider
+	const aiCompletionEnabled = vscode.workspace
+		.getConfiguration(Package.name)
+		.get<boolean>("aiTabCompletion.enabled", false)
+	if (aiCompletionEnabled) {
+		const aiCompletionProvider = new AiCompletionProvider(outputChannel)
+		context.subscriptions.push(
+			vscode.languages.registerInlineCompletionItemProvider({ pattern: "**/*" }, aiCompletionProvider),
+			aiCompletionProvider,
+		)
+		outputChannel.appendLine("AI Tab Completion: Provider registered")
+	}
+
+	// Watch for configuration changes to enable/disable AI completion
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration(`${Package.name}.aiTabCompletion.enabled`)) {
+				const nowEnabled = vscode.workspace
+					.getConfiguration(Package.name)
+					.get<boolean>("aiTabCompletion.enabled", false)
+				if (nowEnabled) {
+					outputChannel.appendLine(
+						"AI Tab Completion: Configuration changed - reloading extension recommended to enable",
+					)
+					vscode.window
+						.showInformationMessage(
+							"AI Tab Completion has been enabled. Please reload the window for changes to take effect.",
+							"Reload Window",
+						)
+						.then((selection) => {
+							if (selection === "Reload Window") {
+								vscode.commands.executeCommand("workbench.action.reloadWindow")
+							}
+						})
+				}
+			}
+		}),
+	)
 
 	// Allows other extensions to activate once Roo is ready.
 	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)
