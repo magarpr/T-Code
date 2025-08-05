@@ -1208,6 +1208,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			}
 		}
 
+		// Reset didClickCancel when streaming ends
+		if (wasStreaming && !isStreaming) {
+			setDidClickCancel(false)
+		}
+
 		// Update previous value.
 		setWasStreaming(isStreaming)
 	}, [isStreaming, lastMessage, wasStreaming, isAutoApproved, messages.length])

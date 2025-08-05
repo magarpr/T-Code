@@ -1493,3 +1493,175 @@ describe("ChatView - Message Queueing Tests", () => {
 		expect(input.getAttribute("data-sending-disabled")).toBe("false")
 	})
 })
+
+describe("ChatView - Cancel Button State Tests", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		vi.mocked(vscode.postMessage).mockClear()
+	})
+
+	it("resets didClickCancel state when streaming ends", async () => {
+		const { getByText, queryByText } = renderChatView()
+
+		// First hydrate state with initial task
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 2000,
+					text: "Initial task",
+				},
+			],
+		})
+
+		// Add a streaming API request
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 2000,
+					text: "Initial task",
+				},
+				{
+					type: "say",
+					say: "api_req_started",
+					ts: Date.now() - 1000,
+					text: JSON.stringify({ model: "openai-compatible" }),
+					partial: true,
+				},
+			],
+		})
+
+		// Wait for cancel button to appear
+		await waitFor(() => {
+			expect(getByText("chat:cancel.title")).toBeInTheDocument()
+		})
+
+		// Click cancel button
+		const cancelButton = getByText("chat:cancel.title")
+		act(() => {
+			cancelButton.click()
+		})
+
+		// Verify cancel task was sent
+		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "cancelTask" })
+
+		// Clear the mock to check for subsequent calls
+		vi.mocked(vscode.postMessage).mockClear()
+
+		// Simulate streaming ending by updating messages with completed API request
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 2000,
+					text: "Initial task",
+				},
+				{
+					type: "say",
+					say: "api_req_started",
+					ts: Date.now() - 1000,
+					text: JSON.stringify({
+						model: "openai-compatible",
+						cost: 0.01, // Cost indicates request finished
+						cancelReason: "User cancelled",
+					}),
+					partial: false,
+				},
+			],
+		})
+
+		// Wait for UI to update
+		await waitFor(() => {
+			// Cancel button should no longer be visible when not streaming
+			expect(queryByText("chat:cancel.title")).not.toBeInTheDocument()
+		})
+
+		// Add a new streaming request to verify didClickCancel was reset
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 2000,
+					text: "Initial task",
+				},
+				{
+					type: "say",
+					say: "api_req_started",
+					ts: Date.now() - 1000,
+					text: JSON.stringify({
+						model: "openai-compatible",
+						cost: 0.01,
+						cancelReason: "User cancelled",
+					}),
+					partial: false,
+				},
+				{
+					type: "say",
+					say: "api_req_started",
+					ts: Date.now(),
+					text: JSON.stringify({ model: "openai-compatible" }),
+					partial: true, // New streaming request
+				},
+			],
+		})
+
+		// Wait for cancel button to appear again
+		await waitFor(() => {
+			expect(getByText("chat:cancel.title")).toBeInTheDocument()
+		})
+
+		// The cancel button should be enabled
+		// This verifies that didClickCancel was properly reset
+		const newCancelButton = getByText("chat:cancel.title")
+		// The button should not be disabled
+		expect(newCancelButton).not.toBeDisabled()
+	})
+
+	it("maintains correct button opacity based on streaming and didClickCancel state", async () => {
+		const { container } = renderChatView()
+
+		// First hydrate state with initial task
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 2000,
+					text: "Initial task",
+				},
+			],
+		})
+
+		// Add a streaming API request
+		mockPostMessage({
+			clineMessages: [
+				{
+					type: "say",
+					say: "task",
+					ts: Date.now() - 2000,
+					text: "Initial task",
+				},
+				{
+					type: "say",
+					say: "api_req_started",
+					ts: Date.now() - 1000,
+					text: JSON.stringify({ model: "openai-compatible" }),
+					partial: true,
+				},
+			],
+		})
+
+		// Wait for button container to appear
+		await waitFor(() => {
+			const buttonContainer = container.querySelector('[class*="opacity-"]')
+			expect(buttonContainer).toBeInTheDocument()
+			// Should have opacity-100 when streaming and cancel not clicked
+			expect(buttonContainer?.className).toContain("opacity-100")
+		})
+	})
+})
