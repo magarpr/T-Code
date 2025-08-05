@@ -23,12 +23,31 @@ export class QdrantVectorStore implements IVectorStore {
 	 * @param workspacePath Path to the workspace
 	 * @param url Optional URL to the Qdrant server
 	 */
-	constructor(workspacePath: string, url: string, vectorSize: number, apiKey?: string) {
+	constructor(
+		private readonly workspacePath: string,
+		url: string,
+		vectorSize: number,
+		apiKey?: string,
+	) {
 		// Parse the URL to determine the appropriate QdrantClient configuration
 		const parsedUrl = this.parseQdrantUrl(url)
 
 		// Store the resolved URL for our property
 		this.qdrantUrl = parsedUrl
+
+		// Log workspace path for debugging external drive issues
+		console.log(`[QdrantVectorStore] Initializing with workspace path: "${workspacePath}"`)
+
+		// Check if workspace path is on an external drive (common patterns)
+		const isExternalDrive =
+			workspacePath.includes("/Volumes/") || // macOS external drives
+			(workspacePath.match(/^[A-Z]:\\/i) && !workspacePath.match(/^C:\\/i)) || // Windows non-C drives
+			workspacePath.includes("/mnt/") || // Linux mounted drives
+			workspacePath.includes("/media/") // Linux media drives
+
+		if (isExternalDrive) {
+			console.log(`[QdrantVectorStore] Detected external drive path: "${workspacePath}"`)
+		}
 
 		try {
 			const urlObj = new URL(parsedUrl)
@@ -53,7 +72,7 @@ export class QdrantVectorStore implements IVectorStore {
 				}
 			}
 
-			this.client = new QdrantClient({
+			const clientConfig = {
 				host: urlObj.hostname,
 				https: useHttps,
 				port: port,
@@ -62,8 +81,19 @@ export class QdrantVectorStore implements IVectorStore {
 				headers: {
 					"User-Agent": "Roo-Code",
 				},
+			}
+
+			console.log(`[QdrantVectorStore] Creating Qdrant client with config:`, {
+				host: clientConfig.host,
+				port: clientConfig.port,
+				https: clientConfig.https,
+				hasApiKey: !!clientConfig.apiKey,
+				prefix: clientConfig.prefix,
 			})
+
+			this.client = new QdrantClient(clientConfig)
 		} catch (urlError) {
+			console.error(`[QdrantVectorStore] Failed to parse URL "${parsedUrl}":`, urlError)
 			// If URL parsing fails, fall back to URL-based config
 			// Note: This fallback won't correctly handle prefixes, but it's a last resort for malformed URLs.
 			this.client = new QdrantClient({
@@ -79,6 +109,8 @@ export class QdrantVectorStore implements IVectorStore {
 		const hash = createHash("sha256").update(workspacePath).digest("hex")
 		this.vectorSize = vectorSize
 		this.collectionName = `ws-${hash.substring(0, 16)}`
+
+		console.log(`[QdrantVectorStore] Generated collection name: "${this.collectionName}" from workspace path`)
 	}
 
 	/**
@@ -129,13 +161,27 @@ export class QdrantVectorStore implements IVectorStore {
 		try {
 			const collectionInfo = await this.client.getCollection(this.collectionName)
 			return collectionInfo
-		} catch (error: unknown) {
-			if (error instanceof Error) {
-				console.warn(
-					`[QdrantVectorStore] Warning during getCollectionInfo for "${this.collectionName}". Collection may not exist or another error occurred:`,
-					error.message,
-				)
+		} catch (error: any) {
+			// Check if it's a 404 (collection not found) - this is expected for new collections
+			const statusCode = error?.statusCode || error?.response?.status || error?.status
+			if (statusCode === 404) {
+				// This is normal - collection doesn't exist yet
+				return null
 			}
+
+			// For other errors, log more details
+			// Log more details for debugging external drive issues
+			console.warn(
+				`[QdrantVectorStore] Warning during getCollectionInfo for "${this.collectionName}". Collection may not exist or another error occurred:`,
+				{
+					message: error?.message || String(error),
+					statusCode: statusCode,
+					collectionName: this.collectionName,
+					qdrantUrl: this.qdrantUrl,
+					workspacePath: this.workspacePath,
+					responseData: error?.response?.data,
+				},
+			)
 			return null
 		}
 	}
@@ -147,10 +193,30 @@ export class QdrantVectorStore implements IVectorStore {
 	async initialize(): Promise<boolean> {
 		let created = false
 		try {
+			console.log(`[QdrantVectorStore] Starting initialization for collection "${this.collectionName}"`)
+
+			// First, try to check if Qdrant is accessible
+			try {
+				const collections = await this.client.getCollections()
+				console.log(
+					`[QdrantVectorStore] Successfully connected to Qdrant. Found ${collections.collections?.length || 0} collections`,
+				)
+			} catch (connectionError: any) {
+				console.error(`[QdrantVectorStore] Failed to connect to Qdrant at ${this.qdrantUrl}:`, {
+					error: connectionError.message,
+					code: connectionError.code,
+					statusCode: connectionError.statusCode || connectionError.response?.status,
+				})
+				throw connectionError
+			}
+
 			const collectionInfo = await this.getCollectionInfo()
 
 			if (collectionInfo === null) {
 				// Collection info not retrieved (assume not found or inaccessible), create it
+				console.log(
+					`[QdrantVectorStore] Collection "${this.collectionName}" not found, creating new collection`,
+				)
 				await this.client.createCollection(this.collectionName, {
 					vectors: {
 						size: this.vectorSize,
@@ -158,6 +224,7 @@ export class QdrantVectorStore implements IVectorStore {
 					},
 				})
 				created = true
+				console.log(`[QdrantVectorStore] Successfully created collection "${this.collectionName}"`)
 			} else {
 				// Collection exists, check vector size
 				const vectorsConfig = collectionInfo.config?.params?.vectors
@@ -189,14 +256,63 @@ export class QdrantVectorStore implements IVectorStore {
 			return created
 		} catch (error: any) {
 			const errorMessage = error?.message || error
+			const errorDetails = {
+				message: errorMessage,
+				collectionName: this.collectionName,
+				qdrantUrl: this.qdrantUrl,
+				workspacePath: this.workspacePath,
+				vectorSize: this.vectorSize,
+				statusCode: error?.statusCode || error?.response?.status,
+				responseData: error?.response?.data,
+			}
+
 			console.error(
 				`[QdrantVectorStore] Failed to initialize Qdrant collection "${this.collectionName}":`,
-				errorMessage,
+				errorDetails,
 			)
 
 			// If this is already a vector dimension mismatch error (identified by cause), re-throw it as-is
 			if (error instanceof Error && error.cause !== undefined) {
 				throw error
+			}
+
+			// Check if this is a connection error
+			const isConnectionError =
+				errorMessage?.toLowerCase().includes("econnrefused") ||
+				errorMessage?.toLowerCase().includes("connect") ||
+				errorMessage?.toLowerCase().includes("network") ||
+				error?.code === "ECONNREFUSED"
+
+			// Check for specific Qdrant errors
+			const statusCode = error?.statusCode || error?.response?.status || error?.status
+			const responseBody = error?.response?.data || error?.data || error?.body
+
+			// Handle specific status codes
+			if (statusCode === 500 || errorMessage?.toLowerCase().includes("internal server error")) {
+				// This is the error from the issue - Qdrant returned 500
+				const detailedMessage = responseBody?.status?.error || responseBody?.error || errorMessage
+				console.error(`[QdrantVectorStore] Qdrant returned Internal Server Error (500):`, {
+					responseBody,
+					collectionName: this.collectionName,
+					workspacePath: this.workspacePath,
+				})
+
+				throw new Error(
+					t("embeddings:vectorStore.qdrantConnectionFailed", {
+						qdrantUrl: this.qdrantUrl,
+						errorMessage: `Qdrant returned Internal Server Error. This may be due to invalid collection name or configuration. Details: ${detailedMessage}`,
+					}),
+				)
+			}
+
+			// Provide more specific error messages based on the error type
+			if (isConnectionError) {
+				throw new Error(
+					t("embeddings:vectorStore.qdrantConnectionFailed", {
+						qdrantUrl: this.qdrantUrl,
+						errorMessage: `Unable to connect to Qdrant. Please ensure Qdrant is running and accessible at ${this.qdrantUrl}`,
+					}),
+				)
 			}
 
 			// Otherwise, provide a more user-friendly error message that includes the original error
