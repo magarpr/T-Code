@@ -35,16 +35,12 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-import {
-	getGlobalRooDirectory,
-	getProjectRooDirectoryForCwd,
-	directoryExists,
-	fileExists,
-	readFileIfExists,
-	getRooDirectoriesForCwd,
-	loadConfiguration,
-} from "../index"
+import { getGlobalRooDirectory, directoryExists, fileExists, readFileIfExists, loadConfiguration } from "../index"
 import { findWorkspaceWithRoo } from "../vscode-utils"
+import { getProjectRooDirectoryForCwd, getRooDirectoriesForCwd, setVscodeUtils } from "../wrapper"
+
+// Initialize the wrapper with vscode utilities for testing
+setVscodeUtils({ findWorkspaceWithRoo })
 
 describe("RooConfigService", () => {
 	beforeEach(() => {
