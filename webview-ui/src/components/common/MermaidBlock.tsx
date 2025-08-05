@@ -95,6 +95,53 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 	const { showCopyFeedback, copyWithFeedback } = useCopyToClipboard()
 	const { t } = useAppTranslation()
 
+	// Helper function to enhance error messages with suggestions
+	const enhanceErrorMessage = (originalError: string, code: string): string => {
+		let enhancedMessage = originalError
+
+		// Check for common syntax errors
+		if (originalError.includes("LINK_ID") && originalError.includes("Expecting")) {
+			// Count brackets to check for unclosed brackets
+			const openBrackets = (code.match(/\[/g) || []).length
+			const closeBrackets = (code.match(/\]/g) || []).length
+			const openBraces = (code.match(/\{/g) || []).length
+			const closeBraces = (code.match(/\}/g) || []).length
+
+			if (openBrackets > closeBrackets) {
+				enhancedMessage +=
+					"\n\nSuggestion: You have unclosed square brackets '['. Make sure all node labels are properly closed with ']'."
+			}
+			if (openBraces > closeBraces) {
+				enhancedMessage +=
+					"\n\nSuggestion: You have unclosed curly braces '{'. Make sure all decision nodes are properly closed with '}'."
+			}
+
+			// Check for incomplete node definitions
+			if (code.includes("@") && !code.includes("]") && !code.includes("}")) {
+				enhancedMessage +=
+					"\n\nSuggestion: Node labels containing special characters like '@' should be properly enclosed in brackets."
+			}
+		}
+
+		// Check for other common issues
+		if (originalError.includes("Parse error") && code.trim().endsWith("-->")) {
+			enhancedMessage +=
+				"\n\nSuggestion: Your diagram appears to end with an arrow '-->'. Make sure to complete the connection with a target node."
+		}
+
+		if (
+			!code.trim().startsWith("graph") &&
+			!code.trim().startsWith("flowchart") &&
+			!code.trim().startsWith("sequenceDiagram") &&
+			!code.trim().startsWith("classDiagram")
+		) {
+			enhancedMessage +=
+				"\n\nSuggestion: Make sure your diagram starts with a valid diagram type (e.g., 'flowchart TD', 'graph LR', 'sequenceDiagram', etc.)."
+		}
+
+		return enhancedMessage
+	}
+
 	// 1) Whenever `code` changes, mark that we need to re-render a new chart
 	useEffect(() => {
 		setIsLoading(true)
@@ -121,7 +168,8 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 				})
 				.catch((err) => {
 					console.warn("Mermaid parse/render failed:", err)
-					setError(err.message || "Failed to render Mermaid diagram")
+					const enhancedError = enhanceErrorMessage(err.message || "Failed to render Mermaid diagram", code)
+					setError(enhancedError)
 				})
 				.finally(() => {
 					setIsLoading(false)
@@ -207,7 +255,12 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 								backgroundColor: "var(--vscode-editor-background)",
 								borderTop: "none",
 							}}>
-							<div style={{ marginBottom: "8px", color: "var(--vscode-descriptionForeground)" }}>
+							<div
+								style={{
+									marginBottom: "8px",
+									color: "var(--vscode-descriptionForeground)",
+									whiteSpace: "pre-wrap",
+								}}>
 								{error}
 							</div>
 							<CodeBlock language="mermaid" source={code} />
@@ -216,7 +269,11 @@ export default function MermaidBlock({ code }: MermaidBlockProps) {
 				</div>
 			) : (
 				<MermaidButton containerRef={containerRef} code={code} isLoading={isLoading} svgToPng={svgToPng}>
-					<SvgContainer onClick={handleClick} ref={containerRef} $isLoading={isLoading}></SvgContainer>
+					<SvgContainer
+						onClick={handleClick}
+						ref={containerRef}
+						$isLoading={isLoading}
+						data-testid="svg-container"></SvgContainer>
 				</MermaidButton>
 			)}
 		</MermaidBlockContainer>
