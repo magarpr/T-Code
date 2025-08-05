@@ -276,8 +276,35 @@ describe("XAIHandler", () => {
 				temperature: 0,
 				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
 				stream: true,
-				stream_options: { include_usage: true },
+				// xAI API doesn't support stream_options
 			}),
 		)
+	})
+
+	it("should not include stream_options for Grok-4 model", async () => {
+		// Create handler with Grok-4 model
+		const grok4Handler = new XAIHandler({ apiModelId: "grok-4" })
+
+		// Setup mock for streaming response
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}
+		})
+
+		// Start generating a message
+		const messageGenerator = grok4Handler.createMessage("test prompt", [])
+		await messageGenerator.next()
+
+		// Verify that stream_options was NOT included
+		const calls = mockCreate.mock.calls
+		const lastCall = calls[calls.length - 1][0]
+		expect(lastCall).not.toHaveProperty("stream_options")
+		expect(lastCall.stream).toBe(true)
+		expect(lastCall.model).toBe("grok-4")
 	})
 })
