@@ -1,5 +1,7 @@
 README.md
 CHANGELOG.md
 LICENSE
-webview-ui
+# Ignore webview-ui source files but keep the build output
+webview-ui/*
+!webview-ui/build/
 assets/vscode-material-icons
