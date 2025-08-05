@@ -23,6 +23,7 @@ export type ChutesModelId =
 	| "Qwen/Qwen3-30B-A3B"
 	| "Qwen/Qwen3-14B"
 	| "Qwen/Qwen3-8B"
+	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 	| "microsoft/MAI-DS-R1-FP8"
 	| "tngtech/DeepSeek-R1T-Chimera"
 	| "zai-org/GLM-4.5-Air"
@@ -219,6 +220,15 @@ export const chutesModels = {
 		inputPrice: 0,
 		outputPrice: 0,
 		description: "Qwen3 8B model.",
+	},
+	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
+		maxTokens: 32768,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Qwen3 Coder 480B A35B Instruct FP8 model, optimized for coding tasks.",
 	},
 	"microsoft/MAI-DS-R1-FP8": {
 		maxTokens: 32768,
