@@ -1842,7 +1842,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
-	private async getSystemPrompt(): Promise<string> {
+	private async getSystemPrompt(userQuery?: string): Promise<string> {
 		const { mcpEnabled } = (await this.providerRef.deref()?.getState()) ?? {}
 		let mcpHub: McpHub | undefined
 		if (mcpEnabled ?? true) {
@@ -1913,6 +1913,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 					useAgentRules: vscode.workspace.getConfiguration("roo-cline").get<boolean>("useAgentRules") ?? true,
 				},
+				undefined, // todoList
+				userQuery,
+				{
+					enabled: vscode.workspace.getConfiguration("roo-cline").get<boolean>("smartRules.enabled") ?? true,
+					minSimilarity:
+						vscode.workspace.getConfiguration("roo-cline").get<number>("smartRules.minSimilarity") ?? 0.7,
+					maxRules: vscode.workspace.getConfiguration("roo-cline").get<number>("smartRules.maxRules") ?? 5,
+					showSelectedRules:
+						vscode.workspace.getConfiguration("roo-cline").get<boolean>("smartRules.showSelectedRules") ??
+						false,
+					debugRuleSelection:
+						vscode.workspace.getConfiguration("roo-cline").get<boolean>("smartRules.debugRuleSelection") ??
+						false,
+				},
 			)
 		})()
 	}
@@ -1980,7 +1994,22 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// requests — even from new subtasks — will honour the provider's rate-limit.
 		Task.lastGlobalApiRequestTime = Date.now()
 
-		const systemPrompt = await this.getSystemPrompt()
+		// Extract the user query from the most recent user message
+		let userQuery: string | undefined
+		const lastUserMessage = this.apiConversationHistory
+			.slice()
+			.reverse()
+			.find((msg) => msg.role === "user")
+
+		if (lastUserMessage && Array.isArray(lastUserMessage.content)) {
+			const textBlocks = lastUserMessage.content.filter((block: any) => block.type === "text")
+			if (textBlocks.length > 0) {
+				// Combine all text blocks to form the user query
+				userQuery = textBlocks.map((block: any) => block.text).join("\n")
+			}
+		}
+
+		const systemPrompt = await this.getSystemPrompt(userQuery)
 		const { contextTokens } = this.getTokenUsage()
 
 		if (contextTokens) {

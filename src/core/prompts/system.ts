@@ -4,6 +4,7 @@ import * as os from "os"
 import type { ModeConfig, PromptComponent, CustomModePrompts, TodoItem } from "@roo-code/types"
 
 import type { SystemPromptSettings } from "./types"
+import type { SmartRulesConfig } from "./types/smart-rules"
 
 import { Mode, modes, defaultModeSlug, getModeBySlug, getGroupName, getModeSelection } from "../../shared/modes"
 import { DiffStrategy } from "../../shared/tools"
@@ -61,6 +62,8 @@ async function generatePrompt(
 	partialReadsEnabled?: boolean,
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
+	userQuery?: string,
+	smartRulesConfig?: Partial<SmartRulesConfig>,
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -126,6 +129,8 @@ ${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", 
 	language: language ?? formatLanguage(vscode.env.language),
 	rooIgnoreInstructions,
 	settings,
+	userQuery,
+	smartRulesConfig,
 })}`
 
 	return basePrompt
@@ -150,6 +155,8 @@ export const SYSTEM_PROMPT = async (
 	partialReadsEnabled?: boolean,
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
+	userQuery?: string,
+	smartRulesConfig?: Partial<SmartRulesConfig>,
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -188,6 +195,8 @@ export const SYSTEM_PROMPT = async (
 				language: language ?? formatLanguage(vscode.env.language),
 				rooIgnoreInstructions,
 				settings,
+				userQuery,
+				smartRulesConfig,
 			},
 		)
 
@@ -221,5 +230,7 @@ ${customInstructions}`
 		partialReadsEnabled,
 		settings,
 		todoList,
+		userQuery,
+		smartRulesConfig,
 	)
 }

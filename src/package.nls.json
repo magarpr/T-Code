@@ -37,5 +37,10 @@
 	"settings.customStoragePath.description": "Custom storage path. Leave empty to use the default location. Supports absolute paths (e.g. 'D:\\RooCodeStorage')",
 	"settings.enableCodeActions.description": "Enable Roo Code quick fixes",
 	"settings.autoImportSettingsPath.description": "Path to a RooCode configuration file to automatically import on extension startup. Supports absolute paths and paths relative to the home directory (e.g. '~/Documents/roo-code-settings.json'). Leave empty to disable auto-import.",
-	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agent-rules.org/)"
+	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agent-rules.org/)",
+	"settings.smartRules.enabled.description": "Enable intelligent semantic rule injection that automatically selects relevant rules based on the current task",
+	"settings.smartRules.minSimilarity.description": "Minimum similarity score (0-1) required for a smart rule to be selected. Lower values include more rules",
+	"settings.smartRules.maxRules.description": "Maximum number of smart rules to include in a single prompt",
+	"settings.smartRules.showSelectedRules.description": "Show which smart rules were selected in the UI",
+	"settings.smartRules.debugRuleSelection.description": "Enable debug logging for smart rule selection process"
 }

@@ -391,6 +391,35 @@
 					"type": "boolean",
 					"default": true,
 					"description": "%settings.useAgentRules.description%"
+				},
+				"roo-cline.smartRules.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "%settings.smartRules.enabled.description%"
+				},
+				"roo-cline.smartRules.minSimilarity": {
+					"type": "number",
+					"default": 0.7,
+					"minimum": 0,
+					"maximum": 1,
+					"description": "%settings.smartRules.minSimilarity.description%"
+				},
+				"roo-cline.smartRules.maxRules": {
+					"type": "number",
+					"default": 5,
+					"minimum": 1,
+					"maximum": 20,
+					"description": "%settings.smartRules.maxRules.description%"
+				},
+				"roo-cline.smartRules.showSelectedRules": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.smartRules.showSelectedRules.description%"
+				},
+				"roo-cline.smartRules.debugRuleSelection": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.smartRules.debugRuleSelection.description%"
 				}
 			}
 		}

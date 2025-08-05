@@ -6,9 +6,12 @@ import { Dirent } from "fs"
 import { isLanguage } from "@roo-code/types"
 
 import type { SystemPromptSettings } from "../types"
+import type { SmartRulesConfig } from "../types/smart-rules"
 
 import { LANGUAGES } from "../../../shared/language"
 import { getRooDirectoriesForCwd, getGlobalRooDirectory } from "../../../services/roo-config"
+import { loadSmartRules, hasSmartRules } from "./smart-rules-loader"
+import { selectSmartRules, formatSmartRules } from "./smart-rules-matcher"
 
 /**
  * Safely read a file and return its trimmed content
@@ -264,6 +267,8 @@ export async function addCustomInstructions(
 		language?: string
 		rooIgnoreInstructions?: string
 		settings?: SystemPromptSettings
+		userQuery?: string
+		smartRulesConfig?: Partial<SmartRulesConfig>
 	} = {},
 ): Promise<string> {
 	const sections = []
@@ -354,6 +359,24 @@ export async function addCustomInstructions(
 	const genericRuleContent = await loadRuleFiles(cwd)
 	if (genericRuleContent && genericRuleContent.trim()) {
 		rules.push(genericRuleContent.trim())
+	}
+
+	// Add smart rules if enabled and user query is provided
+	if (options.userQuery && options.smartRulesConfig?.enabled !== false) {
+		const availableSmartRules = await loadSmartRules(cwd, mode)
+		if (availableSmartRules.length > 0) {
+			const selectionResult = selectSmartRules(options.userQuery, availableSmartRules, options.smartRulesConfig)
+
+			if (selectionResult.rules.length > 0) {
+				const formattedSmartRules = formatSmartRules(
+					selectionResult.rules,
+					options.smartRulesConfig?.showSelectedRules,
+				)
+				if (formattedSmartRules) {
+					rules.push(formattedSmartRules)
+				}
+			}
+		}
 	}
 
 	if (rules.length > 0) {

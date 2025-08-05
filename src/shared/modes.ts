@@ -11,10 +11,25 @@ import {
 	DEFAULT_MODES,
 } from "@roo-code/types"
 
-import { addCustomInstructions } from "../core/prompts/sections/custom-instructions"
-
 import { EXPERIMENT_IDS } from "./experiments"
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS } from "./tools"
+
+// Conditional import to avoid bundling Node.js modules in webview
+let addCustomInstructions:
+	| typeof import("../core/prompts/sections/custom-instructions").addCustomInstructions
+	| undefined
+
+// Dynamic import for Node.js environment
+async function loadAddCustomInstructions() {
+	if (typeof window === "undefined" && !addCustomInstructions) {
+		try {
+			const module = await import("../core/prompts/sections/custom-instructions")
+			addCustomInstructions = module.addCustomInstructions
+		} catch (error) {
+			console.error("Failed to load addCustomInstructions:", error)
+		}
+	}
+}
 
 export type Mode = string
 
@@ -307,6 +322,10 @@ export async function getFullModeDetails(
 		cwd?: string
 		globalCustomInstructions?: string
 		language?: string
+		rooIgnoreInstructions?: string
+		settings?: any
+		userQuery?: string
+		smartRulesConfig?: any
 	},
 ): Promise<ModeConfig> {
 	// First get the base mode config from custom modes or built-in modes
@@ -323,13 +342,22 @@ export async function getFullModeDetails(
 	// If we have cwd, load and combine all custom instructions
 	let fullCustomInstructions = baseCustomInstructions
 	if (options?.cwd) {
-		fullCustomInstructions = await addCustomInstructions(
-			baseCustomInstructions,
-			options.globalCustomInstructions || "",
-			options.cwd,
-			modeSlug,
-			{ language: options.language },
-		)
+		await loadAddCustomInstructions()
+		if (addCustomInstructions) {
+			fullCustomInstructions = await addCustomInstructions(
+				baseCustomInstructions,
+				options.globalCustomInstructions || "",
+				options.cwd,
+				modeSlug,
+				{
+					language: options.language,
+					rooIgnoreInstructions: options.rooIgnoreInstructions,
+					settings: options.settings,
+					userQuery: options.userQuery,
+					smartRulesConfig: options.smartRulesConfig,
+				},
+			)
+		}
 	}
 
 	// Return mode with any overrides applied
