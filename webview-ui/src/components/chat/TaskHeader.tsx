@@ -84,10 +84,6 @@ const TaskHeader = ({
 		setShowCloudNotification(false)
 	}
 
-	const handleNavigateToAccount = () => {
-		vscode.postMessage({ type: "switchTab", tab: "account" })
-	}
-
 	const condenseButton = (
 		<StandardTooltip content={t("chat:task.condenseContext")}>
 			<button
@@ -203,7 +199,7 @@ const TaskHeader = ({
 						<div className="flex flex-grow justify-end gap-1 pr-0">
 							<StandardTooltip content="Continue in Cloud from anywhere">
 								<button
-									onClick={() => console.log("Implement me")}
+									onClick={() => vscode.postMessage({ type: "switchTab", tab: "account" })}
 									className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
 									<Router size={14} />
 								</button>
@@ -346,12 +342,7 @@ const TaskHeader = ({
 			</div>
 
 			{/* Cloud notification banner */}
-			{showCloudNotification && (
-				<CloudNotificationBanner
-					onDismiss={handleDismissCloudNotification}
-					onNavigateToAccount={handleNavigateToAccount}
-				/>
-			)}
+			{showCloudNotification && <CloudNotificationBanner onDismiss={handleDismissCloudNotification} />}
 
 			<TodoListDisplay todos={todos ?? (task as any)?.tool?.todos ?? []} />
 		</div>

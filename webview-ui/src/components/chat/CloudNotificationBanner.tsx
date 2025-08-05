@@ -4,15 +4,10 @@ import { cn } from "@src/lib/utils"
 
 interface CloudNotificationBannerProps {
 	onDismiss: () => void
-	onNavigateToAccount: () => void
 	className?: string
 }
 
-export const CloudNotificationBanner = ({
-	onDismiss,
-	onNavigateToAccount,
-	className,
-}: CloudNotificationBannerProps) => {
+export const CloudNotificationBanner = ({ onDismiss, className }: CloudNotificationBannerProps) => {
 	const { t } = useTranslation()
 
 	const handleDismiss = () => {
@@ -20,7 +15,6 @@ export const CloudNotificationBanner = ({
 	}
 
 	const handleClick = () => {
-		onNavigateToAccount()
 		handleDismiss()
 	}
 
