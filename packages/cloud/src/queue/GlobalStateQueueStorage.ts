@@ -371,4 +371,11 @@ export class GlobalStateQueueStorage implements QueueStorage {
 			hostname: this.hostname,
 		}
 	}
+
+	/**
+	 * Get multi-instance configuration
+	 */
+	getMultiInstanceConfig(): Required<MultiInstanceConfig> {
+		return this.multiInstanceConfig
+	}
 }

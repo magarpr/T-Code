@@ -58,7 +58,8 @@ export class QueuedTelemetryClient extends BaseTelemetryClient {
 	 * Set up periodic queue processing for leader mode
 	 */
 	private setupPeriodicProcessing(): void {
-		const interval = this.storage["multiInstanceConfig"].lockCheckIntervalMs || 5000
+		const config = this.storage.getMultiInstanceConfig()
+		const interval = config.lockCheckIntervalMs || 5000
 
 		this.processingInterval = setInterval(async () => {
 			try {
@@ -111,13 +112,14 @@ export class QueuedTelemetryClient extends BaseTelemetryClient {
 	> {
 		const status = await this.queue.getStatus()
 		const instanceInfo = this.storage.getInstanceInfo()
+		const config = this.storage.getMultiInstanceConfig()
 
 		return {
 			...status,
 			instanceInfo: {
 				...instanceInfo,
-				multiInstanceEnabled: this.storage["multiInstanceConfig"].enabled,
-				multiInstanceMode: this.storage["multiInstanceConfig"].mode,
+				multiInstanceEnabled: config.enabled,
+				multiInstanceMode: config.mode,
 			},
 		}
 	}

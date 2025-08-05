@@ -34,6 +34,33 @@ vi.mock("../ShareService")
 
 vi.mock("../TelemetryClient")
 
+vi.mock("../queue", () => ({
+	QueuedTelemetryClient: vi.fn().mockImplementation(() => ({
+		capture: vi.fn().mockResolvedValue(undefined),
+		processQueue: vi.fn().mockResolvedValue(0),
+		getQueueStatus: vi.fn().mockResolvedValue({
+			queueSize: 0,
+			oldestEventAge: undefined,
+			processingState: "idle",
+			lastProcessedAt: undefined,
+			lastError: undefined,
+			storageStats: {
+				sizeInBytes: 0,
+				sizeInMB: 0,
+				utilizationPercent: 0,
+				eventCount: 0,
+			},
+		}),
+		getLockStats: vi.fn().mockResolvedValue({
+			hasLock: false,
+			lockHolder: undefined,
+			lockAge: undefined,
+			isExpired: undefined,
+		}),
+		shutdown: vi.fn().mockResolvedValue(undefined),
+	})),
+}))
+
 describe("CloudService", () => {
 	let mockContext: vscode.ExtensionContext
 	let mockAuthService: {
