@@ -1,4 +1,3 @@
-import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Lightbulb, X } from "lucide-react"
 import { cn } from "@src/lib/utils"
@@ -15,15 +14,9 @@ export const CloudNotificationBanner = ({
 	className,
 }: CloudNotificationBannerProps) => {
 	const { t } = useTranslation()
-	const [isVisible, setIsVisible] = useState(true)
-	const [isAnimating, setIsAnimating] = useState(false)
 
 	const handleDismiss = () => {
-		setIsAnimating(true)
-		setTimeout(() => {
-			setIsVisible(false)
-			onDismiss()
-		}, 200) // Match animation duration
+		onDismiss()
 	}
 
 	const handleClick = () => {
@@ -31,15 +24,8 @@ export const CloudNotificationBanner = ({
 		handleDismiss()
 	}
 
-	if (!isVisible) return null
-
 	return (
-		<div
-			className={cn(
-				"bg-vscode-badge-background relative z-50 transition-all duration-200 ease-in-out",
-				isAnimating ? "opacity-0 transform scale-95" : "opacity-100 transform scale-100",
-				className,
-			)}>
+		<div className={cn("bg-vscode-badge-background relative z-50", className)}>
 			{/* Main notification container with speech bubble */}
 			<div
 				className="relative text-vscode-badge-foreground p-2 rounded-md cursor-pointer transition-colors"

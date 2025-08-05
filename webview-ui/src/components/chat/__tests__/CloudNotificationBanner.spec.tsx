@@ -1,6 +1,6 @@
 // npx vitest src/components/chat/__tests__/CloudNotificationBanner.spec.tsx
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 import { vi } from "vitest"
 
 import { CloudNotificationBanner } from "../CloudNotificationBanner"
@@ -58,36 +58,23 @@ describe("CloudNotificationBanner", () => {
 		expect(closeButton).toBeInTheDocument()
 	})
 
-	it("calls onNavigateToAccount and onDismiss when banner is clicked", async () => {
+	it("calls onNavigateToAccount and onDismiss when banner is clicked", () => {
 		render(<CloudNotificationBanner {...defaultProps} />)
 
 		const banner = screen.getByText("This might take a while. Grab a coffee and continue from anywhere with Cloud.")
 		fireEvent.click(banner)
 
 		expect(mockOnNavigateToAccount).toHaveBeenCalledTimes(1)
-
-		// Wait for the animation timeout
-		await waitFor(
-			() => {
-				expect(mockOnDismiss).toHaveBeenCalledTimes(1)
-			},
-			{ timeout: 300 },
-		)
+		expect(mockOnDismiss).toHaveBeenCalledTimes(1)
 	})
 
-	it("calls onDismiss when close button is clicked", async () => {
+	it("calls onDismiss when close button is clicked", () => {
 		render(<CloudNotificationBanner {...defaultProps} />)
 
 		const closeButton = screen.getByRole("button", { name: "Close notification" })
 		fireEvent.click(closeButton)
 
-		// Wait for the animation timeout
-		await waitFor(
-			() => {
-				expect(mockOnDismiss).toHaveBeenCalledTimes(1)
-			},
-			{ timeout: 300 },
-		)
+		expect(mockOnDismiss).toHaveBeenCalledTimes(1)
 	})
 
 	it("does not call onNavigateToAccount when close button is clicked", () => {
@@ -116,20 +103,5 @@ describe("CloudNotificationBanner", () => {
 			?.parentElement?.querySelector("div")
 
 		expect(triangleElement).toBeInTheDocument()
-	})
-
-	it("handles animation states correctly", async () => {
-		const { container } = render(<CloudNotificationBanner {...defaultProps} />)
-
-		const bannerContainer = container.firstChild as HTMLElement
-		expect(bannerContainer).toHaveClass("opacity-100")
-
-		const closeButton = screen.getByRole("button", { name: "Close notification" })
-		fireEvent.click(closeButton)
-
-		// Should start animation
-		await waitFor(() => {
-			expect(bannerContainer).toHaveClass("opacity-0")
-		})
 	})
 })
