@@ -100,9 +100,24 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 				const delta = chunk.choices[0]?.delta
 
 				if (delta?.content) {
-					assistantText += delta.content
-					for (const processedChunk of matcher.update(delta.content)) {
-						yield processedChunk
+					// Check if this is a gpt-oss model with special token format
+					const isGptOss = this.getModel().id?.toLowerCase().includes("gpt-oss")
+
+					if (isGptOss && delta.content.includes("<|") && delta.content.includes("|>")) {
+						// Parse gpt-oss special token format
+						// Format: <|start|>assistant<|channel|>commentary to=read_file <|constrain|>json<|message|>{"args":[...]}
+						const cleanedContent = this.parseGptOssFormat(delta.content)
+						if (cleanedContent) {
+							assistantText += cleanedContent
+							for (const processedChunk of matcher.update(cleanedContent)) {
+								yield processedChunk
+							}
+						}
+					} else {
+						assistantText += delta.content
+						for (const processedChunk of matcher.update(delta.content)) {
+							yield processedChunk
+						}
 					}
 				}
 			}
@@ -168,6 +183,31 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Roo Code's prompts.",
 			)
 		}
+	}
+
+	/**
+	 * Parse gpt-oss special token format
+	 * Format example: <|start|>assistant<|channel|>commentary to=read_file <|constrain|>json<|message|>{"args":[...]}
+	 * We want to extract just the actual message content
+	 */
+	private parseGptOssFormat(content: string): string {
+		// Remove all special tokens and extract the actual message
+		// Pattern: <|token|> where token can be any word
+		const specialTokenPattern = /<\|[^|]+\|>/g
+
+		// First, check if this contains the message token
+		const messageMatch = content.match(/<\|message\|>(.+)$/s)
+		if (messageMatch) {
+			// Extract content after <|message|> token
+			return messageMatch[1].trim()
+		}
+
+		// Otherwise, just remove all special tokens
+		const cleaned = content.replace(specialTokenPattern, " ").trim()
+
+		// Also clean up any "to=function_name" patterns that might remain
+		const functionPattern = /\s*to=\w+\s*/g
+		return cleaned.replace(functionPattern, " ").trim()
 	}
 }
 

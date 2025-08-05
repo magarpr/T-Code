@@ -164,4 +164,133 @@ describe("LmStudioHandler", () => {
 			expect(modelInfo.info.contextWindow).toBe(128_000)
 		})
 	})
+
+	describe("gpt-oss special token parsing", () => {
+		it("should parse gpt-oss format with special tokens", async () => {
+			// Mock gpt-oss model response with special tokens
+			mockCreate.mockImplementationOnce(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: {
+										content:
+											'<|start|>assistant<|channel|>commentary to=read_file <|constrain|>json<|message|>{"args":[{"file":{"path":"documentation/program_analysis.md"}}]}',
+									},
+									index: 0,
+								},
+							],
+							usage: null,
+						}
+					},
+				}
+			})
+
+			// Create handler with gpt-oss model
+			const gptOssHandler = new LmStudioHandler({
+				apiModelId: "gpt-oss-20b",
+				lmStudioModelId: "gpt-oss-20b",
+				lmStudioBaseUrl: "http://localhost:1234",
+			})
+
+			const systemPrompt = "You are a helpful assistant."
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "Read the file",
+				},
+			]
+
+			const stream = gptOssHandler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			expect(textChunks).toHaveLength(1)
+			// Should extract just the JSON message content
+			expect(textChunks[0].text).toBe('{"args":[{"file":{"path":"documentation/program_analysis.md"}}]}')
+		})
+
+		it("should handle gpt-oss format without message token", async () => {
+			mockCreate.mockImplementationOnce(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: {
+										content:
+											"<|start|>assistant<|channel|>commentary to=analyze_code <|constrain|>text",
+									},
+									index: 0,
+								},
+							],
+							usage: null,
+						}
+					},
+				}
+			})
+
+			const gptOssHandler = new LmStudioHandler({
+				apiModelId: "gpt-oss-20b",
+				lmStudioModelId: "gpt-oss-20b",
+				lmStudioBaseUrl: "http://localhost:1234",
+			})
+
+			const systemPrompt = "You are a helpful assistant."
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "Analyze the code",
+				},
+			]
+
+			const stream = gptOssHandler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			expect(textChunks).toHaveLength(1)
+			// Should clean up special tokens and function patterns
+			expect(textChunks[0].text).toBe("assistant commentary text")
+		})
+
+		it("should not parse special tokens for non-gpt-oss models", async () => {
+			// Mock response with special-looking content
+			mockCreate.mockImplementationOnce(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: {
+										content:
+											"Here is some content with <|special|> tokens that should not be parsed",
+									},
+									index: 0,
+								},
+							],
+							usage: null,
+						}
+					},
+				}
+			})
+
+			const stream = handler.createMessage("System prompt", [{ role: "user", content: "Test" }])
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			expect(textChunks).toHaveLength(1)
+			// Should keep the content as-is for non-gpt-oss models
+			expect(textChunks[0].text).toBe("Here is some content with <|special|> tokens that should not be parsed")
+		})
+	})
 })
