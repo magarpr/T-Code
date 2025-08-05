@@ -1,6 +1,6 @@
 import { memo, useRef, useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
-import { FoldVertical, ChevronUp, ChevronDown } from "lucide-react"
+import { FoldVertical, ChevronUp, ChevronDown, Router } from "lucide-react"
 import prettyBytes from "pretty-bytes"
 
 import type { ClineMessage } from "@roo-code/types"
@@ -65,10 +65,12 @@ const TaskHeader = ({
 
 		const interval = setInterval(() => {
 			const duration = Date.now() - task.ts
+			const threshold = 2 * 60 * 1000 // 2 minutes
 
 			// Show notification if task has been running for more than 2 minutes
 			// and hasn't been dismissed for this task
-			const shouldShow = duration > 2 * 60 * 1000 && !dismissedCloudNotifications.has(taskId)
+
+			const shouldShow = duration > threshold && !dismissedCloudNotifications.has(taskId)
 			setShowCloudNotification(shouldShow)
 		}, 1000)
 
@@ -198,6 +200,15 @@ const TaskHeader = ({
 							</span>
 						</StandardTooltip>
 						{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
+						<div className="flex flex-grow justify-end gap-1 pr-0">
+							<StandardTooltip content="Continue in Cloud from anywhere">
+								<button
+									onClick={() => console.log("Implement me")}
+									className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
+									<Router size={14} />
+								</button>
+							</StandardTooltip>
+						</div>
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}
