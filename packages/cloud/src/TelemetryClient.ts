@@ -27,14 +27,14 @@ export class TelemetryClient extends BaseTelemetryClient {
 
 	private async fetch(path: string, options: RequestInit) {
 		if (!this.authService.isAuthenticated()) {
-			return
+			throw new Error("Not authenticated")
 		}
 
 		const token = this.authService.getSessionToken()
 
 		if (!token) {
 			console.error(`[TelemetryClient#fetch] Unauthorized: No session token available.`)
-			return
+			throw new Error("No session token available")
 		}
 
 		const response = await fetch(`${getRooCodeApiUrl()}/api/${path}`, {
