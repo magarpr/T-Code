@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 import { Lightbulb, X } from "lucide-react"
 import { cn } from "@src/lib/utils"
+import { vscode } from "@src/utils/vscode"
 
 interface CloudNotificationBannerProps {
 	onDismiss: () => void
@@ -14,16 +15,20 @@ export const CloudNotificationBanner = ({ onDismiss, className }: CloudNotificat
 		onDismiss()
 	}
 
-	const handleClick = () => {
+	const handleNavigate = () => {
+		vscode.postMessage({ type: "switchTab", tab: "account" })
 		handleDismiss()
 	}
 
 	return (
-		<div className={cn("bg-vscode-badge-background relative z-50", className)}>
+		<div
+			className={cn("bg-vscode-badge-background relative z-50", className)}
+			data-testid="cloud-notification-banner">
 			{/* Main notification container with speech bubble */}
 			<div
 				className="relative text-vscode-badge-foreground p-2 rounded-md cursor-pointer transition-colors"
-				onClick={handleClick}>
+				onClick={handleNavigate}
+				data-testid="navigate-button">
 				{/* Speech bubble triangle */}
 				<div
 					className="absolute bg-vscode-badge-background w-3 h-1.5"
@@ -46,7 +51,8 @@ export const CloudNotificationBanner = ({ onDismiss, className }: CloudNotificat
 							handleDismiss()
 						}}
 						className="cursor-pointer"
-						aria-label="Close notification">
+						aria-label="Close notification"
+						data-testid="dismiss-button">
 						<X size={14} className="text-vscode-badge-foreground" />
 					</button>
 				</div>

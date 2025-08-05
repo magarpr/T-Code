@@ -70,12 +70,12 @@ const TaskHeader = ({
 			// Show notification if task has been running for more than 2 minutes
 			// and hasn't been dismissed for this task
 
-			const shouldShow = duration > threshold && !dismissedCloudNotifications.has(taskId)
+			const shouldShow = duration > threshold && !dismissedCloudNotifications.has(taskId) && buttonsDisabled
 			setShowCloudNotification(shouldShow)
 		}, 1000)
 
 		return () => clearInterval(interval)
-	}, [task.ts, currentTaskItem?.id, dismissedCloudNotifications])
+	}, [task.ts, currentTaskItem?.id, dismissedCloudNotifications, buttonsDisabled])
 
 	const handleDismissCloudNotification = () => {
 		if (currentTaskItem?.id) {

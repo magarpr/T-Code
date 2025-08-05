@@ -110,7 +110,7 @@ describe("TaskHeader Cloud Notification", () => {
 		tokensOut: 50,
 		totalCost: 0.05,
 		contextTokens: 1000,
-		buttonsDisabled: false,
+		buttonsDisabled: true,
 		handleCondenseContext: vi.fn(),
 	}
 
@@ -146,6 +146,7 @@ describe("TaskHeader Cloud Notification", () => {
 		const taskStartTime = Date.now() - 3 * 60 * 1000 // 3 minutes ago
 		renderTaskHeader({
 			task: { type: "say", ts: taskStartTime, text: "Test task", images: [] },
+			buttonsDisabled: true, // Task is still running
 		})
 
 		// Fast-forward timers to trigger the interval
@@ -162,6 +163,7 @@ describe("TaskHeader Cloud Notification", () => {
 		const taskStartTime = Date.now() - 1 * 60 * 1000 // 1 minute ago
 		renderTaskHeader({
 			task: { type: "say", ts: taskStartTime, text: "Test task", images: [] },
+			buttonsDisabled: true, // Task is still running
 		})
 
 		// Fast-forward timers to trigger the interval
@@ -180,6 +182,24 @@ describe("TaskHeader Cloud Notification", () => {
 
 		renderTaskHeader({
 			task: { type: "say", ts: taskStartTime, text: "Test task", images: [] },
+			buttonsDisabled: true, // Task is still running
+		})
+
+		// Fast-forward timers to trigger the interval
+		act(() => {
+			vi.advanceTimersByTime(1000)
+		})
+
+		await waitFor(() => {
+			expect(screen.queryByTestId("cloud-notification-banner")).not.toBeInTheDocument()
+		})
+	})
+
+	it("does not show cloud notification for completed tasks (buttonsDisabled: false)", async () => {
+		const taskStartTime = Date.now() - 3 * 60 * 1000 // 3 minutes ago
+		renderTaskHeader({
+			task: { type: "say", ts: taskStartTime, text: "Test task", images: [] },
+			buttonsDisabled: false, // Task is completed/not running
 		})
 
 		// Fast-forward timers to trigger the interval
@@ -196,6 +216,7 @@ describe("TaskHeader Cloud Notification", () => {
 		const taskStartTime = Date.now() - 3 * 60 * 1000 // 3 minutes ago
 		renderTaskHeader({
 			task: { type: "say", ts: taskStartTime, text: "Test task", images: [] },
+			buttonsDisabled: true, // Task is still running
 		})
 
 		// Expand the task to see TaskActions
@@ -219,6 +240,7 @@ describe("TaskHeader Cloud Notification", () => {
 		const taskStartTime = Date.now() - 3 * 60 * 1000 // 3 minutes ago
 		renderTaskHeader({
 			task: { type: "say", ts: taskStartTime, text: "Test task", images: [] },
+			buttonsDisabled: true, // Task is still running
 		})
 
 		// Fast-forward timers to trigger the interval
@@ -244,6 +266,7 @@ describe("TaskHeader Cloud Notification", () => {
 		const taskStartTime = Date.now() - 3 * 60 * 1000 // 3 minutes ago
 		renderTaskHeader({
 			task: { type: "say", ts: taskStartTime, text: "Test task", images: [] },
+			buttonsDisabled: true, // Task is still running
 		})
 
 		// Fast-forward timers to trigger the interval
@@ -279,6 +302,7 @@ describe("TaskHeader Cloud Notification", () => {
 	it("updates duration tracking when task changes", async () => {
 		const { rerender } = renderTaskHeader({
 			task: { type: "say", ts: Date.now() - 1 * 60 * 1000, text: "Test task", images: [] },
+			buttonsDisabled: true, // Task is still running
 		})
 
 		// Fast-forward timers
@@ -292,10 +316,13 @@ describe("TaskHeader Cloud Notification", () => {
 		// Update task to be older
 		rerender(
 			<QueryClientProvider client={queryClient}>
-				<TaskHeader
-					{...defaultProps}
-					task={{ type: "say", ts: Date.now() - 3 * 60 * 1000, text: "Test task", images: [] }}
-				/>
+				<TooltipProvider>
+					<TaskHeader
+						{...defaultProps}
+						task={{ type: "say", ts: Date.now() - 3 * 60 * 1000, text: "Test task", images: [] }}
+						buttonsDisabled={true} // Task is still running
+					/>
+				</TooltipProvider>
 			</QueryClientProvider>,
 		)
 
