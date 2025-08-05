@@ -11,7 +11,7 @@ export class CloudQueueProcessor implements QueueProcessor {
 		try {
 			// Use the telemetry client to send the event
 			await this.telemetryClient.capture(event.event)
-			console.debug(`[CloudQueueProcessor] Successfully processed event ${event.id}`)
+			// Only log errors, not successes
 			return true
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
@@ -26,7 +26,7 @@ export class CloudQueueProcessor implements QueueProcessor {
 			}
 
 			// Non-retryable error, consider it "processed" to remove from queue
-			console.warn(`[CloudQueueProcessor] Non-retryable error for event ${event.id}, removing from queue`)
+			// Only log actual errors, not warnings about non-retryable errors
 			return true
 		}
 	}

@@ -95,7 +95,7 @@ export class TelemetryEventQueue {
 		if (isMultiInstanceEnabled && this.storage instanceof GlobalStateQueueStorage) {
 			hasLock = await this.storage.acquireLock()
 			if (!hasLock) {
-				console.debug("[TelemetryEventQueue] Could not acquire lock, another instance may be processing")
+				// Only log errors, not debug info about lock acquisition
 				return 0
 			}
 
@@ -111,7 +111,7 @@ export class TelemetryEventQueue {
 		try {
 			// Check if processor is ready
 			if (!(await this.processor.isReady())) {
-				console.debug("[TelemetryEventQueue] Processor not ready, skipping queue processing")
+				// Only log errors, not debug info about processor readiness
 				return 0
 			}
 
@@ -121,16 +121,14 @@ export class TelemetryEventQueue {
 				// Check if we still hold the lock (for multi-instance)
 				if (isMultiInstanceEnabled && this.storage instanceof GlobalStateQueueStorage) {
 					if (!(await this.storage.holdsLock())) {
-						console.warn("[TelemetryEventQueue] Lost lock during processing, stopping")
+						// Lost lock during processing, stopping silently
 						break
 					}
 				}
 
 				// Skip events that have exceeded retry limit
 				if (event.retryCount >= this.options.maxRetries) {
-					console.warn(
-						`[TelemetryEventQueue] Event ${event.id} exceeded retry limit (${event.retryCount}/${this.options.maxRetries}), removing`,
-					)
+					// Event exceeded retry limit, removing silently
 					await this.storage.remove(event.id)
 					continue
 				}
@@ -147,16 +145,11 @@ export class TelemetryEventQueue {
 					await this.storage.update(event)
 
 					// Stop processing on failure (no automatic retry)
-					console.debug(
-						`[TelemetryEventQueue] Event ${event.id} failed (attempt ${event.retryCount}), stopping queue processing`,
-					)
 					break
 				}
 			}
 
-			if (processedCount > 0) {
-				console.info(`[TelemetryEventQueue] Successfully processed ${processedCount} events`)
-			}
+			// Only log errors, not success info
 		} catch (error) {
 			console.error("[TelemetryEventQueue] Queue processing error:", error)
 		} finally {

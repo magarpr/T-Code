@@ -38,7 +38,7 @@ export class GlobalStateQueueStorage implements QueueStorage {
 			...multiInstanceConfig,
 		}
 
-		console.info(`[QueueStorage] Initialized with instance ID: ${this.instanceId}, hostname: ${this.hostname}`)
+		// Only log errors, not initialization info
 	}
 
 	/**
@@ -80,7 +80,7 @@ export class GlobalStateQueueStorage implements QueueStorage {
 					// Atomic compare-and-swap
 					const success = await this.compareAndSwapLock(currentLock, newLock)
 					if (success) {
-						console.debug(`[QueueStorage] Lock acquired by instance ${this.instanceId}`)
+						// Only log errors, not successful lock acquisition
 						return true
 					}
 				}
@@ -92,7 +92,7 @@ export class GlobalStateQueueStorage implements QueueStorage {
 			}
 		}
 
-		console.warn(`[QueueStorage] Failed to acquire lock within ${timeout}ms`)
+		// Failed to acquire lock within timeout, return silently
 		return false
 	}
 
@@ -108,7 +108,7 @@ export class GlobalStateQueueStorage implements QueueStorage {
 			const currentLock = await this.getLock()
 			if (currentLock && currentLock.instanceId === this.instanceId) {
 				await this.context.globalState.update(GlobalStateQueueStorage.LOCK_KEY, undefined)
-				console.debug(`[QueueStorage] Lock released by instance ${this.instanceId}`)
+				// Only log errors, not successful lock release
 			}
 		} catch (error) {
 			console.error("[QueueStorage] Error releasing lock:", error)
@@ -185,19 +185,13 @@ export class GlobalStateQueueStorage implements QueueStorage {
 			const sizeInBytes = this.calculateSize(events)
 			if (sizeInBytes > this.maxStorageSize) {
 				// Remove oldest events until we're under the limit
-				let removedCount = 0
+				let _removedCount = 0
 				while (events.length > 0 && this.calculateSize(events) > this.maxStorageSize) {
 					events.shift() // Remove oldest event (FIFO)
-					removedCount++
+					_removedCount++
 				}
 
-				if (removedCount > 0) {
-					console.warn(
-						`[QueueStorage] Removed ${removedCount} oldest events to stay under ${
-							this.maxStorageSize / 1024 / 1024
-						}MB storage limit`,
-					)
-				}
+				// Removed oldest events to stay under storage limit, no need to log
 
 				// If even the single new event is too large, throw an error
 				if (events.length === 0) {
@@ -329,9 +323,7 @@ export class GlobalStateQueueStorage implements QueueStorage {
 
 				// Exponential backoff with jitter
 				const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 100
-				console.warn(
-					`[QueueStorage] Operation failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`,
-				)
+				// Operation failed, retrying silently
 				await this.sleep(delay)
 			}
 		}

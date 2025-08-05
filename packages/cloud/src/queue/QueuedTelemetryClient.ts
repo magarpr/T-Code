@@ -42,11 +42,7 @@ export class QueuedTelemetryClient extends BaseTelemetryClient {
 
 		this.queue = new TelemetryEventQueue(this.storage, processor, queueOptions)
 
-		// Log instance information
-		const instanceInfo = this.storage.getInstanceInfo()
-		console.info(
-			`[QueuedTelemetryClient] Initialized with instance: ${instanceInfo.instanceId} on ${instanceInfo.hostname}`,
-		)
+		// Only log errors, not initialization info
 
 		// Set up periodic processing if in leader mode
 		if (multiInstanceConfig?.mode === "leader") {
@@ -64,10 +60,8 @@ export class QueuedTelemetryClient extends BaseTelemetryClient {
 		this.processingInterval = setInterval(async () => {
 			try {
 				// Only process if we can acquire the lock (leader election)
-				const processed = await this.queue.processQueue()
-				if (processed > 0) {
-					console.debug(`[QueuedTelemetryClient] Periodic processing: ${processed} events`)
-				}
+				await this.queue.processQueue()
+				// Only log errors, not successful processing
 			} catch (error) {
 				console.error("[QueuedTelemetryClient] Periodic processing error:", error)
 			}
@@ -79,9 +73,7 @@ export class QueuedTelemetryClient extends BaseTelemetryClient {
 	 */
 	public override async capture(event: TelemetryEvent): Promise<void> {
 		if (!this.isTelemetryEnabled() || !this.isEventCapturable(event.event)) {
-			if (this.debug) {
-				console.info(`[QueuedTelemetryClient#capture] Skipping event: ${event.event}`)
-			}
+			// Skip event silently
 			return
 		}
 
@@ -174,8 +166,8 @@ export class QueuedTelemetryClient extends BaseTelemetryClient {
 
 		// Process any remaining events before shutdown
 		try {
-			const processed = await this.queue.processQueue()
-			console.info(`[QueuedTelemetryClient] Processed ${processed} events during shutdown`)
+			await this.queue.processQueue()
+			// Only log errors, not successful shutdown processing
 		} catch (error) {
 			console.error("[QueuedTelemetryClient] Failed to process queue during shutdown:", error)
 		}
@@ -191,7 +183,7 @@ export class QueuedTelemetryClient extends BaseTelemetryClient {
 	 * Force process the queue (useful for testing or manual triggers)
 	 */
 	public async forceProcessQueue(): Promise<number> {
-		console.info("[QueuedTelemetryClient] Force processing queue")
+		// Force processing queue silently
 		return this.queue.processQueue()
 	}
 
