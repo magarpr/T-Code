@@ -175,4 +175,61 @@ describe("CerebrasHandler", () => {
 			// Test fallback token estimation logic
 		})
 	})
+
+	describe("computer use support", () => {
+		it("should return supportsComputerUse true for qwen-3-coder-480b-free model", () => {
+			const testModelId: CerebrasModelId = "qwen-3-coder-480b-free"
+			const handlerWithModel = new CerebrasHandler({
+				cerebrasApiKey: "test-api-key",
+				apiModelId: testModelId,
+			})
+			const { id, info } = handlerWithModel.getModel()
+			// The model ID is routed from qwen-3-coder-480b-free to qwen-3-coder-480b
+			expect(id).toBe("qwen-3-coder-480b")
+			// But the info should be from the original model (qwen-3-coder-480b-free)
+			expect("supportsComputerUse" in info && info.supportsComputerUse).toBe(true)
+			expect(info.maxTokens).toBe(40000)
+			expect(info.contextWindow).toBe(64000)
+			expect(info.inputPrice).toBe(0)
+			expect(info.outputPrice).toBe(0)
+			expect(info.description).toContain("SOTA coding model")
+			expect(info.description).toContain("$0 free tier")
+		})
+
+		it("should return supportsComputerUse true for qwen-3-coder-480b model", () => {
+			const testModelId: CerebrasModelId = "qwen-3-coder-480b"
+			const handlerWithModel = new CerebrasHandler({
+				cerebrasApiKey: "test-api-key",
+				apiModelId: testModelId,
+			})
+			const { id, info } = handlerWithModel.getModel()
+			expect(id).toBe(testModelId)
+			expect("supportsComputerUse" in info && info.supportsComputerUse).toBe(true)
+			expect(info.maxTokens).toBe(40000)
+			expect(info.contextWindow).toBe(128000)
+			expect(info.inputPrice).toBe(0)
+			expect(info.outputPrice).toBe(0)
+			expect(info.description).toContain("SOTA coding model")
+		})
+
+		it("should not have supportsComputerUse for other Cerebras models", () => {
+			const otherModels: CerebrasModelId[] = [
+				"llama-3.3-70b",
+				"qwen-3-235b-a22b-instruct-2507",
+				"qwen-3-32b",
+				"qwen-3-235b-a22b-thinking-2507",
+			]
+
+			otherModels.forEach((modelId) => {
+				const handlerWithModel = new CerebrasHandler({
+					cerebrasApiKey: "test-api-key",
+					apiModelId: modelId,
+				})
+				const { id, info } = handlerWithModel.getModel()
+				expect(id).toBe(modelId)
+				// Should be undefined or false
+				expect("supportsComputerUse" in info ? info.supportsComputerUse : undefined).toBeFalsy()
+			})
+		})
+	})
 })

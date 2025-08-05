@@ -11,6 +11,7 @@ export const cerebrasModels = {
 		contextWindow: 64000,
 		supportsImages: false,
 		supportsPromptCache: false,
+		supportsComputerUse: true,
 		inputPrice: 0,
 		outputPrice: 0,
 		description:
@@ -21,6 +22,7 @@ export const cerebrasModels = {
 		contextWindow: 128000,
 		supportsImages: false,
 		supportsPromptCache: false,
+		supportsComputerUse: true,
 		inputPrice: 0,
 		outputPrice: 0,
 		description:
