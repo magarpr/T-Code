@@ -1,36 +1,6 @@
 import * as path from "path"
 import * as os from "os"
 import fs from "fs/promises"
-import * as vscode from "vscode"
-
-/**
- * Finds the workspace folder that contains a .roo directory
- *
- * @returns The workspace folder containing .roo, or undefined if not found
- *
- * @example
- * ```typescript
- * const workspaceWithRoo = findWorkspaceWithRoo()
- * if (workspaceWithRoo) {
- *   // .roo folder exists as one of the workspace folders
- *   const rooPath = workspaceWithRoo.uri.fsPath
- * }
- * ```
- */
-export function findWorkspaceWithRoo(): vscode.WorkspaceFolder | undefined {
-	if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-		return undefined
-	}
-
-	// Check if any workspace folder is named .roo
-	for (const folder of vscode.workspace.workspaceFolders) {
-		if (path.basename(folder.uri.fsPath) === ".roo") {
-			return folder
-		}
-	}
-
-	return undefined
-}
 
 /**
  * Gets the global .roo directory path based on the current platform
@@ -92,13 +62,10 @@ export function getGlobalRooDirectory(): string {
  * subdirectory in the first workspace folder.
  */
 export function getProjectRooDirectoryForCwd(cwd: string): string {
-	// Check if .roo is one of the workspace folders in a multi-root workspace
-	const workspaceWithRoo = findWorkspaceWithRoo()
-	if (workspaceWithRoo) {
-		return workspaceWithRoo.uri.fsPath
-	}
-
-	// Default behavior: create .roo as a subdirectory
+	// Note: In VS Code extension context, this function is overridden
+	// by the extension to check for .roo workspace folders.
+	// This base implementation is used by the webview and other contexts
+	// where vscode API is not available.
 	return path.join(cwd, ".roo")
 }
 

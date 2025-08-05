@@ -50,7 +50,7 @@ import { getModels, flushModels } from "../../api/providers/fetchers/modelCache"
 import { GetModelsOptions } from "../../shared/api"
 import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
-import { getProjectRooDirectoryForCwd } from "../../services/roo-config"
+import { getProjectRooDirectoryForCwd } from "../../services/roo-config/wrapper"
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 

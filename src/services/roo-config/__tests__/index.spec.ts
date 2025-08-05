@@ -43,8 +43,8 @@ import {
 	readFileIfExists,
 	getRooDirectoriesForCwd,
 	loadConfiguration,
-	findWorkspaceWithRoo,
 } from "../index"
+import { findWorkspaceWithRoo } from "../vscode-utils"
 
 describe("RooConfigService", () => {
 	beforeEach(() => {

@@ -10,7 +10,8 @@ import { type ModeConfig, type PromptComponent, customModesSettingsSchema, modeC
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { getWorkspacePath } from "../../utils/path"
-import { getGlobalRooDirectory, getProjectRooDirectoryForCwd } from "../../services/roo-config"
+import { getGlobalRooDirectory } from "../../services/roo-config"
+import { getProjectRooDirectoryForCwd } from "../../services/roo-config/wrapper"
 import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"

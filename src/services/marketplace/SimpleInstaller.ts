@@ -6,7 +6,7 @@ import type { MarketplaceItem, MarketplaceItemType, InstallMarketplaceItemOption
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import type { CustomModesManager } from "../../core/config/CustomModesManager"
-import { getProjectRooDirectoryForCwd } from "../../services/roo-config"
+import { getProjectRooDirectoryForCwd } from "../../services/roo-config/wrapper"
 
 export interface InstallOptions extends InstallMarketplaceItemOptions {
 	target: "project" | "global"
