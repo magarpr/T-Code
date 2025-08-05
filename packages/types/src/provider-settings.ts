@@ -79,6 +79,10 @@ const baseProviderSettingsSchema = z.object({
 	reasoningEffort: reasoningEffortsSchema.optional(),
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
+
+	// URL context and grounding (optional for most providers, required for Gemini)
+	enableUrlContext: z.boolean().optional(),
+	enableGrounding: z.boolean().optional(),
 })
 
 // Several of the providers share common model config properties.
@@ -174,8 +178,8 @@ const lmStudioSchema = baseProviderSettingsSchema.extend({
 const geminiSchema = apiModelIdProviderModelSchema.extend({
 	geminiApiKey: z.string().optional(),
 	googleGeminiBaseUrl: z.string().optional(),
-	enableUrlContext: z.boolean().optional(),
-	enableGrounding: z.boolean().optional(),
+	enableUrlContext: z.boolean(),
+	enableGrounding: z.boolean(),
 })
 
 const geminiCliSchema = apiModelIdProviderModelSchema.extend({

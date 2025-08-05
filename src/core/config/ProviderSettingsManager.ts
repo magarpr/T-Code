@@ -32,6 +32,8 @@ export const providerProfilesSchema = z.object({
 			openAiHeadersMigrated: z.boolean().optional(),
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
+			enableUrlContextMigrated: z.boolean().optional(),
+			enableGroundingMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -56,6 +58,8 @@ export class ProviderSettingsManager {
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
 			todoListEnabledMigrated: true, // Mark as migrated on fresh installs
+			enableUrlContextMigrated: true, // Mark as migrated on fresh installs
+			enableGroundingMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -123,6 +127,8 @@ export class ProviderSettingsManager {
 						openAiHeadersMigrated: false,
 						consecutiveMistakeLimitMigrated: false,
 						todoListEnabledMigrated: false,
+						enableUrlContextMigrated: false,
+						enableGroundingMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -155,6 +161,22 @@ export class ProviderSettingsManager {
 					await this.migrateTodoListEnabled(providerProfiles)
 					providerProfiles.migrations.todoListEnabledMigrated = true
 					isDirty = true
+				}
+
+				// Only run migration if either flag is false
+				if (
+					!providerProfiles.migrations.enableUrlContextMigrated ||
+					!providerProfiles.migrations.enableGroundingMigrated
+				) {
+					await this.migrateEnableUrlContextAndGrounding(providerProfiles)
+					if (!providerProfiles.migrations.enableUrlContextMigrated) {
+						providerProfiles.migrations.enableUrlContextMigrated = true
+						isDirty = true
+					}
+					if (!providerProfiles.migrations.enableGroundingMigrated) {
+						providerProfiles.migrations.enableGroundingMigrated = true
+						isDirty = true
+					}
 				}
 
 				if (isDirty) {
@@ -274,6 +296,38 @@ export class ProviderSettingsManager {
 		}
 	}
 
+	private async migrateEnableUrlContextAndGrounding(providerProfiles: ProviderProfiles) {
+		try {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				// Only apply migration to gemini provider settings
+				if (apiConfig.apiProvider === "gemini") {
+					// Type assertion to access gemini-specific properties
+					const geminiConfig = apiConfig as any
+					if (geminiConfig.enableUrlContext === undefined) {
+						geminiConfig.enableUrlContext = true
+					}
+					if (geminiConfig.enableGrounding === undefined) {
+						geminiConfig.enableGrounding = true
+					}
+				} else {
+					// For non-Gemini providers, remove these fields if they exist (cleanup old data)
+					const configAny = apiConfig as any
+					if (configAny.enableUrlContext !== undefined) {
+						delete configAny.enableUrlContext
+					}
+					if (configAny.enableGrounding !== undefined) {
+						delete configAny.enableGrounding
+					}
+				}
+			}
+		} catch (error) {
+			console.error(
+				`[MigrateEnableUrlContextAndGrounding] Failed to migrate enableUrlContext and enableGrounding settings:`,
+				error,
+			)
+		}
+	}
+
 	/**
 	 * List all available configs with metadata.
 	 */
@@ -308,7 +362,28 @@ export class ProviderSettingsManager {
 
 				// Filter out settings from other providers.
 				const filteredConfig = discriminatedProviderSettingsWithIdSchema.parse(config)
-				providerProfiles.apiConfigs[name] = { ...filteredConfig, id }
+
+				// Handle gemini-specific fields - only ensure they exist for Gemini configs
+				if (filteredConfig.apiProvider === "gemini") {
+					// For Gemini, ensure these fields are always present with defaults if not provided
+					const geminiConfig = { ...filteredConfig } as any
+					geminiConfig.enableUrlContext = (config as any).enableUrlContext ?? true
+					geminiConfig.enableGrounding = (config as any).enableGrounding ?? true
+					providerProfiles.apiConfigs[name] = {
+						...geminiConfig,
+						id,
+					}
+				} else {
+					// For non-Gemini providers, ensure we don't include gemini-specific fields
+					// The discriminated schema should filter these out, but let's be explicit
+					const cleanConfig = { ...filteredConfig } as any
+					delete cleanConfig.enableUrlContext
+					delete cleanConfig.enableGrounding
+					providerProfiles.apiConfigs[name] = {
+						...cleanConfig,
+						id,
+					}
+				}
 				await this.store(providerProfiles)
 				return id
 			})
@@ -455,7 +530,21 @@ export class ProviderSettingsManager {
 				const configs = profiles.apiConfigs
 				for (const name in configs) {
 					// Avoid leaking properties from other providers.
-					configs[name] = discriminatedProviderSettingsWithIdSchema.parse(configs[name])
+					const parsedConfig = discriminatedProviderSettingsWithIdSchema.parse(configs[name])
+
+					// Handle gemini-specific fields - only ensure they exist for Gemini configs
+					if (parsedConfig.apiProvider === "gemini") {
+						// For Gemini, ensure these fields are always present with defaults if not provided
+						const geminiConfig = { ...parsedConfig } as any
+						geminiConfig.enableUrlContext = (configs[name] as any).enableUrlContext ?? true
+						geminiConfig.enableGrounding = (configs[name] as any).enableGrounding ?? true
+						configs[name] = geminiConfig
+						continue
+					}
+					// For non-Gemini providers, the discriminated schema will automatically filter out
+					// fields that don't belong to their schema, so we don't need to manually remove them
+
+					configs[name] = parsedConfig
 				}
 				return profiles
 			})
@@ -502,7 +591,23 @@ export class ProviderSettingsManager {
 			const apiConfigs = Object.entries(providerProfiles.apiConfigs).reduce(
 				(acc, [key, apiConfig]) => {
 					const result = providerSettingsWithIdSchema.safeParse(apiConfig)
-					return result.success ? { ...acc, [key]: result.data } : acc
+					if (!result.success) {
+						return acc
+					}
+
+					// Clean up enableUrlContext and enableGrounding fields for non-Gemini configs
+					const cleanedConfig = { ...result.data } as any
+					if (cleanedConfig.apiProvider !== "gemini") {
+						// For non-Gemini providers, remove these fields if they exist (cleanup old data)
+						if (cleanedConfig.enableUrlContext !== undefined) {
+							delete cleanedConfig.enableUrlContext
+						}
+						if (cleanedConfig.enableGrounding !== undefined) {
+							delete cleanedConfig.enableGrounding
+						}
+					}
+
+					return { ...acc, [key]: cleanedConfig }
 				},
 				{} as Record<string, ProviderSettingsWithId>,
 			)
