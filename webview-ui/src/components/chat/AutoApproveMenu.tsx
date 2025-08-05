@@ -213,16 +213,25 @@ const AutoApproveMenu = ({ style }: AutoApproveMenuProps) => {
 						}}>
 						{!effectiveAutoApprovalEnabled || !hasEnabledOptions
 							? t("chat:autoApprove.none")
-							: enabledIcons.map((icon, index) => (
-									<span
-										key={index}
-										className={`codicon codicon-${icon}`}
-										style={{
-											fontSize: "14px",
-											flexShrink: 0,
-										}}
-									/>
-								))}
+							: enabledIcons.map((icon, index) => {
+									// Find the config for this icon to get the label
+									const config = Object.values(autoApproveSettingsConfig).find(
+										(cfg) => cfg.icon === icon,
+									)
+									const tooltipContent = config ? t(config.labelKey) : ""
+
+									return (
+										<StandardTooltip key={index} content={tooltipContent}>
+											<span
+												className={`codicon codicon-${icon}`}
+												style={{
+													fontSize: "14px",
+													flexShrink: 0,
+												}}
+											/>
+										</StandardTooltip>
+									)
+								})}
 					</span>
 					<span
 						className={`codicon codicon-chevron-${isExpanded ? "down" : "right"}`}
