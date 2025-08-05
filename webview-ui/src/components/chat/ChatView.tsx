@@ -9,6 +9,7 @@ import { LRUCache } from "lru-cache"
 
 import { useDebounceEffect } from "@src/utils/useDebounceEffect"
 import { appendImages } from "@src/utils/imageUtils"
+import { getNewTaskShortcut } from "@src/utils/keyboardShortcuts"
 
 import type { ClineAsk, ClineMessage } from "@roo-code/types"
 
@@ -1897,7 +1898,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 															: primaryButtonText === t("chat:runCommand.title")
 																? t("chat:runCommand.tooltip")
 																: primaryButtonText === t("chat:startNewTask.title")
-																	? t("chat:startNewTask.tooltip")
+																	? `${t("chat:startNewTask.tooltip")} (${getNewTaskShortcut()})`
 																	: primaryButtonText === t("chat:resumeTask.title")
 																		? t("chat:resumeTask.tooltip")
 																		: primaryButtonText ===
@@ -1923,7 +1924,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 												isStreaming
 													? t("chat:cancel.tooltip")
 													: secondaryButtonText === t("chat:startNewTask.title")
-														? t("chat:startNewTask.tooltip")
+														? `${t("chat:startNewTask.tooltip")} (${getNewTaskShortcut()})`
 														: secondaryButtonText === t("chat:reject.title")
 															? t("chat:reject.tooltip")
 															: secondaryButtonText === t("chat:terminate.title")
