@@ -378,5 +378,8 @@
 	"queuedMessages": {
 		"title": "Queued Messages:",
 		"clickToEdit": "Click to edit message"
+	},
+	"cloudNotification": {
+		"message": "This might take a while. Grab a coffee and continue from anywhere with Cloud."
 	}
 }

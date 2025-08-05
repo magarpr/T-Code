@@ -1,10 +1,13 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { Cloud } from "lucide-react"
 
 import type { HistoryItem } from "@roo-code/types"
 
 import { vscode } from "@/utils/vscode"
 import { useCopyToClipboard } from "@/utils/clipboard"
+import { cn } from "@/lib/utils"
+import { StandardTooltip } from "@/components/ui"
 
 import { DeleteTaskDialog } from "../history/DeleteTaskDialog"
 import { IconButton } from "./IconButton"
@@ -13,15 +16,37 @@ import { ShareButton } from "./ShareButton"
 interface TaskActionsProps {
 	item?: HistoryItem
 	buttonsDisabled: boolean
+	showCloudNotification?: boolean
 }
 
-export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
+export const TaskActions = ({ item, buttonsDisabled, showCloudNotification }: TaskActionsProps) => {
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 	const { t } = useTranslation()
 	const { copyWithFeedback, showCopyFeedback } = useCopyToClipboard()
 
 	return (
 		<div className="flex flex-row items-center">
+			{/* Cloud icon button */}
+			<StandardTooltip content="Cloud">
+				<button
+					className={cn(
+						"relative inline-flex items-center justify-center",
+						"bg-transparent border-none p-1.5",
+						"rounded-md min-w-[28px] min-h-[28px]",
+						"transition-all duration-150",
+						"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+						"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+						"active:bg-[rgba(255,255,255,0.1)]",
+						"cursor-pointer",
+						showCloudNotification
+							? "text-vscode-charts-blue opacity-100"
+							: "text-vscode-foreground opacity-85",
+					)}
+					style={{ fontSize: 16.5 }}
+					aria-label="Cloud">
+					<Cloud size={16} />
+				</button>
+			</StandardTooltip>
 			<IconButton
 				iconClass="codicon-desktop-download"
 				title={t("chat:task.export")}

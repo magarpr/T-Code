@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from "react"
+import { memo, useRef, useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { FoldVertical, ChevronUp, ChevronDown } from "lucide-react"
 import prettyBytes from "pretty-bytes"
@@ -12,6 +12,7 @@ import { cn } from "@src/lib/utils"
 import { StandardTooltip } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
+import { vscode } from "@src/utils/vscode"
 
 import Thumbnails from "../common/Thumbnails"
 
@@ -19,6 +20,7 @@ import { TaskActions } from "./TaskActions"
 import { ContextWindowProgress } from "./ContextWindowProgress"
 import { Mention } from "./Mention"
 import { TodoListDisplay } from "./TodoListDisplay"
+import { CloudNotificationBanner } from "./CloudNotificationBanner"
 
 export interface TaskHeaderProps {
 	task: ClineMessage
@@ -46,13 +48,43 @@ const TaskHeader = ({
 	todos,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { apiConfiguration, currentTaskItem } = useExtensionState()
+	const { apiConfiguration, currentTaskItem, dismissedCloudNotifications, addDismissedCloudNotification } =
+		useExtensionState()
 	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
+	const [showCloudNotification, setShowCloudNotification] = useState(false)
 
 	const textContainerRef = useRef<HTMLDivElement>(null)
 	const textRef = useRef<HTMLDivElement>(null)
 	const contextWindow = model?.contextWindow || 1
+
+	// Task duration tracking
+	useEffect(() => {
+		const taskId = currentTaskItem?.id
+		if (!taskId) return
+
+		const interval = setInterval(() => {
+			const duration = Date.now() - task.ts
+
+			// Show notification if task has been running for more than 2 minutes
+			// and hasn't been dismissed for this task
+			const shouldShow = duration > 2 * 60 * 1000 && !dismissedCloudNotifications.has(taskId)
+			setShowCloudNotification(shouldShow)
+		}, 1000)
+
+		return () => clearInterval(interval)
+	}, [task.ts, currentTaskItem?.id, dismissedCloudNotifications])
+
+	const handleDismissCloudNotification = () => {
+		if (currentTaskItem?.id) {
+			addDismissedCloudNotification(currentTaskItem.id)
+		}
+		setShowCloudNotification(false)
+	}
+
+	const handleNavigateToAccount = () => {
+		vscode.postMessage({ type: "switchTab", tab: "account" })
+	}
 
 	const condenseButton = (
 		<StandardTooltip content={t("chat:task.condenseContext")}>
@@ -292,11 +324,24 @@ const TaskHeader = ({
 
 						{/* Footer with task management buttons */}
 						<div onClick={(e) => e.stopPropagation()}>
-							<TaskActions item={currentTaskItem} buttonsDisabled={buttonsDisabled} />
+							<TaskActions
+								item={currentTaskItem}
+								buttonsDisabled={buttonsDisabled}
+								showCloudNotification={showCloudNotification}
+							/>
 						</div>
 					</>
 				)}
 			</div>
+
+			{/* Cloud notification banner */}
+			{showCloudNotification && (
+				<CloudNotificationBanner
+					onDismiss={handleDismissCloudNotification}
+					onNavigateToAccount={handleNavigateToAccount}
+				/>
+			)}
+
 			<TodoListDisplay todos={todos ?? (task as any)?.tool?.todos ?? []} />
 		</div>
 	)
