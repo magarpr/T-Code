@@ -247,5 +247,11 @@ export const parseOpenRouterModel = ({
 		modelInfo.maxTokens = 32768
 	}
 
+	// Override kimi-k2 context window to match OpenRouter's advertised 131K
+	// The API returns 63K but the website shows 131K
+	if (id === "moonshotai/kimi-k2") {
+		modelInfo.contextWindow = 131072
+	}
+
 	return modelInfo
 }

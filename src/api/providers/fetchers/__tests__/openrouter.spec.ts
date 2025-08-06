@@ -332,5 +332,30 @@ describe("OpenRouter API", () => {
 			expect(result.maxTokens).toBe(64000)
 			expect(result.contextWindow).toBe(128000)
 		})
+
+		it("overrides kimi-k2 model context window to 131K", () => {
+			const mockModel = {
+				name: "MoonshotAI: Kimi K2",
+				description: "Kimi K2 model",
+				context_length: 63000, // API returns 63K
+				max_completion_tokens: null,
+				pricing: {
+					prompt: "0.000003",
+					completion: "0.000015",
+				},
+			}
+
+			const result = parseOpenRouterModel({
+				id: "moonshotai/kimi-k2",
+				model: mockModel,
+				modality: "text",
+				maxTokens: null,
+			})
+
+			// Should override to 131K (131072) instead of using the API's 63K
+			expect(result.contextWindow).toBe(131072)
+			// Max tokens should be calculated as 20% of context window
+			expect(result.maxTokens).toBe(Math.ceil(63000 * 0.2)) // Still uses original for maxTokens calculation
+		})
 	})
 })
