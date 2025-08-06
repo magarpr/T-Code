@@ -118,6 +118,7 @@ export type TaskOptions = {
 	parentTask?: Task
 	taskNumber?: number
 	onCreated?: (task: Task) => void
+	initialTodos?: TodoItem[]
 }
 
 export class Task extends EventEmitter<TaskEvents> implements TaskLike {
@@ -268,6 +269,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		parentTask,
 		taskNumber = -1,
 		onCreated,
+		initialTodos,
 	}: TaskOptions) {
 		super()
 
@@ -345,11 +347,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.toolRepetitionDetector = new ToolRepetitionDetector(this.consecutiveMistakeLimit)
 
+		// Initialize todo list if provided
+		if (initialTodos && initialTodos.length > 0) {
+			this.todoList = initialTodos
+		}
+
 		onCreated?.(this)
 
 		if (startTask) {
 			if (task || images) {
-				this.startTask(task, images)
+				this.startTask(task, images, initialTodos)
 			} else if (historyItem) {
 				this.resumeTaskFromHistory()
 			} else {
@@ -930,7 +937,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	// Start / Abort / Resume
 
-	private async startTask(task?: string, images?: string[]): Promise<void> {
+	private async startTask(task?: string, images?: string[], initialTodos?: TodoItem[]): Promise<void> {
 		// `conversationHistory` (for API) and `clineMessages` (for webview)
 		// need to be in sync.
 		// If the extension process were killed, then on restart the
@@ -939,9 +946,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// messages from previous session).
 		this.clineMessages = []
 		this.apiConversationHistory = []
-		await this.providerRef.deref()?.postStateToWebview()
+
+		// The todo list is already set in the constructor if initialTodos were provided
+		// No need to add any messages - the todoList property is already set
 
 		await this.say("text", task, images)
+
+		await this.providerRef.deref()?.postStateToWebview()
 		this.isInitialized = true
 
 		let imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
