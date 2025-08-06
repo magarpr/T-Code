@@ -179,6 +179,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const [showCheckpointWarning, setShowCheckpointWarning] = useState<boolean>(false)
 	const [isCondensing, setIsCondensing] = useState<boolean>(false)
 	const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
+	const [isModeSwitching, setIsModeSwitching] = useState<boolean>(false)
 	const everVisibleMessagesTsRef = useRef<LRUCache<number, boolean>>(
 		new LRUCache({
 			max: 100,
@@ -1456,6 +1457,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// Function to switch to a specific mode
 	const switchToMode = useCallback(
 		(modeSlug: string): void => {
+			// Prevent concurrent mode switches
+			if (isModeSwitching) {
+				return
+			}
+
+			// Set flag to prevent concurrent switches
+			setIsModeSwitching(true)
+
 			// Update local state and notify extension to sync mode change
 			setMode(modeSlug)
 
@@ -1464,8 +1473,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				type: "mode",
 				text: modeSlug,
 			})
+
+			// Reset the flag after a short delay to allow the mode switch to complete
+			setTimeout(() => {
+				setIsModeSwitching(false)
+			}, 300)
 		},
-		[setMode],
+		[setMode, isModeSwitching],
 	)
 
 	const handleSuggestionClickInRow = useCallback(
@@ -1714,23 +1728,31 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		tSettings,
 	])
 
-	// Function to handle mode switching
-	const switchToNextMode = useCallback(() => {
-		const allModes = getAllModes(customModes)
-		const currentModeIndex = allModes.findIndex((m) => m.slug === mode)
-		const nextModeIndex = (currentModeIndex + 1) % allModes.length
-		// Update local state and notify extension to sync mode change
-		switchToMode(allModes[nextModeIndex].slug)
-	}, [mode, customModes, switchToMode])
+	// Function to handle mode switching with debouncing
+	const switchToNextMode = useMemo(
+		() =>
+			debounce(() => {
+				const allModes = getAllModes(customModes)
+				const currentModeIndex = allModes.findIndex((m) => m.slug === mode)
+				const nextModeIndex = (currentModeIndex + 1) % allModes.length
+				// Update local state and notify extension to sync mode change
+				switchToMode(allModes[nextModeIndex].slug)
+			}, 150),
+		[mode, customModes, switchToMode],
+	)
 
-	// Function to handle switching to previous mode
-	const switchToPreviousMode = useCallback(() => {
-		const allModes = getAllModes(customModes)
-		const currentModeIndex = allModes.findIndex((m) => m.slug === mode)
-		const previousModeIndex = (currentModeIndex - 1 + allModes.length) % allModes.length
-		// Update local state and notify extension to sync mode change
-		switchToMode(allModes[previousModeIndex].slug)
-	}, [mode, customModes, switchToMode])
+	// Function to handle switching to previous mode with debouncing
+	const switchToPreviousMode = useMemo(
+		() =>
+			debounce(() => {
+				const allModes = getAllModes(customModes)
+				const currentModeIndex = allModes.findIndex((m) => m.slug === mode)
+				const previousModeIndex = (currentModeIndex - 1 + allModes.length) % allModes.length
+				// Update local state and notify extension to sync mode change
+				switchToMode(allModes[previousModeIndex].slug)
+			}, 150),
+		[mode, customModes, switchToMode],
+	)
 
 	// Add keyboard event handler
 	const handleKeyDown = useCallback(
@@ -1752,13 +1774,20 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		[switchToNextMode, switchToPreviousMode],
 	)
 
-	// Add event listener
+	// Add event listener and cleanup debounced functions
 	useEffect(() => {
 		window.addEventListener("keydown", handleKeyDown)
 		return () => {
 			window.removeEventListener("keydown", handleKeyDown)
+			// Cancel any pending debounced calls when unmounting
+			if (typeof (switchToNextMode as any).cancel === "function") {
+				;(switchToNextMode as any).cancel()
+			}
+			if (typeof (switchToPreviousMode as any).cancel === "function") {
+				;(switchToPreviousMode as any).cancel()
+			}
 		}
-	}, [handleKeyDown])
+	}, [handleKeyDown, switchToNextMode, switchToPreviousMode])
 
 	useImperativeHandle(ref, () => ({
 		acceptInput: () => {

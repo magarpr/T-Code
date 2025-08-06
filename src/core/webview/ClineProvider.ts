@@ -112,6 +112,7 @@ export class ClineProvider
 	protected mcpHub?: McpHub // Change from private to protected
 	private marketplaceManager: MarketplaceManager
 	private mdmService?: MdmService
+	private isModeSwitching = false
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
@@ -956,6 +957,23 @@ export class ClineProvider
 	 * @param newMode The mode to switch to
 	 */
 	public async handleModeSwitch(newMode: Mode) {
+		// Prevent concurrent mode switches
+		if (this.isModeSwitching) {
+			this.log(`Mode switch already in progress, ignoring switch to ${newMode}`)
+			return
+		}
+
+		this.isModeSwitching = true
+
+		try {
+			await this.performModeSwitch(newMode)
+		} finally {
+			// Always reset the flag, even if an error occurs
+			this.isModeSwitching = false
+		}
+	}
+
+	private async performModeSwitch(newMode: Mode) {
 		const cline = this.getCurrentCline()
 
 		if (cline) {
