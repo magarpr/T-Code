@@ -114,6 +114,94 @@ describe("LmStudioHandler", () => {
 			expect(textChunks[0].text).toBe("Test response")
 		})
 
+		it("should handle <think> tags in responses", async () => {
+			mockCreate.mockImplementationOnce(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: { content: "Before <think>This is a thought</think> After" },
+									index: 0,
+								},
+							],
+							usage: null,
+						}
+						yield {
+							choices: [
+								{
+									delta: {},
+									index: 0,
+								},
+							],
+							usage: {
+								prompt_tokens: 10,
+								completion_tokens: 15,
+								total_tokens: 25,
+							},
+						}
+					},
+				}
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			const reasoningChunks = chunks.filter((chunk) => chunk.type === "reasoning")
+
+			expect(textChunks).toContainEqual({ type: "text", text: "Before " })
+			expect(textChunks).toContainEqual({ type: "text", text: " After" })
+			expect(reasoningChunks).toContainEqual({ type: "reasoning", text: "This is a thought" })
+		})
+
+		it("should handle <thinking> tags in responses (GPT-OSS compatibility)", async () => {
+			mockCreate.mockImplementationOnce(async (options) => {
+				return {
+					[Symbol.asyncIterator]: async function* () {
+						yield {
+							choices: [
+								{
+									delta: { content: "Before <thinking>This is thinking content</thinking> After" },
+									index: 0,
+								},
+							],
+							usage: null,
+						}
+						yield {
+							choices: [
+								{
+									delta: {},
+									index: 0,
+								},
+							],
+							usage: {
+								prompt_tokens: 10,
+								completion_tokens: 20,
+								total_tokens: 30,
+							},
+						}
+					},
+				}
+			})
+
+			const stream = handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const textChunks = chunks.filter((chunk) => chunk.type === "text")
+			const reasoningChunks = chunks.filter((chunk) => chunk.type === "reasoning")
+
+			expect(textChunks).toContainEqual({ type: "text", text: "Before " })
+			expect(textChunks).toContainEqual({ type: "text", text: " After" })
+			expect(reasoningChunks).toContainEqual({ type: "reasoning", text: "This is thinking content" })
+		})
+
 		it("should handle API errors", async () => {
 			mockCreate.mockRejectedValueOnce(new Error("API Error"))
 

@@ -6,7 +6,7 @@ import { type ModelInfo, openAiModelInfoSaneDefaults, LMSTUDIO_DEFAULT_TEMPERATU
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
-import { XmlMatcher } from "../../utils/xml-matcher"
+import { MultiTagXmlMatcher } from "../../utils/multi-tag-xml-matcher"
 
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
@@ -87,8 +87,9 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 
 			const results = await this.client.chat.completions.create(params)
 
-			const matcher = new XmlMatcher(
-				"think",
+			// Support both <think> and <thinking> tags for different GPT-OSS models
+			const matcher = new MultiTagXmlMatcher(
+				["think", "thinking"],
 				(chunk) =>
 					({
 						type: chunk.matched ? "reasoning" : "text",
