@@ -70,10 +70,10 @@ export interface ChatViewRef {
 
 export const MAX_IMAGES_PER_MESSAGE = 20 // Anthropic limits to 20 images
 
-// Viewport buffer constants for memory-efficient scroll behavior
-const VIEWPORT_BUFFER_AT_BOTTOM = 10_000 // Larger buffer when at bottom to maintain scroll lock
-const VIEWPORT_BUFFER_SCROLLED_UP = 1_000 // Smaller buffer when scrolled up to preserve memory efficiency
-const VIEWPORT_BUFFER_TOP = 3_000 // Top buffer for smooth scrolling
+// Viewport buffer constants
+const VIEWPORT_BUFFER_AT_BOTTOM = 10_000 // Maintains scroll lock when at bottom
+const VIEWPORT_BUFFER_SCROLLED_UP = 1_000 // Reduces memory usage when scrolled up
+const VIEWPORT_BUFFER_TOP = 3_000
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
@@ -1437,12 +1437,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	useEvent("wheel", handleWheel, window, { passive: true }) // passive improves scrolling performance
 
-	// Debounce the isAtBottom state to prevent rapid viewport buffer changes
-	// This adds hysteresis to avoid performance issues when users quickly scroll between top and bottom
+	// Debounce isAtBottom to prevent rapid viewport buffer changes
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			setDebouncedIsAtBottom(isAtBottom)
-		}, 300) // 300ms delay provides good balance between responsiveness and stability
+		}, 300)
 
 		return () => clearTimeout(timer)
 	}, [isAtBottom])
@@ -1906,11 +1905,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							className="scrollable grow overflow-y-scroll mb-1"
 							increaseViewportBy={{
 								top: VIEWPORT_BUFFER_TOP,
-								// Dynamic bottom buffer based on scroll position:
-								// - When at bottom: Use larger buffer to maintain scroll lock behavior
-								// - When scrolled up: Use smaller buffer to preserve memory efficiency
-								// This balances the memory leak fix from PR #6697 with proper scroll lock functionality
-								// Using debounced state to prevent rapid toggling during quick scrolling
+								// Dynamic bottom buffer: larger when at bottom for scroll lock,
+								// smaller when scrolled up for memory efficiency
 								bottom: debouncedIsAtBottom ? VIEWPORT_BUFFER_AT_BOTTOM : VIEWPORT_BUFFER_SCROLLED_UP,
 							}}
 							data={groupedMessages}
@@ -1924,9 +1920,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							}}
 							atBottomThreshold={10}
 							initialTopMostItemIndex={groupedMessages.length - 1}
-							// followOutput='smooth' ensures smooth scrolling animation when new content arrives,
-							// working in conjunction with the dynamic viewport buffer to maintain scroll lock
-							// when the user is at the bottom of the chat
+							// Smooth scrolling when new content arrives
 							followOutput="smooth"
 						/>
 					</div>
