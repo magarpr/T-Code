@@ -732,7 +732,38 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.handleWebviewAskResponse("messageResponse", text, images)
 	}
 
-	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
+	async handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
+		// Check if the text is a slash command
+		if (text && text.trim().startsWith("/")) {
+			const trimmedText = text.trim()
+			const spaceIndex = trimmedText.indexOf(" ")
+			const commandName = spaceIndex === -1 ? trimmedText.slice(1) : trimmedText.slice(1, spaceIndex)
+			const commandArgs = spaceIndex === -1 ? "" : trimmedText.slice(spaceIndex + 1)
+
+			// Try to get the command
+			try {
+				const { getCommand } = await import("../../services/command/commands")
+				const command = await getCommand(this.cwd, commandName)
+
+				if (command) {
+					// Execute the command by replacing the user's message with the command content
+					const commandContent = commandArgs
+						? command.content.replace(/\{\{args\}\}/g, commandArgs)
+						: command.content
+
+					// Set the response with the command content instead of the slash command
+					this.askResponse = askResponse
+					this.askResponseText = commandContent
+					this.askResponseImages = images
+					return
+				}
+			} catch (error) {
+				// If there's an error getting the command, fall through to normal handling
+				console.debug(`Failed to get command '${commandName}':`, error)
+			}
+		}
+
+		// Normal handling for non-slash commands or if command not found
 		this.askResponse = askResponse
 		this.askResponseText = text
 		this.askResponseImages = images
