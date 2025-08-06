@@ -155,7 +155,7 @@ describe("multiApplyDiffTool", () => {
 	})
 
 	describe("Fallback parsing", () => {
-		it("should use fallback parser after repeated failures", () => {
+		it("should use fallback parser immediately on any failure", () => {
 			const xml = `<args>
 				<file>
 					<path>test.txt</path>
@@ -166,14 +166,9 @@ describe("multiApplyDiffTool", () => {
 				</file>
 			</args>`
 
-			// Simulate multiple failures to trigger fallback
-			let callCount = 0
+			// Mock parseXml to simulate immediate fallback on any error
 			vi.mocked(parseXml).mockImplementation(() => {
-				callCount++
-				if (callCount <= 3) {
-					throw new Error("Cannot read properties of undefined (reading 'addChild')")
-				}
-				// After 3 failures, the fallback should be used
+				// Fallback should be used immediately
 				return {
 					file: {
 						path: "test.txt",
@@ -185,12 +180,7 @@ describe("multiApplyDiffTool", () => {
 				}
 			})
 
-			// First 3 calls should fail
-			for (let i = 0; i < 3; i++) {
-				expect(() => parseXml(xml)).toThrow()
-			}
-
-			// Fourth call should succeed with fallback
+			// First call should succeed with fallback
 			const result = parseXml(xml) as any
 			expect(result).toBeDefined()
 			expect(result.file.path).toBe("test.txt")
@@ -246,28 +236,16 @@ describe("multiApplyDiffTool", () => {
 			}
 		})
 
-		it("should track parse failure count for circuit breaker", () => {
-			// This tests the circuit breaker pattern
-			let failureCount = 0
-			const MAX_FAILURES = 3
-
+		it("should immediately use fallback on parse failure", () => {
+			// This tests the immediate fallback pattern
 			const simulateParseFailure = () => {
-				failureCount++
-				if (failureCount >= MAX_FAILURES) {
-					// Should trigger fallback
-					return "fallback_result"
-				}
-				throw new Error("Parse failed")
+				// Should immediately trigger fallback on any error
+				return "fallback_result"
 			}
 
-			// First two failures
-			expect(() => simulateParseFailure()).toThrow()
-			expect(() => simulateParseFailure()).toThrow()
-
-			// Third failure triggers fallback
+			// First failure immediately triggers fallback
 			const result = simulateParseFailure()
 			expect(result).toBe("fallback_result")
-			expect(failureCount).toBe(3)
 		})
 	})
 

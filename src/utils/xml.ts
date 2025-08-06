@@ -1,20 +1,14 @@
 import { XMLParser } from "fast-xml-parser"
 
 /**
- * Encapsulated XML parser with circuit breaker pattern
+ * Encapsulated XML parser with fallback mechanism
  *
  * This dual-parser system handles interference from external XML parsers (like xml2js)
  * that may be loaded globally by other VSCode extensions. When the primary parser
  * (fast-xml-parser) fails due to external interference, it automatically falls back
  * to a regex-based parser.
- *
- * Note: This parser instance should not be used concurrently as parseFailureCount
- * is not thread-safe. However, this is not an issue in practice since JavaScript
- * is single-threaded.
  */
 class XmlParserWithFallback {
-	private parseFailureCount = 0
-	private readonly MAX_FAILURES = 3
 	private readonly MAX_XML_SIZE = 10 * 1024 * 1024 // 10MB limit for fallback parser
 
 	/**
@@ -118,14 +112,7 @@ class XmlParserWithFallback {
 				stopNodes: _stopNodes,
 			})
 
-			const result = parser.parse(xmlString)
-
-			// Reset failure count on success
-			if (this.parseFailureCount > 0) {
-				this.parseFailureCount = 0
-			}
-
-			return result
+			return parser.parse(xmlString)
 		} catch (error) {
 			// Enhance error message for better debugging
 			// Handle cases where error might not be an Error instance (e.g., strings, objects)
@@ -140,41 +127,23 @@ class XmlParserWithFallback {
 				errorMessage = "Unknown error"
 			}
 
-			// Check for xml2js specific error patterns - IMMEDIATELY use fallback
-			if (errorMessage.includes("addChild")) {
-				// Don't wait for multiple failures - use fallback immediately for addChild errors
-				try {
-					const result = this.fallbackXmlParse(xmlString)
-					return result
-				} catch (fallbackError) {
-					const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : "Unknown error"
-					// Still throw the error but make it clear we tried the fallback
-					throw new Error(
-						`XML parsing failed with fallback parser. Fallback parser also failed: ${fallbackErrorMsg}`,
-					)
-				}
+			// Try fallback parser for any parsing error
+			// This handles both xml2js interference (addChild errors) and other parse failures
+			try {
+				const result = this.fallbackXmlParse(xmlString)
+				return result
+			} catch (fallbackError) {
+				const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : "Unknown error"
+				// Provide context about which error was from xml2js interference
+				const isXml2jsError = errorMessage.includes("addChild")
+				const errorContext = isXml2jsError
+					? "XML parsing failed due to external parser interference (xml2js)."
+					: "XML parsing failed."
+
+				throw new Error(
+					`${errorContext} Fallback parser also failed. Original: ${errorMessage}, Fallback: ${fallbackErrorMsg}`,
+				)
 			}
-
-			// For other errors, also consider using fallback after repeated failures
-			this.parseFailureCount++
-
-			if (this.parseFailureCount >= this.MAX_FAILURES) {
-				try {
-					const result = this.fallbackXmlParse(xmlString)
-					// Reset counter on successful fallback
-					this.parseFailureCount = 0
-					return result
-				} catch (fallbackError) {
-					// Reset counter after fallback attempt
-					this.parseFailureCount = 0
-					const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : "Unknown error"
-					throw new Error(
-						`XML parsing failed with both parsers. Original: ${errorMessage}, Fallback: ${fallbackErrorMsg}`,
-					)
-				}
-			}
-
-			throw new Error(`Failed to parse XML: ${errorMessage}`)
 		}
 	}
 }
