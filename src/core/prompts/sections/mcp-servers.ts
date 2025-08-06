@@ -52,36 +52,20 @@ export async function getMcpServersSection(
 	let mcpIncludedList: string[] | undefined
 
 	if (currentMode) {
-		// Find MCP group configuration
+		// Find MCP group configuration - object format: { mcp: { included: [...] } }
 		const mcpGroup = currentMode.groups.find((group: GroupEntry) => {
-			// Handle tuple format: ["mcp", { mcp: { included: [...] } }]
-			if (Array.isArray(group) && group.length === 2 && group[0] === "mcp") {
-				return true
-			}
-			// Handle direct object format: { mcp: { included: [...] } }
 			if (typeof group === "object" && !Array.isArray(group) && "mcp" in group) {
 				return true
 			}
 			return getGroupName(group) === "mcp"
 		})
 
-		// Extract mcpIncludedList based on the format
-		if (mcpGroup) {
-			let mcpOptions: { mcp?: { included?: unknown[] } } | undefined
-
-			if (Array.isArray(mcpGroup) && mcpGroup.length === 2) {
-				// Tuple format
-				mcpOptions = mcpGroup[1] as { mcp?: { included?: unknown[] } }
-			} else if (typeof mcpGroup === "object" && !Array.isArray(mcpGroup) && "mcp" in mcpGroup) {
-				// Direct object format
-				mcpOptions = mcpGroup as { mcp?: { included?: unknown[] } }
-			}
-
-			if (mcpOptions) {
-				mcpIncludedList = Array.isArray(mcpOptions.mcp?.included)
-					? mcpOptions.mcp.included.filter((item: unknown): item is string => typeof item === "string")
-					: undefined
-			}
+		// Extract mcpIncludedList from the MCP configuration
+		if (mcpGroup && typeof mcpGroup === "object" && !Array.isArray(mcpGroup) && "mcp" in mcpGroup) {
+			const mcpOptions = mcpGroup as { mcp?: { included?: unknown[] } }
+			mcpIncludedList = Array.isArray(mcpOptions.mcp?.included)
+				? mcpOptions.mcp.included.filter((item: unknown): item is string => typeof item === "string")
+				: undefined
 		}
 	}
 

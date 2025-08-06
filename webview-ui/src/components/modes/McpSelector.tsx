@@ -14,7 +14,7 @@ import {
 	CommandItem,
 } from "@src/components/ui"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { ModeConfig, GroupEntry, GroupOptions } from "@roo-code/types"
+import { ModeConfig, GroupEntry } from "@roo-code/types"
 import { McpServer } from "@roo/mcp"
 
 interface McpSelectorProps {
@@ -55,28 +55,29 @@ const McpSelector: React.FC<McpSelectorProps> = ({
 			return
 		}
 
-		const mcpGroupArr = currentMode.groups?.find(
-			(g: GroupEntry): g is ["mcp", GroupOptions] => Array.isArray(g) && g.length === 2 && g[0] === "mcp",
-		)
+		// Find MCP group - object format: { mcp: { included: [...] } }
+		const mcpGroup = currentMode.groups?.find((g: GroupEntry) => {
+			return typeof g === "object" && !Array.isArray(g) && "mcp" in g
+		})
 
-		const rawGroupOptions: GroupOptions | undefined = mcpGroupArr ? mcpGroupArr[1] : undefined
+		let included: string[] = []
 
-		const included = Array.isArray(rawGroupOptions?.mcp?.included)
-			? (rawGroupOptions.mcp.included.filter((item) => typeof item === "string") as string[])
-			: []
+		if (mcpGroup && typeof mcpGroup === "object" && !Array.isArray(mcpGroup) && "mcp" in mcpGroup) {
+			const mcpOptions = mcpGroup as { mcp?: { included?: unknown[] } }
+			included = Array.isArray(mcpOptions.mcp?.included)
+				? (mcpOptions.mcp.included.filter((item) => typeof item === "string") as string[])
+				: []
+		}
 
 		// Sync MCP settings when mode changes
 		setMcpIncludedList(included)
 	}, [currentMode])
 	// Handle save
 	function updateMcpGroupOptions(groups: GroupEntry[] = [], _group: string, mcpIncludedList: string[]): GroupEntry[] {
-		// Filter out any existing "mcp" entries (both string and object forms)
+		// Filter out any existing "mcp" entries (string or object forms)
 		const filteredGroups = groups.filter((g) => {
 			if (typeof g === "string") {
 				return g !== "mcp"
-			}
-			if (Array.isArray(g) && g[0] === "mcp") {
-				return false
 			}
 			if (typeof g === "object" && g !== null && !Array.isArray(g) && "mcp" in g) {
 				return false
@@ -84,13 +85,16 @@ const McpSelector: React.FC<McpSelectorProps> = ({
 			return true
 		})
 
-		// Add the new MCP configuration if there are selected servers
+		// Always add MCP back if it's enabled
+		// If mcpIncludedList is empty, it means all servers are enabled (default behavior)
+		// If mcpIncludedList has items, only those servers are enabled
 		if (mcpIncludedList.length > 0) {
-			// Directly add the mcp object without wrapping in an array
+			// Specific servers selected
 			return [...filteredGroups, { mcp: { included: mcpIncludedList } }] as GroupEntry[]
+		} else {
+			// No specific servers selected - enable all (just add "mcp" string)
+			return [...filteredGroups, "mcp"] as GroupEntry[]
 		}
-
-		return filteredGroups as GroupEntry[]
 	}
 
 	// Handle save
