@@ -36,6 +36,7 @@ export const providerNames = [
 	"huggingface",
 	"cerebras",
 	"sambanova",
+	"tars",
 	"zai",
 	"fireworks",
 ] as const
@@ -268,6 +269,12 @@ const fireworksSchema = apiModelIdProviderModelSchema.extend({
 	fireworksApiKey: z.string().optional(),
 })
 
+const tarsSchema = baseProviderSettingsSchema.extend({
+	tarsApiKey: z.string().optional(),
+	tarsModelId: z.string().optional(),
+	tarsBaseUrl: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -301,6 +308,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	litellmSchema.merge(z.object({ apiProvider: z.literal("litellm") })),
 	cerebrasSchema.merge(z.object({ apiProvider: z.literal("cerebras") })),
 	sambaNovaSchema.merge(z.object({ apiProvider: z.literal("sambanova") })),
+	tarsSchema.merge(z.object({ apiProvider: z.literal("tars") })),
 	zaiSchema.merge(z.object({ apiProvider: z.literal("zai") })),
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
 	defaultSchema,
@@ -336,6 +344,7 @@ export const providerSettingsSchema = z.object({
 	...litellmSchema.shape,
 	...cerebrasSchema.shape,
 	...sambaNovaSchema.shape,
+	...tarsSchema.shape,
 	...zaiSchema.shape,
 	...fireworksSchema.shape,
 	...codebaseIndexProviderSchema.shape,
@@ -363,6 +372,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"requestyModelId",
 	"litellmModelId",
 	"huggingFaceModelId",
+	"tarsModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {

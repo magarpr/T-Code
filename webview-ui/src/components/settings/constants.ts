@@ -67,6 +67,7 @@ export const PROVIDERS = [
 	{ value: "chutes", label: "Chutes AI" },
 	{ value: "litellm", label: "LiteLLM" },
 	{ value: "sambanova", label: "SambaNova" },
+	{ value: "tars", label: "TARS (Tetrate Agent Router Service)" },
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
 ].sort((a, b) => a.label.localeCompare(b.label))

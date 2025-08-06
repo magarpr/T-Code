@@ -32,6 +32,7 @@ import {
 	LiteLLMHandler,
 	ClaudeCodeHandler,
 	SambaNovaHandler,
+	TarsHandler,
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
@@ -126,6 +127,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new CerebrasHandler(options)
 		case "sambanova":
 			return new SambaNovaHandler(options)
+		case "tars":
+			return new TarsHandler(options)
 		case "zai":
 			return new ZAiHandler(options)
 		case "fireworks":

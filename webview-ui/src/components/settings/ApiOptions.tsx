@@ -31,6 +31,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiDefaultModelId,
 	fireworksDefaultModelId,
+	tarsDefaultModelId,
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -78,6 +79,7 @@ import {
 	OpenRouter,
 	Requesty,
 	SambaNova,
+	Tars,
 	Unbound,
 	Vertex,
 	VSCodeLM,
@@ -319,6 +321,7 @@ const ApiOptions = ({
 							: internationalZAiDefaultModelId,
 				},
 				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
+				tars: { field: "tarsModelId", default: tarsDefaultModelId },
 				openai: { field: "openAiModelId" },
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
@@ -541,6 +544,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "sambanova" && (
 				<SambaNova apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "tars" && (
+				<Tars apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "zai" && (
