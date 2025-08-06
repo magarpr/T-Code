@@ -2,10 +2,20 @@ import { XMLParser } from "fast-xml-parser"
 
 /**
  * Encapsulated XML parser with circuit breaker pattern
+ *
+ * This dual-parser system handles interference from external XML parsers (like xml2js)
+ * that may be loaded globally by other VSCode extensions. When the primary parser
+ * (fast-xml-parser) fails due to external interference, it automatically falls back
+ * to a regex-based parser.
+ *
+ * Note: This parser instance should not be used concurrently as parseFailureCount
+ * is not thread-safe. However, this is not an issue in practice since JavaScript
+ * is single-threaded.
  */
 class XmlParserWithFallback {
 	private parseFailureCount = 0
 	private readonly MAX_FAILURES = 3
+	private readonly MAX_XML_SIZE = 10 * 1024 * 1024 // 10MB limit for fallback parser
 
 	/**
 	 * Fallback XML parser for apply_diff structure when fast-xml-parser fails
@@ -14,6 +24,13 @@ class XmlParserWithFallback {
 	 * @returns Parsed object with file entries
 	 */
 	private fallbackXmlParse(xmlString: string): any {
+		// Check size limit to prevent memory exhaustion on very large files
+		if (xmlString.length > this.MAX_XML_SIZE) {
+			throw new Error(
+				`XML content exceeds maximum size limit of ${this.MAX_XML_SIZE / 1024 / 1024}MB for fallback parser`,
+			)
+		}
+
 		const result: any = { file: [] }
 
 		// Extract file entries
@@ -24,7 +41,10 @@ class XmlParserWithFallback {
 
 			// Extract path
 			const pathMatch = fileContent.match(/<path>(.*?)<\/path>/)
-			const path = pathMatch ? pathMatch[1].trim() : null
+			if (!pathMatch) {
+				throw new Error("Fallback parser: <file> entry missing <path> element")
+			}
+			const path = pathMatch[1].trim()
 
 			// Extract diff blocks
 			const diffMatches = fileContent.matchAll(/<diff>([\s\S]*?)<\/diff>/g)
@@ -55,7 +75,7 @@ class XmlParserWithFallback {
 				}
 			}
 
-			if (path && diffs.length > 0) {
+			if (diffs.length > 0) {
 				result.file.push({
 					path,
 					diff: diffs.length === 1 ? diffs[0] : diffs,
@@ -68,7 +88,7 @@ class XmlParserWithFallback {
 			result.file = result.file[0]
 		} else if (result.file.length === 0) {
 			// No valid files found
-			throw new Error("Fallback parser: No valid file entries found in XML")
+			throw new Error("No valid file entries found in XML structure")
 		}
 
 		return result
@@ -108,7 +128,17 @@ class XmlParserWithFallback {
 			return result
 		} catch (error) {
 			// Enhance error message for better debugging
-			const errorMessage = error instanceof Error ? error.message : "Unknown error"
+			// Handle cases where error might not be an Error instance (e.g., strings, objects)
+			let errorMessage: string
+			if (error instanceof Error) {
+				errorMessage = error.message
+			} else if (typeof error === "string") {
+				errorMessage = error
+			} else if (error && typeof error === "object" && "toString" in error) {
+				errorMessage = error.toString()
+			} else {
+				errorMessage = "Unknown error"
+			}
 
 			// Check for xml2js specific error patterns - IMMEDIATELY use fallback
 			if (errorMessage.includes("addChild")) {
@@ -120,7 +150,7 @@ class XmlParserWithFallback {
 					const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : "Unknown error"
 					// Still throw the error but make it clear we tried the fallback
 					throw new Error(
-						`XML parsing failed (external xml2js interference detected). Fallback parser also failed: ${fallbackErrorMsg}`,
+						`XML parsing failed with fallback parser. Fallback parser also failed: ${fallbackErrorMsg}`,
 					)
 				}
 			}

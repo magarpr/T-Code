@@ -59,12 +59,14 @@ function validateApplyDiffXml(xmlString: string): boolean {
 	// Basic structure validation
 	const hasRequiredTags = xmlString.includes("<file>") && xmlString.includes("<path>") && xmlString.includes("<diff>")
 
-	// Check for balanced tags (simple check)
+	// Improved tag balance check: account for self-closing tags
+	const selfClosingTags = (xmlString.match(/<[^>]+\/>/g) || []).length
 	const openTags = (xmlString.match(/<[^/][^>]*>/g) || []).length
 	const closeTags = (xmlString.match(/<\/[^>]+>/g) || []).length
 
-	// Allow for slight imbalance due to self-closing tags
-	const tagBalance = Math.abs(openTags - closeTags) <= 1
+	// Only count non-self-closing opening tags for balance
+	const nonSelfClosingOpenTags = openTags - selfClosingTags
+	const tagBalance = nonSelfClosingOpenTags === closeTags
 
 	return hasRequiredTags && tagBalance
 }
@@ -185,7 +187,7 @@ Expected structure:
 </args>
 
 Original error: ${errorMessage}
-${hasAddChild ? '\n⚠️ NOTE: Detected "addChild" error which suggests interference from another XML parser (xml2js). This may be caused by a conflicting VSCode extension.' : ""}`
+${hasAddChild ? "\n⚠️ NOTE: There may be a conflict with another extension. If you have XML-related extensions installed in VSCode, try disabling them and retrying." : ""}`
 
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("apply_diff")
