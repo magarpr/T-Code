@@ -50,6 +50,25 @@ interface ParsedXmlResult {
 	file: ParsedFile | ParsedFile[]
 }
 
+/**
+ * Validates the structure of apply_diff XML before parsing
+ * @param xmlString The XML string to validate
+ * @returns true if the XML structure appears valid, false otherwise
+ */
+function validateApplyDiffXml(xmlString: string): boolean {
+	// Basic structure validation
+	const hasRequiredTags = xmlString.includes("<file>") && xmlString.includes("<path>") && xmlString.includes("<diff>")
+
+	// Check for balanced tags (simple check)
+	const openTags = (xmlString.match(/<[^/][^>]*>/g) || []).length
+	const closeTags = (xmlString.match(/<\/[^>]+>/g) || []).length
+
+	// Allow for slight imbalance due to self-closing tags
+	const tagBalance = Math.abs(openTags - closeTags) <= 1
+
+	return hasRequiredTags && tagBalance
+}
+
 export async function applyDiffTool(
 	cline: Task,
 	block: ToolUse,
@@ -108,6 +127,11 @@ export async function applyDiffTool(
 	if (argsXmlTag) {
 		// Parse file entries from XML (new way)
 		try {
+			// Validate XML structure before parsing (issue #4852)
+			if (!validateApplyDiffXml(argsXmlTag)) {
+				throw new Error("Invalid apply_diff XML structure: missing required tags or unbalanced tags")
+			}
+
 			const parsed = parseXml(argsXmlTag, ["file.diff.content"]) as ParsedXmlResult
 			const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
 
@@ -143,6 +167,7 @@ export async function applyDiffTool(
 			}
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
+			const hasAddChild = error instanceof Error ? error.message.includes("addChild") : false
 			const detailedError = `Failed to parse apply_diff XML. This usually means:
 1. The XML structure is malformed or incomplete
 2. Missing required <file>, <path>, or <diff> tags
@@ -159,10 +184,15 @@ Expected structure:
   </file>
 </args>
 
-Original error: ${errorMessage}`
+Original error: ${errorMessage}
+${hasAddChild ? '\n⚠️ NOTE: Detected "addChild" error which suggests interference from another XML parser (xml2js). This may be caused by a conflicting VSCode extension.' : ""}`
+
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("apply_diff")
+
+			// Enhanced telemetry for issue #4852
 			TelemetryService.instance.captureDiffApplicationError(cline.taskId, cline.consecutiveMistakeCount)
+
 			await cline.say("diff_error", `Failed to parse apply_diff XML: ${errorMessage}`)
 			pushToolResult(detailedError)
 			return
