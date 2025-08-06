@@ -483,13 +483,42 @@ describe("OpenAiNativeHandler", () => {
 			expect(mockResponsesStream).toHaveBeenCalledWith({
 				model: "codex-mini-latest",
 				instructions: systemPrompt,
-				input: "Hello!",
+				input: "User: Hello!",
 			})
 
 			const textChunks = chunks.filter((chunk) => chunk.type === "text")
 			expect(textChunks).toHaveLength(2)
 			expect(textChunks[0].text).toBe("Hello")
 			expect(textChunks[1].text).toBe(" world")
+		})
+
+		it("should handle multi-turn conversations with assistant messages", async () => {
+			const multiTurnMessages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "What is 2+2?",
+				},
+				{
+					role: "assistant",
+					content: "2+2 equals 4.",
+				},
+				{
+					role: "user",
+					content: "What about 3+3?",
+				},
+			]
+
+			const responseStream = handler.createMessage(systemPrompt, multiTurnMessages)
+			const chunks: any[] = []
+			for await (const chunk of responseStream) {
+				chunks.push(chunk)
+			}
+
+			expect(mockResponsesStream).toHaveBeenCalledWith({
+				model: "codex-mini-latest",
+				instructions: systemPrompt,
+				input: "User: What is 2+2?\n\nAssistant: 2+2 equals 4.\n\nUser: What about 3+3?",
+			})
 		})
 
 		it("should handle non-streaming completion via v1/responses", async () => {

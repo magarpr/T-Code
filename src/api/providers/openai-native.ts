@@ -173,15 +173,20 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	private convertMessagesToInput(messages: Anthropic.Messages.MessageParam[]): string {
 		return messages
 			.map((msg) => {
-				if (msg.role === "user") {
-					if (typeof msg.content === "string") {
-						return msg.content
-					} else if (Array.isArray(msg.content)) {
-						return msg.content
-							.filter((part) => part.type === "text")
-							.map((part) => part.text)
-							.join("\n")
-					}
+				let content = ""
+
+				if (typeof msg.content === "string") {
+					content = msg.content
+				} else if (Array.isArray(msg.content)) {
+					content = msg.content
+						.filter((part) => part.type === "text")
+						.map((part) => part.text)
+						.join("\n")
+				}
+
+				// Include role prefix to maintain conversation context
+				if (content) {
+					return msg.role === "user" ? `User: ${content}` : `Assistant: ${content}`
 				}
 				return ""
 			})
