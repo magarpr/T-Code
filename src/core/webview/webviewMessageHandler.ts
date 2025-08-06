@@ -900,12 +900,20 @@ export const webviewMessageHandler = async (
 		}
 		case "mcpEnabled":
 			const mcpEnabled = message.bool ?? true
-			await updateGlobalState("mcpEnabled", mcpEnabled)
+			const currentMcpEnabled = getGlobalState("mcpEnabled") ?? true
 
-			// Delegate MCP enable/disable logic to McpHub
-			const mcpHubInstance = provider.getMcpHub()
-			if (mcpHubInstance) {
-				await mcpHubInstance.handleMcpEnabledChange(mcpEnabled)
+			// Only update and refresh if the value actually changed
+			if (currentMcpEnabled !== mcpEnabled) {
+				await updateGlobalState("mcpEnabled", mcpEnabled)
+
+				// Delegate MCP enable/disable logic to McpHub
+				const mcpHubInstance = provider.getMcpHub()
+				if (mcpHubInstance) {
+					await mcpHubInstance.handleMcpEnabledChange(mcpEnabled)
+				}
+			} else {
+				// Just update the state without triggering refresh
+				await updateGlobalState("mcpEnabled", mcpEnabled)
 			}
 
 			await provider.postStateToWebview()
