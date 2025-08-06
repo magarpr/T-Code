@@ -70,6 +70,11 @@ export interface ChatViewRef {
 
 export const MAX_IMAGES_PER_MESSAGE = 20 // Anthropic limits to 20 images
 
+// Viewport buffer constants for memory-efficient scroll behavior
+const VIEWPORT_BUFFER_AT_BOTTOM = 10_000 // Larger buffer when at bottom to maintain scroll lock
+const VIEWPORT_BUFFER_SCROLLED_UP = 1_000 // Smaller buffer when scrolled up to preserve memory efficiency
+const VIEWPORT_BUFFER_TOP = 3_000 // Top buffer for smooth scrolling
+
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
 const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewProps> = (
@@ -174,6 +179,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const disableAutoScrollRef = useRef(false)
 	const [showScrollToBottom, setShowScrollToBottom] = useState(false)
 	const [isAtBottom, setIsAtBottom] = useState(false)
+	// Debounced version of isAtBottom to prevent rapid viewport buffer changes
+	const [debouncedIsAtBottom, setDebouncedIsAtBottom] = useState(false)
 	const lastTtsRef = useRef<string>("")
 	const [wasStreaming, setWasStreaming] = useState<boolean>(false)
 	const [showCheckpointWarning, setShowCheckpointWarning] = useState<boolean>(false)
@@ -1430,6 +1437,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	useEvent("wheel", handleWheel, window, { passive: true }) // passive improves scrolling performance
 
+	// Debounce the isAtBottom state to prevent rapid viewport buffer changes
+	// This adds hysteresis to avoid performance issues when users quickly scroll between top and bottom
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedIsAtBottom(isAtBottom)
+		}, 300) // 300ms delay provides good balance between responsiveness and stability
+
+		return () => clearTimeout(timer)
+	}, [isAtBottom])
+
 	// Effect to handle showing the checkpoint warning after a delay
 	useEffect(() => {
 		// Only show the warning when there's a task but no visible messages yet
@@ -1888,10 +1905,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							key={task.ts}
 							className="scrollable grow overflow-y-scroll mb-1"
 							increaseViewportBy={{
-								top: 3_000,
-								// Use a dynamic bottom value: larger when at bottom to maintain scroll lock,
-								// smaller when scrolled up to preserve memory efficiency
-								bottom: isAtBottom ? 10_000 : 1000,
+								top: VIEWPORT_BUFFER_TOP,
+								// Dynamic bottom buffer based on scroll position:
+								// - When at bottom: Use larger buffer to maintain scroll lock behavior
+								// - When scrolled up: Use smaller buffer to preserve memory efficiency
+								// This balances the memory leak fix from PR #6697 with proper scroll lock functionality
+								// Using debounced state to prevent rapid toggling during quick scrolling
+								bottom: debouncedIsAtBottom ? VIEWPORT_BUFFER_AT_BOTTOM : VIEWPORT_BUFFER_SCROLLED_UP,
 							}}
 							data={groupedMessages}
 							itemContent={itemContent}
@@ -1904,6 +1924,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							}}
 							atBottomThreshold={10}
 							initialTopMostItemIndex={groupedMessages.length - 1}
+							// followOutput='smooth' ensures smooth scrolling animation when new content arrives,
+							// working in conjunction with the dynamic viewport buffer to maintain scroll lock
+							// when the user is at the bottom of the chat
 							followOutput="smooth"
 						/>
 					</div>
