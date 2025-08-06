@@ -558,10 +558,6 @@ const ApiOptions = ({
 				</>
 			)}
 
-			{selectedProvider === "fireworks" && (
-				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
-			)}
-
 			{selectedProviderModels.length > 0 && (
 				<>
 					<div>
@@ -607,6 +603,10 @@ const ApiOptions = ({
 						setIsDescriptionExpanded={setIsDescriptionExpanded}
 					/>
 				</>
+			)}
+
+			{selectedProvider === "fireworks" && (
+				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			<ThinkingBudget
