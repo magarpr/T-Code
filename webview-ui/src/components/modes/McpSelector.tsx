@@ -69,45 +69,28 @@ const McpSelector: React.FC<McpSelectorProps> = ({
 		setMcpIncludedList(included)
 	}, [currentMode])
 	// Handle save
-	function updateMcpGroupOptions(groups: GroupEntry[] = [], group: string, mcpIncludedList: string[]): GroupEntry[] {
-		let mcpGroupFound = false
-		const newGroups = groups
-			.map((g) => {
-				if (Array.isArray(g) && g[0] === group) {
-					mcpGroupFound = true
-					return [
-						group,
-						{
-							...(g[1] || {}),
-							mcp: mcpIncludedList.length > 0 ? { included: mcpIncludedList } : undefined,
-						},
-					] as GroupEntry
-				}
-				if (typeof g === "string" && g === group) {
-					mcpGroupFound = true
-					return [
-						group,
-						{
-							mcp: mcpIncludedList.length > 0 ? { included: mcpIncludedList } : undefined,
-						},
-					] as GroupEntry
-				}
-				return g
-			})
-			.filter((g) => g !== undefined)
+	function updateMcpGroupOptions(groups: GroupEntry[] = [], _group: string, mcpIncludedList: string[]): GroupEntry[] {
+		// Filter out any existing "mcp" entries (both string and object forms)
+		const filteredGroups = groups.filter((g) => {
+			if (typeof g === "string") {
+				return g !== "mcp"
+			}
+			if (Array.isArray(g) && g[0] === "mcp") {
+				return false
+			}
+			if (typeof g === "object" && g !== null && !Array.isArray(g) && "mcp" in g) {
+				return false
+			}
+			return true
+		})
 
-		if (!mcpGroupFound && group === "mcp") {
-			const groupsWithoutSimpleMcp = newGroups.filter((g) => g !== "mcp")
-			groupsWithoutSimpleMcp.push([
-				"mcp",
-				{
-					mcp: mcpIncludedList.length > 0 ? { included: mcpIncludedList } : undefined,
-				},
-			])
-			return groupsWithoutSimpleMcp as GroupEntry[]
-		} else {
-			return newGroups as GroupEntry[]
+		// Add the new MCP configuration if there are selected servers
+		if (mcpIncludedList.length > 0) {
+			// Directly add the mcp object without wrapping in an array
+			return [...filteredGroups, { mcp: { included: mcpIncludedList } }] as GroupEntry[]
 		}
+
+		return filteredGroups as GroupEntry[]
 	}
 
 	// Handle save

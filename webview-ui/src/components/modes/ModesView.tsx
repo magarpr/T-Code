@@ -62,7 +62,13 @@ type ModesViewProps = {
 
 // Helper to get group name regardless of format
 function getGroupName(group: GroupEntry): ToolGroup {
-	return Array.isArray(group) ? group[0] : group
+	if (Array.isArray(group)) {
+		return group[0]
+	}
+	if (typeof group === "object" && "mcp" in group) {
+		return "mcp" as ToolGroup
+	}
+	return group as ToolGroup
 }
 
 const ModesView = ({ onDone }: ModesViewProps) => {

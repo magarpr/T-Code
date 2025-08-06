@@ -54,18 +54,34 @@ export async function getMcpServersSection(
 	if (currentMode) {
 		// Find MCP group configuration
 		const mcpGroup = currentMode.groups.find((group: GroupEntry) => {
+			// Handle tuple format: ["mcp", { mcp: { included: [...] } }]
 			if (Array.isArray(group) && group.length === 2 && group[0] === "mcp") {
+				return true
+			}
+			// Handle direct object format: { mcp: { included: [...] } }
+			if (typeof group === "object" && !Array.isArray(group) && "mcp" in group) {
 				return true
 			}
 			return getGroupName(group) === "mcp"
 		})
 
-		// If MCP group configuration is found, get mcpIncludedList from mcp.included
-		if (mcpGroup && Array.isArray(mcpGroup) && mcpGroup.length === 2) {
-			const options = mcpGroup[1] as { mcp?: { included?: unknown[] } }
-			mcpIncludedList = Array.isArray(options.mcp?.included)
-				? options.mcp.included.filter((item: unknown): item is string => typeof item === "string")
-				: undefined
+		// Extract mcpIncludedList based on the format
+		if (mcpGroup) {
+			let mcpOptions: { mcp?: { included?: unknown[] } } | undefined
+
+			if (Array.isArray(mcpGroup) && mcpGroup.length === 2) {
+				// Tuple format
+				mcpOptions = mcpGroup[1] as { mcp?: { included?: unknown[] } }
+			} else if (typeof mcpGroup === "object" && !Array.isArray(mcpGroup) && "mcp" in mcpGroup) {
+				// Direct object format
+				mcpOptions = mcpGroup as { mcp?: { included?: unknown[] } }
+			}
+
+			if (mcpOptions) {
+				mcpIncludedList = Array.isArray(mcpOptions.mcp?.included)
+					? mcpOptions.mcp.included.filter((item: unknown): item is string => typeof item === "string")
+					: undefined
+			}
 		}
 	}
 
@@ -77,7 +93,7 @@ export async function getMcpServersSection(
 		connectedServers = `${filteredServers
 			.map((server) => {
 				const tools = server.tools
-							?.filter((tool) => tool.enabledForPrompt !== false)
+					?.filter((tool) => tool.enabledForPrompt !== false)
 					?.map((tool) => {
 						const schemaStr = tool.inputSchema
 							? `    Input Schema:
