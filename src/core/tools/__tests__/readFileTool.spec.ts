@@ -4,7 +4,6 @@ import * as path from "path"
 
 import { countFileLines } from "../../../integrations/misc/line-counter"
 import { readLines } from "../../../integrations/misc/read-lines"
-import { readPartialContent } from "../../../integrations/misc/read-partial-content"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../../services/tree-sitter"
 import { isBinaryFile } from "isbinaryfile"
@@ -34,17 +33,6 @@ vi.mock("isbinaryfile")
 vi.mock("../../../integrations/misc/line-counter")
 vi.mock("../../../integrations/misc/read-lines", () => ({
 	readLines: vi.fn().mockResolvedValue("mocked line content"),
-}))
-vi.mock("../../../integrations/misc/read-partial-content", () => ({
-	readPartialSingleLineContent: vi.fn().mockResolvedValue("mocked partial content"),
-	readPartialContent: vi.fn().mockResolvedValue({
-		content: "mocked partial content",
-		charactersRead: 100,
-		totalCharacters: 1000,
-		linesRead: 5,
-		totalLines: 50,
-		lastLineRead: 5,
-	}),
 }))
 vi.mock("../contextValidator")
 
@@ -1379,15 +1367,8 @@ describe("read_file tool XML output structure", () => {
 				reason: "This is a partial read - the remaining content cannot be accessed due to context limitations.",
 			})
 
-			// Mock readPartialContent to return truncated content
-			vi.mocked(readPartialContent).mockResolvedValue({
-				content: "Line 1\nLine 2\n...truncated...",
-				charactersRead: 2000,
-				totalCharacters: 500000,
-				linesRead: 100,
-				totalLines: 10000,
-				lastLineRead: 100,
-			})
+			// Mock readLines to return truncated content with maxChars
+			vi.mocked(readLines).mockResolvedValue("Line 1\nLine 2\n...truncated...")
 
 			const result = await executeReadFileTool(
 				{ args: `<file><path>large-file.ts</path></file>` },
@@ -1430,15 +1411,8 @@ describe("read_file tool XML output structure", () => {
 				reason: "This is a partial read - the remaining content cannot be accessed due to context limitations.",
 			})
 
-			// Mock readPartialContent to return truncated content for single-line file
-			vi.mocked(readPartialContent).mockResolvedValue({
-				content: "const a=1;const b=2;...truncated",
-				charactersRead: 5000,
-				totalCharacters: 10000,
-				linesRead: 1,
-				totalLines: 1,
-				lastLineRead: 1,
-			})
+			// Mock readLines to return truncated content for single-line file with maxChars
+			vi.mocked(readLines).mockResolvedValue("const a=1;const b=2;...truncated")
 
 			const result = await executeReadFileTool(
 				{ args: `<file><path>minified.js</path></file>` },
@@ -1463,15 +1437,8 @@ describe("read_file tool XML output structure", () => {
 				reason: "This is a partial read - the remaining content cannot be accessed due to context limitations.",
 			})
 
-			// Mock readPartialContent to return truncated content
-			vi.mocked(readPartialContent).mockResolvedValue({
-				content: "Line 1\nLine 2\n...truncated...",
-				charactersRead: 50000,
-				totalCharacters: 250000,
-				linesRead: 1000,
-				totalLines: 5000,
-				lastLineRead: 1000,
-			})
+			// Mock readLines to return truncated content with maxChars
+			vi.mocked(readLines).mockResolvedValue("Line 1\nLine 2\n...truncated...")
 
 			const result = await executeReadFileTool(
 				{ args: `<file><path>large-file.ts</path></file>` },
@@ -1496,15 +1463,8 @@ describe("read_file tool XML output structure", () => {
 				reason: "This is a partial read - the remaining content cannot be accessed due to context limitations.",
 			})
 
-			// Mock readPartialContent for single-line file
-			vi.mocked(readPartialContent).mockResolvedValue({
-				content: "const a=1;const b=2;const c=3;",
-				charactersRead: 8000,
-				totalCharacters: 10000,
-				linesRead: 1,
-				totalLines: 1,
-				lastLineRead: 1,
-			})
+			// Mock readLines for single-line file with maxChars
+			vi.mocked(readLines).mockResolvedValue("const a=1;const b=2;const c=3;")
 
 			const result = await executeReadFileTool(
 				{ args: `<file><path>semi-large.js</path></file>` },

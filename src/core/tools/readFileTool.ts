@@ -12,7 +12,6 @@ import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { getReadablePath } from "../../utils/path"
 import { countFileLines } from "../../integrations/misc/line-counter"
 import { readLines } from "../../integrations/misc/read-lines"
-import { readPartialContent } from "../../integrations/misc/read-partial-content"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
@@ -578,12 +577,15 @@ export async function readFileTool(
 
 				// Handle files with validation limits (character-based reading)
 				if (shouldApplyValidation) {
-					const result = await readPartialContent(fullPath, validation.safeContentLimit)
+					const partialContent = await readLines(fullPath, undefined, undefined, validation.safeContentLimit)
+
+					// Count lines in the partial content
+					const linesRead = partialContent ? (partialContent.match(/\n/g) || []).length + 1 : 0
 
 					// Generate line range attribute based on what was read
-					const lineRangeAttr = result.linesRead === 1 ? ` lines="1"` : ` lines="1-${result.lastLineRead}"`
+					const lineRangeAttr = linesRead === 1 ? ` lines="1"` : ` lines="1-${linesRead}"`
 
-					const content = addLineNumbers(result.content, 1)
+					const content = addLineNumbers(partialContent, 1)
 					let xmlInfo = `<content${lineRangeAttr}>\n${content}</content>\n`
 
 					// Add simple notice about partial read
