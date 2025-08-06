@@ -65,9 +65,9 @@ export async function getLMStudioModels(baseUrl = "http://localhost:1234"): Prom
 			return models
 		}
 
-		// test the connection to LM Studio first
+		// test the connection to LM Studio first and get models from OpenAI-compatible endpoint
 		// errors will be caught further down
-		await axios.get(`${baseUrl}/v1/models`)
+		const openAiModelsResponse = await axios.get(`${baseUrl}/v1/models`)
 
 		const client = new LMStudioClient({ baseUrl: lmsUrl })
 
@@ -82,13 +82,37 @@ export async function getLMStudioModels(baseUrl = "http://localhost:1234"): Prom
 			console.warn("Failed to list downloaded models, falling back to loaded models only")
 		}
 		// We want to list loaded models *anyway* since they provide valuable extra info (context size)
-		const loadedModels = (await client.llm.listLoaded().then((models: LLM[]) => {
-			return Promise.all(models.map((m) => m.getModelInfo()))
-		})) as Array<LLMInstanceInfo>
+		try {
+			const loadedModels = (await client.llm.listLoaded().then((models: LLM[]) => {
+				return Promise.all(models.map((m) => m.getModelInfo()))
+			})) as Array<LLMInstanceInfo>
 
-		for (const lmstudioModel of loadedModels) {
-			models[lmstudioModel.modelKey] = parseLMStudioModel(lmstudioModel)
-			modelsWithLoadedDetails.add(lmstudioModel.modelKey)
+			for (const lmstudioModel of loadedModels) {
+				models[lmstudioModel.modelKey] = parseLMStudioModel(lmstudioModel)
+				modelsWithLoadedDetails.add(lmstudioModel.modelKey)
+			}
+		} catch (error) {
+			console.warn("Failed to list loaded models via SDK")
+		}
+
+		// If we didn't get any models from the SDK, fall back to OpenAI-compatible API
+		if (Object.keys(models).length === 0 && openAiModelsResponse.data?.data) {
+			console.log("Falling back to OpenAI-compatible API models")
+			const openAiModels = openAiModelsResponse.data.data
+
+			for (const model of openAiModels) {
+				// Use the model ID as the key
+				models[model.id] = {
+					...lMStudioDefaultModelInfo,
+					description: model.id,
+					// We don't have detailed info from the OpenAI API, so use defaults
+					contextWindow: lMStudioDefaultModelInfo.contextWindow,
+					maxTokens: lMStudioDefaultModelInfo.maxTokens,
+					supportsPromptCache: true,
+					supportsImages: false, // Conservative default
+					supportsComputerUse: false,
+				}
+			}
 		}
 	} catch (error) {
 		if (error.code === "ECONNREFUSED") {

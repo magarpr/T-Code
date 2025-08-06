@@ -212,11 +212,12 @@ describe("LMStudio Fetcher", () => {
 			consoleInfoSpy.mockRestore()
 		})
 
-		it("should return an empty object and log error if listDownloadedModels fails", async () => {
-			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+		it("should return an empty object and log warning if listLoaded fails", async () => {
+			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 			const listError = new Error("LMStudio SDK internal error")
 
 			mockedAxios.get.mockResolvedValueOnce({ data: {} })
+			mockListDownloadedModels.mockRejectedValueOnce(new Error("Failed to list downloaded"))
 			mockListLoaded.mockRejectedValueOnce(listError)
 
 			const result = await getLMStudioModels(baseUrl)
@@ -225,11 +226,86 @@ describe("LMStudio Fetcher", () => {
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledTimes(1)
 			expect(MockedLMStudioClientConstructor).toHaveBeenCalledWith({ baseUrl: lmsUrl })
 			expect(mockListLoaded).toHaveBeenCalledTimes(1)
-			expect(consoleErrorSpy).toHaveBeenCalledWith(
-				`Error fetching LMStudio models: ${JSON.stringify(listError, Object.getOwnPropertyNames(listError), 2)}`,
+			// Now it should log a warning for failed SDK methods, not an error
+			expect(consoleWarnSpy).toHaveBeenCalledWith(
+				"Failed to list downloaded models, falling back to loaded models only",
 			)
+			expect(consoleWarnSpy).toHaveBeenCalledWith("Failed to list loaded models via SDK")
 			expect(result).toEqual({})
-			consoleErrorSpy.mockRestore()
+			consoleWarnSpy.mockRestore()
+		})
+
+		it("should fall back to OpenAI API models when SDK methods fail", async () => {
+			const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+			// Mock OpenAI API response with models
+			const openAiModels = {
+				data: [
+					{ id: "openai/gpt-oss-20b", object: "model", owned_by: "organization_owner" },
+					{ id: "unsloth/gpt-oss-20b", object: "model", owned_by: "organization_owner" },
+					{ id: "qwen/qwen3-coder-30b", object: "model", owned_by: "organization_owner" },
+				],
+				object: "list",
+			}
+
+			mockedAxios.get.mockResolvedValueOnce({ data: openAiModels })
+
+			// Make SDK methods fail
+			mockListDownloadedModels.mockRejectedValueOnce(new Error("SDK not available"))
+			mockListLoaded.mockRejectedValueOnce(new Error("SDK not available"))
+
+			const result = await getLMStudioModels(baseUrl)
+
+			// Should have called the OpenAI endpoint
+			expect(mockedAxios.get).toHaveBeenCalledWith(`${baseUrl}/v1/models`)
+
+			// Should have tried SDK methods
+			expect(MockedLMStudioClientConstructor).toHaveBeenCalledWith({ baseUrl: lmsUrl })
+			expect(mockListDownloadedModels).toHaveBeenCalled()
+			expect(mockListLoaded).toHaveBeenCalled()
+
+			// Should have logged the fallback
+			expect(consoleLogSpy).toHaveBeenCalledWith("Falling back to OpenAI-compatible API models")
+
+			// Should return models from OpenAI API
+			expect(Object.keys(result)).toHaveLength(3)
+			expect(result["openai/gpt-oss-20b"]).toBeDefined()
+			expect(result["openai/gpt-oss-20b"].description).toBe("openai/gpt-oss-20b")
+			expect(result["unsloth/gpt-oss-20b"]).toBeDefined()
+			expect(result["qwen/qwen3-coder-30b"]).toBeDefined()
+
+			consoleLogSpy.mockRestore()
+			consoleWarnSpy.mockRestore()
+		})
+
+		it("should not use OpenAI API fallback if SDK returns models", async () => {
+			const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {})
+
+			// Mock OpenAI API response with models
+			const openAiModels = {
+				data: [{ id: "openai/gpt-oss-20b", object: "model", owned_by: "organization_owner" }],
+				object: "list",
+			}
+
+			mockedAxios.get.mockResolvedValueOnce({ data: openAiModels })
+
+			// SDK returns models successfully
+			mockListDownloadedModels.mockResolvedValueOnce([])
+			mockListLoaded.mockResolvedValueOnce([{ getModelInfo: mockGetModelInfo }])
+			mockGetModelInfo.mockResolvedValueOnce(mockRawModel)
+
+			const result = await getLMStudioModels(baseUrl)
+
+			// Should NOT log the fallback message
+			expect(consoleLogSpy).not.toHaveBeenCalledWith("Falling back to OpenAI-compatible API models")
+
+			// Should return SDK models, not OpenAI API models
+			expect(Object.keys(result)).toHaveLength(1)
+			expect(result[mockRawModel.modelKey]).toBeDefined()
+			expect(result["openai/gpt-oss-20b"]).toBeUndefined()
+
+			consoleLogSpy.mockRestore()
 		})
 	})
 })
