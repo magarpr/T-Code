@@ -46,6 +46,8 @@ import {
 	mainlandZAiModels,
 	fireworksModels,
 	fireworksDefaultModelId,
+	tarsDefaultModelId,
+	tarsDefaultModelInfo,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -275,6 +277,11 @@ function getSelectedModel({
 		case "fireworks": {
 			const id = apiConfiguration.apiModelId ?? fireworksDefaultModelId
 			const info = fireworksModels[id as keyof typeof fireworksModels]
+			return { id, info }
+		}
+		case "tars": {
+			const id = apiConfiguration.tarsModelId ?? tarsDefaultModelId
+			const info = tarsDefaultModelInfo
 			return { id, info }
 		}
 		// case "anthropic":
