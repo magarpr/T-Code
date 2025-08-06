@@ -13,7 +13,6 @@ import { stripLineNumbers, everyLineHasLineNumbers } from "../../integrations/mi
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { detectCodeOmission } from "../../integrations/editor/detect-omission"
-import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 
@@ -81,10 +80,6 @@ export async function writeToFileTool(
 
 	if (newContent.endsWith("```")) {
 		newContent = newContent.split("\n").slice(0, -1).join("\n")
-	}
-
-	if (!cline.api.getModel().id.includes("claude")) {
-		newContent = unescapeHtmlEntities(newContent)
 	}
 
 	// Determine if the path is outside the workspace

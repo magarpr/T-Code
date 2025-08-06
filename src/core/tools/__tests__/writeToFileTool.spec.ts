@@ -6,7 +6,6 @@ import { fileExistsAtPath } from "../../../utils/fs"
 import { detectCodeOmission } from "../../../integrations/editor/detect-omission"
 import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
 import { getReadablePath } from "../../../utils/path"
-import { unescapeHtmlEntities } from "../../../utils/text-normalization"
 import { everyLineHasLineNumbers, stripLineNumbers } from "../../../integrations/misc/extract-text"
 import { ToolUse, ToolResponse } from "../../../shared/tools"
 import { writeToFileTool } from "../writeToFileTool"
@@ -52,10 +51,6 @@ vi.mock("../../../utils/pathUtils", () => ({
 
 vi.mock("../../../utils/path", () => ({
 	getReadablePath: vi.fn().mockReturnValue("test/path.txt"),
-}))
-
-vi.mock("../../../utils/text-normalization", () => ({
-	unescapeHtmlEntities: vi.fn().mockImplementation((content) => content),
 }))
 
 vi.mock("../../../integrations/misc/extract-text", () => ({
@@ -104,7 +99,6 @@ describe("writeToFileTool", () => {
 	const mockedDetectCodeOmission = detectCodeOmission as MockedFunction<typeof detectCodeOmission>
 	const mockedIsPathOutsideWorkspace = isPathOutsideWorkspace as MockedFunction<typeof isPathOutsideWorkspace>
 	const mockedGetReadablePath = getReadablePath as MockedFunction<typeof getReadablePath>
-	const mockedUnescapeHtmlEntities = unescapeHtmlEntities as MockedFunction<typeof unescapeHtmlEntities>
 	const mockedEveryLineHasLineNumbers = everyLineHasLineNumbers as MockedFunction<typeof everyLineHasLineNumbers>
 	const mockedStripLineNumbers = stripLineNumbers as MockedFunction<typeof stripLineNumbers>
 	const mockedPathResolve = path.resolve as MockedFunction<typeof path.resolve>
@@ -124,7 +118,6 @@ describe("writeToFileTool", () => {
 		mockedDetectCodeOmission.mockReturnValue(false)
 		mockedIsPathOutsideWorkspace.mockReturnValue(false)
 		mockedGetReadablePath.mockReturnValue("test/path.txt")
-		mockedUnescapeHtmlEntities.mockImplementation((content) => content)
 		mockedEveryLineHasLineNumbers.mockReturnValue(false)
 		mockedStripLineNumbers.mockImplementation((content) => content)
 
@@ -288,20 +281,28 @@ describe("writeToFileTool", () => {
 			expect(mockCline.diffViewProvider.update).toHaveBeenCalledWith("", true)
 		})
 
-		it("unescapes HTML entities for non-Claude models", async () => {
-			mockCline.api.getModel.mockReturnValue({ id: "gpt-4" })
+		it("preserves C# generics and angle brackets in content", async () => {
+			const csharpContent = `public class Service<T> where T : class
+{
+		  public void Configure<TOptions>(TOptions options)
+		  {
+		      builder.Services.Configure<BlazorServerSettings>(builder.Configuration.GetSection("BlazorServerSettings"));
+		  }
+}`
 
-			await executeWriteFileTool({ content: "&lt;test&gt;" })
+			await executeWriteFileTool({ content: csharpContent, line_count: "7" })
 
-			expect(mockedUnescapeHtmlEntities).toHaveBeenCalledWith("&lt;test&gt;")
+			// Verify the content is passed through unchanged (no HTML entity conversion)
+			expect(mockCline.diffViewProvider.update).toHaveBeenCalledWith(csharpContent, true)
 		})
 
-		it("skips HTML unescaping for Claude models", async () => {
-			mockCline.api.getModel.mockReturnValue({ id: "claude-3" })
+		it("preserves HTML entities in content without unescaping", async () => {
+			const contentWithEntities = "This has &lt;angle&gt; brackets and &amp; ampersand"
 
-			await executeWriteFileTool({ content: "&lt;test&gt;" })
+			await executeWriteFileTool({ content: contentWithEntities })
 
-			expect(mockedUnescapeHtmlEntities).not.toHaveBeenCalled()
+			// Verify the content is passed through with HTML entities preserved
+			expect(mockCline.diffViewProvider.update).toHaveBeenCalledWith(contentWithEntities, true)
 		})
 
 		it("strips line numbers from numbered content", async () => {
