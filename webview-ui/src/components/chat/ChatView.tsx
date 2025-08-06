@@ -1887,7 +1887,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							ref={virtuosoRef}
 							key={task.ts}
 							className="scrollable grow overflow-y-scroll mb-1"
-							increaseViewportBy={{ top: 3_000, bottom: 1000 }}
+							increaseViewportBy={{
+								top: 3_000,
+								// Use a dynamic bottom value: larger when at bottom to maintain scroll lock,
+								// smaller when scrolled up to preserve memory efficiency
+								bottom: isAtBottom ? 10_000 : 1000,
+							}}
 							data={groupedMessages}
 							itemContent={itemContent}
 							atBottomStateChange={(isAtBottom: boolean) => {
@@ -1899,6 +1904,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							}}
 							atBottomThreshold={10}
 							initialTopMostItemIndex={groupedMessages.length - 1}
+							followOutput="smooth"
 						/>
 					</div>
 					<div className={`flex-initial min-h-0 ${!areButtonsVisible ? "mb-1" : ""}`}>
