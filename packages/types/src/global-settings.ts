@@ -244,7 +244,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowUpdateTodoList: true,
 	followupAutoApproveTimeoutMs: 0,
 	allowedCommands: ["*"],
-	commandExecutionTimeout: 45,
+	commandExecutionTimeout: 120,
 	commandTimeoutAllowlist: [],
 	preventCompletionWithOpenTodos: false,
 
