@@ -244,7 +244,7 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	alwaysAllowUpdateTodoList: true,
 	followupAutoApproveTimeoutMs: 0,
 	allowedCommands: ["*"],
-	commandExecutionTimeout: 20,
+	commandExecutionTimeout: 45,
 	commandTimeoutAllowlist: [],
 	preventCompletionWithOpenTodos: false,
 
@@ -296,6 +296,8 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	mode: "code", // "architect",
 
 	customModes: [],
+
+	consecutiveMistakeLimit: 100_000,
 }
 
 export const EVALS_TIMEOUT = 5 * 60 * 1_000
