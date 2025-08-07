@@ -261,6 +261,8 @@
 		"getCerebrasApiKey": "Cerebras API 키 가져오기",
 		"chutesApiKey": "Chutes API 키",
 		"getChutesApiKey": "Chutes API 키 받기",
+		"fireworksApiKey": "Fireworks API 키",
+		"getFireworksApiKey": "Fireworks API 키 받기",
 		"deepSeekApiKey": "DeepSeek API 키",
 		"getDeepSeekApiKey": "DeepSeek API 키 받기",
 		"doubaoApiKey": "Doubao API 키",
@@ -268,6 +270,10 @@
 		"moonshotApiKey": "Moonshot API 키",
 		"getMoonshotApiKey": "Moonshot API 키 받기",
 		"moonshotBaseUrl": "Moonshot 엔트리포인트",
+		"zaiApiKey": "Z AI API 키",
+		"getZaiApiKey": "Z AI API 키 받기",
+		"zaiEntrypoint": "Z AI 엔트리포인트",
+		"zaiEntrypointDescription": "위치에 따라 적절한 API 엔트리포인트를 선택하세요. 중국에 있다면 open.bigmodel.cn을 선택하세요. 그렇지 않으면 api.z.ai를 선택하세요.",
 		"geminiApiKey": "Gemini API 키",
 		"getGroqApiKey": "Groq API 키 받기",
 		"groqApiKey": "Groq API 키",
@@ -691,6 +697,10 @@
 		"PREVENT_TERMINAL_DISRUPTION": {
 			"name": "백그라운드 터미널 실행",
 			"description": "활성화하면 터미널 포커스 방해를 방지합니다. 명령어가 출력 터미널로 자동 전환 없이 백그라운드에서 실행됩니다. Roo가 명령어를 실행하는 동안 현재 터미널에서 계속 작업할 수 있으며, 터미널 컨텍스트를 유지하고 명령어 출력을 언제 볼지 수동으로 제어할 수 있습니다."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "새 메시지 파서 사용",
+			"description": "실험적 스트리밍 메시지 파서를 활성화합니다. 긴 응답을 더 효율적으로 처리해 지연을 줄입니다."
 		}
 	},
 	"promptCaching": {

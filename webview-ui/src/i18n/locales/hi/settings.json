@@ -261,6 +261,8 @@
 		"getCerebrasApiKey": "Cerebras API कुंजी प्राप्त करें",
 		"chutesApiKey": "Chutes API कुंजी",
 		"getChutesApiKey": "Chutes API कुंजी प्राप्त करें",
+		"fireworksApiKey": "Fireworks API कुंजी",
+		"getFireworksApiKey": "Fireworks API कुंजी प्राप्त करें",
 		"deepSeekApiKey": "DeepSeek API कुंजी",
 		"getDeepSeekApiKey": "DeepSeek API कुंजी प्राप्त करें",
 		"doubaoApiKey": "डौबाओ API कुंजी",
@@ -268,6 +270,10 @@
 		"moonshotApiKey": "Moonshot API कुंजी",
 		"getMoonshotApiKey": "Moonshot API कुंजी प्राप्त करें",
 		"moonshotBaseUrl": "Moonshot प्रवेश बिंदु",
+		"zaiApiKey": "Z AI API कुंजी",
+		"getZaiApiKey": "Z AI API कुंजी प्राप्त करें",
+		"zaiEntrypoint": "Z AI प्रवेश बिंदु",
+		"zaiEntrypointDescription": "कृपया अपने स्थान के आधार पर उपयुक्त API प्रवेश बिंदु का चयन करें। यदि आप चीन में हैं, तो open.bigmodel.cn चुनें। अन्यथा, api.z.ai चुनें।",
 		"geminiApiKey": "Gemini API कुंजी",
 		"getGroqApiKey": "Groq API कुंजी प्राप्त करें",
 		"groqApiKey": "Groq API कुंजी",
@@ -691,6 +697,10 @@
 		"PREVENT_TERMINAL_DISRUPTION": {
 			"name": "बैकग्राउंड टर्मिनल निष्पादन",
 			"description": "सक्षम होने पर टर्मिनल फोकस व्यवधान को रोकता है। कमांड बैकग्राउंड में चलते हैं बिना आउटपुट टर्मिनल पर स्वचालित रूप से स्विच किए। आप अपने वर्तमान टर्मिनल में काम जारी रख सकते हैं जबकि Roo कमांड चलाता है, टर्मिनल संदर्भ बनाए रखते हुए और मैन्युअल रूप से नियंत्रित करते हुए कि कब कमांड आउटपुट देखना है।"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "नए मैसेज पार्सर का उपयोग करें",
+			"description": "प्रायोगिक स्ट्रीमिंग मैसेज पार्सर सक्षम करें, जो लंबे उत्तरों के लिए संदेशों को अधिक कुशलता से प्रोसेस करके प्रदर्शन को बेहतर बनाता है।"
 		}
 	},
 	"promptCaching": {

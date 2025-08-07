@@ -261,6 +261,8 @@
 		"getCerebrasApiKey": "取得 Cerebras API 金鑰",
 		"chutesApiKey": "Chutes API 金鑰",
 		"getChutesApiKey": "取得 Chutes API 金鑰",
+		"fireworksApiKey": "Fireworks API 金鑰",
+		"getFireworksApiKey": "取得 Fireworks API 金鑰",
 		"deepSeekApiKey": "DeepSeek API 金鑰",
 		"getDeepSeekApiKey": "取得 DeepSeek API 金鑰",
 		"doubaoApiKey": "豆包 API 金鑰",
@@ -268,6 +270,10 @@
 		"moonshotApiKey": "Moonshot API 金鑰",
 		"getMoonshotApiKey": "取得 Moonshot API 金鑰",
 		"moonshotBaseUrl": "Moonshot 服務站點",
+		"zaiApiKey": "Z AI API 金鑰",
+		"getZaiApiKey": "取得 Z AI API 金鑰",
+		"zaiEntrypoint": "Z AI 服務站點",
+		"zaiEntrypointDescription": "請根據您的位置選擇適當的 API 服務站點。如果您在中國，請選擇 open.bigmodel.cn。否則，請選擇 api.z.ai。",
 		"geminiApiKey": "Gemini API 金鑰",
 		"getGroqApiKey": "取得 Groq API 金鑰",
 		"groqApiKey": "Groq API 金鑰",
@@ -691,6 +697,10 @@
 		"PREVENT_TERMINAL_DISRUPTION": {
 			"name": "背景終端執行",
 			"description": "啟用後可防止終端焦點中斷。指令會在背景執行，不會自動切換到輸出終端。您可以在 Roo 執行指令時繼續在目前終端中工作，保持終端內容並手動控制何時檢視指令輸出。"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "使用全新訊息解析器",
+			"description": "啟用實驗性的串流訊息解析器。透過更有效率地處理訊息，能顯著提升長回覆的效能。"
 		}
 	},
 	"promptCaching": {

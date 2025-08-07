@@ -261,6 +261,8 @@
 		"getCerebrasApiKey": "Cerebras API-sleutel verkrijgen",
 		"chutesApiKey": "Chutes API-sleutel",
 		"getChutesApiKey": "Chutes API-sleutel ophalen",
+		"fireworksApiKey": "Fireworks API-sleutel",
+		"getFireworksApiKey": "Fireworks API-sleutel ophalen",
 		"deepSeekApiKey": "DeepSeek API-sleutel",
 		"getDeepSeekApiKey": "DeepSeek API-sleutel ophalen",
 		"doubaoApiKey": "Doubao API-sleutel",
@@ -268,6 +270,10 @@
 		"moonshotApiKey": "Moonshot API-sleutel",
 		"getMoonshotApiKey": "Moonshot API-sleutel ophalen",
 		"moonshotBaseUrl": "Moonshot-ingangspunt",
+		"zaiApiKey": "Z AI API-sleutel",
+		"getZaiApiKey": "Z AI API-sleutel ophalen",
+		"zaiEntrypoint": "Z AI-ingangspunt",
+		"zaiEntrypointDescription": "Selecteer het juiste API-ingangspunt op basis van uw locatie. Als u zich in China bevindt, kies dan open.bigmodel.cn. Anders kiest u api.z.ai.",
 		"geminiApiKey": "Gemini API-sleutel",
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
@@ -691,6 +697,10 @@
 		"PREVENT_TERMINAL_DISRUPTION": {
 			"name": "Achtergrond Terminal Uitvoering",
 			"description": "Voorkomt terminal focus verstoring wanneer ingeschakeld. Commando's worden op de achtergrond uitgevoerd zonder automatisch over te schakelen naar output terminals. Je kunt ononderbroken doorwerken in je huidige terminal terwijl Roo commando's uitvoert, waarbij de terminal context behouden blijft en je handmatig controleert wanneer je commando outputs wilt bekijken."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Nieuwe berichtparser gebruiken",
+			"description": "Schakel de experimentele streaming-berichtparser in die lange antwoorden sneller maakt door berichten efficiënter te verwerken."
 		}
 	},
 	"promptCaching": {

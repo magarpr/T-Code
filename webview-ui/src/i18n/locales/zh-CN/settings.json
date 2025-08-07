@@ -261,6 +261,8 @@
 		"getCerebrasApiKey": "获取 Cerebras API 密钥",
 		"chutesApiKey": "Chutes API 密钥",
 		"getChutesApiKey": "获取 Chutes API 密钥",
+		"fireworksApiKey": "Fireworks API 密钥",
+		"getFireworksApiKey": "获取 Fireworks API 密钥",
 		"deepSeekApiKey": "DeepSeek API 密钥",
 		"getDeepSeekApiKey": "获取 DeepSeek API 密钥",
 		"doubaoApiKey": "豆包 API 密钥",
@@ -268,6 +270,10 @@
 		"moonshotApiKey": "Moonshot API 密钥",
 		"getMoonshotApiKey": "获取 Moonshot API 密钥",
 		"moonshotBaseUrl": "Moonshot 服务站点",
+		"zaiApiKey": "Z AI API 密钥",
+		"getZaiApiKey": "获取 Z AI API 密钥",
+		"zaiEntrypoint": "Z AI 服务站点",
+		"zaiEntrypointDescription": "请根据您的位置选择适当的 API 服务站点。如果您在中国，请选择 open.bigmodel.cn。否则，请选择 api.z.ai。",
 		"geminiApiKey": "Gemini API 密钥",
 		"getGroqApiKey": "获取 Groq API 密钥",
 		"groqApiKey": "Groq API 密钥",
@@ -691,6 +697,10 @@
 		"PREVENT_TERMINAL_DISRUPTION": {
 			"name": "后台终端执行",
 			"description": "启用后防止终端焦点干扰。命令在后台执行，不会自动切换到输出终端。你可以在 Roo 执行命令时继续在当前终端中工作，保持终端上下文并手动控制何时查看命令输出。"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "使用新的消息解析器",
+			"description": "启用实验性的流式消息解析器。通过更高效地处理消息，可显著提升长回复的性能。"
 		}
 	},
 	"promptCaching": {

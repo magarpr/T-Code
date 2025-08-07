@@ -261,6 +261,8 @@
 		"getCerebrasApiKey": "Cerebras API Anahtarını Al",
 		"chutesApiKey": "Chutes API Anahtarı",
 		"getChutesApiKey": "Chutes API Anahtarı Al",
+		"fireworksApiKey": "Fireworks API Anahtarı",
+		"getFireworksApiKey": "Fireworks API Anahtarı Al",
 		"deepSeekApiKey": "DeepSeek API Anahtarı",
 		"getDeepSeekApiKey": "DeepSeek API Anahtarı Al",
 		"doubaoApiKey": "Doubao API Anahtarı",
@@ -268,6 +270,10 @@
 		"moonshotApiKey": "Moonshot API Anahtarı",
 		"getMoonshotApiKey": "Moonshot API Anahtarı Al",
 		"moonshotBaseUrl": "Moonshot Giriş Noktası",
+		"zaiApiKey": "Z AI API Anahtarı",
+		"getZaiApiKey": "Z AI API Anahtarı Al",
+		"zaiEntrypoint": "Z AI Giriş Noktası",
+		"zaiEntrypointDescription": "Konumunuza göre uygun API giriş noktasını seçin. Çin'de iseniz open.bigmodel.cn'yi seçin. Aksi takdirde api.z.ai'yi seçin.",
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
@@ -691,6 +697,10 @@
 		"PREVENT_TERMINAL_DISRUPTION": {
 			"name": "Arka plan terminal yürütme",
 			"description": "Etkinleştirildiğinde terminal odak kesintisini önler. Komutlar çıktı terminallerine otomatik geçiş yapmadan arka planda çalışır. Roo komutları yürütürken mevcut terminalinizde çalışmaya devam edebilir, terminal bağlamını koruyabilir ve komut çıktılarını ne zaman görüntüleyeceğinizi manuel olarak kontrol edebilirsiniz."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Yeni mesaj ayrıştırıcıyı kullan",
+			"description": "Uzun yanıtları daha verimli işleyerek hızlandıran deneysel akış mesaj ayrıştırıcısını etkinleştir."
 		}
 	},
 	"promptCaching": {
