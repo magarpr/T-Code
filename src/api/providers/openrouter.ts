@@ -18,6 +18,7 @@ import { addCacheBreakpoints as addAnthropicCacheBreakpoints } from "../transfor
 import { addCacheBreakpoints as addGeminiCacheBreakpoints } from "../transform/caching/gemini"
 import type { OpenRouterReasoningParams } from "../transform/reasoning"
 import { getModelParams } from "../transform/model-params"
+import { XmlMatcher } from "../../utils/xml-matcher"
 
 import { getModels } from "./fetchers/modelCache"
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
@@ -138,6 +139,20 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		let lastUsage: CompletionUsage | undefined = undefined
 
+		// For GPT-OSS models, we need to handle tool calls that may appear within reasoning blocks
+		const isGptOss = modelId.includes("gpt-oss")
+		const toolCallMatcher = isGptOss
+			? new XmlMatcher("tool_call", (chunk) => ({
+					type: "tool_call" as const,
+					data: chunk.data,
+					matched: chunk.matched,
+				}))
+			: null
+
+		// Track accumulated tool call data for streaming
+		let currentToolCall: { id?: string; name?: string; arguments?: string } | null = null
+		let toolCallIdCounter = 0
+
 		for await (const chunk of stream) {
 			// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
 			if ("error" in chunk) {
@@ -148,16 +163,118 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 			const delta = chunk.choices[0]?.delta
 
+			// Handle reasoning content (which may contain tool calls for GPT-OSS)
 			if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
-				yield { type: "reasoning", text: delta.reasoning }
+				if (isGptOss && toolCallMatcher) {
+					// Process reasoning content through the tool call matcher
+					for (const matchChunk of toolCallMatcher.update(delta.reasoning)) {
+						if (matchChunk.type === "tool_call" && matchChunk.matched) {
+							// Parse the tool call from the matched content
+							try {
+								const toolCallContent = matchChunk.data
+								// Extract tool name and arguments from the XML-like format
+								const nameMatch = toolCallContent.match(/<name>([^<]+)<\/name>/)
+								const argsMatch = toolCallContent.match(/<arguments>([\s\S]*?)<\/arguments>/)
+
+								if (nameMatch && argsMatch) {
+									// Emit a tool call chunk
+									yield {
+										type: "tool_call" as const,
+										id: `tool_${++toolCallIdCounter}`,
+										name: nameMatch[1],
+										arguments: argsMatch[1],
+									}
+								}
+							} catch (e) {
+								console.warn("Failed to parse tool call from reasoning:", e)
+								// If parsing fails, treat it as regular reasoning text
+								yield { type: "reasoning", text: delta.reasoning }
+							}
+						} else {
+							// Regular reasoning text
+							yield { type: "reasoning", text: matchChunk.data }
+						}
+					}
+				} else {
+					// Non-GPT-OSS models or no tool call matching
+					yield { type: "reasoning", text: delta.reasoning }
+				}
 			}
 
+			// Handle regular content
 			if (delta?.content) {
 				yield { type: "text", text: delta.content }
 			}
 
+			// Handle standard OpenAI-style tool calls (if they appear in the stream)
+			if (delta?.tool_calls) {
+				for (const toolCall of delta.tool_calls) {
+					if (toolCall.id) {
+						// Start of a new tool call
+						if (currentToolCall) {
+							// Emit the previous tool call if it exists
+							if (currentToolCall.id && currentToolCall.name && currentToolCall.arguments) {
+								yield {
+									type: "tool_call" as const,
+									id: currentToolCall.id,
+									name: currentToolCall.name,
+									arguments: currentToolCall.arguments,
+								}
+							}
+						}
+						currentToolCall = {
+							id: toolCall.id,
+							name: toolCall.function?.name || "",
+							arguments: toolCall.function?.arguments || "",
+						}
+					} else if (currentToolCall && toolCall.function) {
+						// Continue accumulating the current tool call
+						if (toolCall.function.name) {
+							currentToolCall.name = (currentToolCall.name || "") + toolCall.function.name
+						}
+						if (toolCall.function.arguments) {
+							currentToolCall.arguments = (currentToolCall.arguments || "") + toolCall.function.arguments
+						}
+					}
+				}
+			}
+
 			if (chunk.usage) {
 				lastUsage = chunk.usage
+			}
+		}
+
+		// Finalize any remaining tool call matcher content
+		if (isGptOss && toolCallMatcher) {
+			for (const matchChunk of toolCallMatcher.final()) {
+				if (matchChunk.type === "tool_call" && matchChunk.matched) {
+					try {
+						const toolCallContent = matchChunk.data
+						const nameMatch = toolCallContent.match(/<name>([^<]+)<\/name>/)
+						const argsMatch = toolCallContent.match(/<arguments>([\s\S]*?)<\/arguments>/)
+
+						if (nameMatch && argsMatch) {
+							yield {
+								type: "tool_call" as const,
+								id: `tool_${++toolCallIdCounter}`,
+								name: nameMatch[1],
+								arguments: argsMatch[1],
+							}
+						}
+					} catch (e) {
+						console.warn("Failed to parse tool call from reasoning:", e)
+					}
+				}
+			}
+		}
+
+		// Emit any remaining accumulated tool call
+		if (currentToolCall && currentToolCall.id && currentToolCall.name && currentToolCall.arguments) {
+			yield {
+				type: "tool_call" as const,
+				id: currentToolCall.id,
+				name: currentToolCall.name,
+				arguments: currentToolCall.arguments,
 			}
 		}
 

@@ -45,6 +45,51 @@ vitest.mock("../fetchers/modelCache", () => ({
 	}),
 }))
 
+// Mock XmlMatcher
+vitest.mock("../../../utils/xml-matcher", () => ({
+	XmlMatcher: vitest.fn().mockImplementation((tagName, transform) => {
+		return {
+			update: vitest.fn((chunk) => {
+				const results = []
+				// Simple mock implementation for testing
+				const toolCallRegex = new RegExp(`<${tagName}>(.+?)</${tagName}>`, "g")
+				let lastIndex = 0
+				let match
+
+				while ((match = toolCallRegex.exec(chunk)) !== null) {
+					// Add text before the match
+					if (match.index > lastIndex) {
+						results.push({
+							type: tagName,
+							data: chunk.substring(lastIndex, match.index),
+							matched: false,
+						})
+					}
+					// Add the matched content
+					results.push({
+						type: tagName,
+						data: match[1],
+						matched: true,
+					})
+					lastIndex = toolCallRegex.lastIndex
+				}
+
+				// Add remaining text
+				if (lastIndex < chunk.length) {
+					results.push({
+						type: tagName,
+						data: chunk.substring(lastIndex),
+						matched: false,
+					})
+				}
+
+				return transform ? results.map(transform) : results
+			}),
+			final: vitest.fn(() => []),
+		}
+	}),
+}))
+
 describe("OpenRouterHandler", () => {
 	const mockOptions: ApiHandlerOptions = {
 		openRouterApiKey: "test-key",
@@ -318,6 +363,354 @@ describe("OpenRouterHandler", () => {
 			} as any
 
 			await expect(handler.completePrompt("test prompt")).rejects.toThrow("Unexpected error")
+		})
+	})
+
+	describe("GPT-OSS tool calling support", () => {
+		it("handles standard OpenAI-style tool calls in stream", async () => {
+			const handler = new OpenRouterHandler({
+				...mockOptions,
+				openRouterModelId: "openai/gpt-oss-120b",
+			})
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					// Simulate tool call chunks
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									tool_calls: [
+										{
+											id: "tool_1",
+											function: { name: "get_weather" },
+										},
+									],
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									tool_calls: [
+										{
+											function: { arguments: '{"location": ' },
+										},
+									],
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									tool_calls: [
+										{
+											function: { arguments: '"San Francisco"}' },
+										},
+									],
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 10, completion_tokens: 20 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should have tool call chunk and usage chunk
+			expect(chunks).toHaveLength(2)
+			expect(chunks[0]).toEqual({
+				type: "tool_call",
+				id: "tool_1",
+				name: "get_weather",
+				arguments: '{"location": "San Francisco"}',
+			})
+			expect(chunks[1]).toEqual({
+				type: "usage",
+				inputTokens: 10,
+				outputTokens: 20,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
+
+		it("handles tool calls within reasoning blocks for GPT-OSS models", async () => {
+			const handler = new OpenRouterHandler({
+				...mockOptions,
+				openRouterModelId: "openai/gpt-oss-20b",
+			})
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					// Simulate reasoning with embedded tool call
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									reasoning:
+										'Let me check the weather. <tool_call><name>get_weather</name><arguments>{"location": "New York"}</arguments></tool_call>',
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									content: "The weather in New York is sunny.",
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 15, completion_tokens: 25 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should have reasoning, tool call, text, and usage chunks
+			expect(chunks).toHaveLength(4)
+			expect(chunks[0]).toEqual({
+				type: "reasoning",
+				text: "Let me check the weather. ",
+			})
+			expect(chunks[1]).toEqual({
+				type: "tool_call",
+				id: "tool_1",
+				name: "get_weather",
+				arguments: '{"location": "New York"}',
+			})
+			expect(chunks[2]).toEqual({
+				type: "text",
+				text: "The weather in New York is sunny.",
+			})
+			expect(chunks[3]).toEqual({
+				type: "usage",
+				inputTokens: 15,
+				outputTokens: 25,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
+
+		it("handles multiple tool calls in reasoning for GPT-OSS", async () => {
+			const handler = new OpenRouterHandler({
+				...mockOptions,
+				openRouterModelId: "openai/gpt-oss-120b",
+			})
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									reasoning:
+										'I\'ll check multiple things. <tool_call><name>get_weather</name><arguments>{"location": "LA"}</arguments></tool_call> and then <tool_call><name>get_time</name><arguments>{"timezone": "PST"}</arguments></tool_call>',
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 20, completion_tokens: 30 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should have reasoning text, two tool calls, more reasoning text, and usage
+			expect(chunks).toHaveLength(5)
+			expect(chunks[0]).toEqual({
+				type: "reasoning",
+				text: "I'll check multiple things. ",
+			})
+			expect(chunks[1]).toEqual({
+				type: "tool_call",
+				id: "tool_1",
+				name: "get_weather",
+				arguments: '{"location": "LA"}',
+			})
+			expect(chunks[2]).toEqual({
+				type: "reasoning",
+				text: " and then ",
+			})
+			expect(chunks[3]).toEqual({
+				type: "tool_call",
+				id: "tool_2",
+				name: "get_time",
+				arguments: '{"timezone": "PST"}',
+			})
+			expect(chunks[4]).toEqual({
+				type: "usage",
+				inputTokens: 20,
+				outputTokens: 30,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
+
+		it("handles non-GPT-OSS models without tool call parsing in reasoning", async () => {
+			const handler = new OpenRouterHandler({
+				...mockOptions,
+				openRouterModelId: "anthropic/claude-sonnet-4",
+			})
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									reasoning: "This contains <tool_call> but should not be parsed as tool call",
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 5, completion_tokens: 10 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should only have reasoning and usage chunks, no tool call parsing
+			expect(chunks).toHaveLength(2)
+			expect(chunks[0]).toEqual({
+				type: "reasoning",
+				text: "This contains <tool_call> but should not be parsed as tool call",
+			})
+			expect(chunks[1]).toEqual({
+				type: "usage",
+				inputTokens: 5,
+				outputTokens: 10,
+				cacheReadTokens: undefined,
+				reasoningTokens: undefined,
+				totalCost: 0,
+			})
+		})
+
+		it("handles malformed tool calls gracefully", async () => {
+			const handler = new OpenRouterHandler({
+				...mockOptions,
+				openRouterModelId: "openai/gpt-oss-20b",
+			})
+
+			const mockStream = {
+				async *[Symbol.asyncIterator]() {
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									reasoning: "Invalid tool call: <tool_call>missing closing tag",
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [
+							{
+								delta: {
+									reasoning: " and another <tool_call><name>no_args</name></tool_call>",
+								},
+							},
+						],
+					}
+					yield {
+						id: "test-id",
+						choices: [{ delta: {} }],
+						usage: { prompt_tokens: 5, completion_tokens: 10 },
+					}
+				},
+			}
+
+			const mockCreate = vitest.fn().mockResolvedValue(mockStream)
+			;(OpenAI as any).prototype.chat = {
+				completions: { create: mockCreate },
+			} as any
+
+			const generator = handler.createMessage("test", [])
+			const chunks = []
+
+			for await (const chunk of generator) {
+				chunks.push(chunk)
+			}
+
+			// Should handle malformed tool calls gracefully
+			// The first malformed one should be treated as reasoning text
+			// The second one without arguments should be ignored
+			expect(chunks.some((chunk) => chunk.type === "reasoning")).toBe(true)
+			expect(chunks[chunks.length - 1].type).toBe("usage")
 		})
 	})
 })
