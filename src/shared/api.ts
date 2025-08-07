@@ -90,9 +90,16 @@ export const getModelMaxOutputTokens = ({
 		return ANTHROPIC_DEFAULT_MAX_TOKENS
 	}
 
-	// If model has explicit maxTokens, clamp it to 20% of the context window
+	// If model has explicit maxTokens, only clamp it if it exceeds 80% of the context window
+	// This prevents models from using the entire context for output while still allowing
+	// models with legitimately high output requirements (like GLM-4.5) to function
 	if (model.maxTokens) {
-		return Math.min(model.maxTokens, model.contextWindow * 0.2)
+		// Only apply clamping if maxTokens is more than 80% of context window
+		if (model.maxTokens > model.contextWindow * 0.8) {
+			// Clamp to 80% to leave room for input
+			return Math.floor(model.contextWindow * 0.8)
+		}
+		return model.maxTokens
 	}
 
 	// For non-Anthropic formats without explicit maxTokens, return undefined
