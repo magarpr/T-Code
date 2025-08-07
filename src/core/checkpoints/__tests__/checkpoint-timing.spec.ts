@@ -216,8 +216,8 @@ describe("Checkpoint Timing", () => {
 		vi.clearAllMocks()
 	})
 
-	describe("Checkpoint after file edits", () => {
-		it("should save checkpoint AFTER write_to_file tool execution", async () => {
+	describe("Checkpoint before and after file edits", () => {
+		it("should save checkpoint BEFORE and AFTER write_to_file tool execution", async () => {
 			// Setup assistant message content with write_to_file tool
 			mockTask.assistantMessageContent = [
 				{
@@ -241,8 +241,10 @@ describe("Checkpoint Timing", () => {
 			// Execute presentAssistantMessage
 			await presentAssistantMessage(mockTask)
 
-			// Verify checkpoint was saved after the tool execution
+			// Verify checkpoint was saved twice (before and after the tool execution)
+			expect(mockTask.checkpointSave).toHaveBeenCalledTimes(2)
 			expect(mockTask.checkpointSave).toHaveBeenCalledWith(true)
+			// Note: currentStreamingDidCheckpoint is only set to true after the "after" checkpoint
 			expect(mockTask.currentStreamingDidCheckpoint).toBe(true)
 		})
 
@@ -251,7 +253,7 @@ describe("Checkpoint Timing", () => {
 		// through the other file editing tools (write_to_file, insert_content, search_and_replace)
 		// which all follow the same pattern of saving checkpoints after file edits.
 
-		it("should save checkpoint AFTER insert_content tool execution", async () => {
+		it("should save checkpoint BEFORE and AFTER insert_content tool execution", async () => {
 			// Setup assistant message content with insert_content tool
 			mockTask.assistantMessageContent = [
 				{
@@ -276,12 +278,14 @@ describe("Checkpoint Timing", () => {
 			// Execute presentAssistantMessage
 			await presentAssistantMessage(mockTask)
 
-			// Verify checkpoint was saved after the tool execution
+			// Verify checkpoint was saved twice (before and after the tool execution)
+			expect(mockTask.checkpointSave).toHaveBeenCalledTimes(2)
 			expect(mockTask.checkpointSave).toHaveBeenCalledWith(true)
+			// Note: currentStreamingDidCheckpoint is only set to true after the "after" checkpoint
 			expect(mockTask.currentStreamingDidCheckpoint).toBe(true)
 		})
 
-		it("should save checkpoint AFTER search_and_replace tool execution", async () => {
+		it("should save checkpoint BEFORE and AFTER search_and_replace tool execution", async () => {
 			// Setup assistant message content with search_and_replace tool
 			mockTask.assistantMessageContent = [
 				{
@@ -306,9 +310,93 @@ describe("Checkpoint Timing", () => {
 			// Execute presentAssistantMessage
 			await presentAssistantMessage(mockTask)
 
-			// Verify checkpoint was saved after the tool execution
+			// Verify checkpoint was saved twice (before and after the tool execution)
+			expect(mockTask.checkpointSave).toHaveBeenCalledTimes(2)
 			expect(mockTask.checkpointSave).toHaveBeenCalledWith(true)
+			// Note: currentStreamingDidCheckpoint is only set to true after the "after" checkpoint
 			expect(mockTask.currentStreamingDidCheckpoint).toBe(true)
+		})
+
+		it("should handle checkpoint errors gracefully for file edit tools", async () => {
+			// Setup assistant message content with write_to_file tool
+			mockTask.assistantMessageContent = [
+				{
+					type: "tool_use",
+					name: "write_to_file",
+					params: {
+						path: "test.txt",
+						content: "test content",
+					},
+					partial: false,
+				},
+			]
+
+			// Mock the write_to_file tool execution
+			const writeToFileModule = await import("../../tools/writeToFileTool")
+			vi.spyOn(writeToFileModule, "writeToFileTool").mockImplementation(async () => {
+				// Simulate tool execution
+				return undefined
+			})
+
+			// Mock checkpointSave to fail on first call (before) and succeed on second (after)
+			mockTask.checkpointSave
+				.mockRejectedValueOnce(new Error("Checkpoint before failed"))
+				.mockResolvedValueOnce(undefined)
+
+			// Mock console.error to verify error logging
+			const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+			// Execute presentAssistantMessage
+			await presentAssistantMessage(mockTask)
+
+			// Verify checkpoint was attempted twice
+			expect(mockTask.checkpointSave).toHaveBeenCalledTimes(2)
+
+			// Verify error was logged for the "before" checkpoint failure
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				expect.stringContaining("Error saving checkpoint (before)"),
+				expect.any(Error),
+			)
+
+			// Clean up
+			consoleErrorSpy.mockRestore()
+		})
+
+		it("should not set currentStreamingDidCheckpoint for 'before' checkpoints", async () => {
+			// Setup assistant message content with write_to_file tool
+			mockTask.assistantMessageContent = [
+				{
+					type: "tool_use",
+					name: "write_to_file",
+					params: {
+						path: "test.txt",
+						content: "test content",
+					},
+					partial: false,
+				},
+			]
+
+			// Mock the write_to_file tool execution to track when it's called
+			const writeToFileModule = await import("../../tools/writeToFileTool")
+			let toolExecuted = false
+			vi.spyOn(writeToFileModule, "writeToFileTool").mockImplementation(async () => {
+				// At this point, the "before" checkpoint should have been saved
+				// but currentStreamingDidCheckpoint should still be false
+				expect(mockTask.checkpointSave).toHaveBeenCalledTimes(1)
+				expect(mockTask.currentStreamingDidCheckpoint).toBe(false)
+				toolExecuted = true
+				return undefined
+			})
+
+			// Execute presentAssistantMessage
+			await presentAssistantMessage(mockTask)
+
+			// Verify tool was executed
+			expect(toolExecuted).toBe(true)
+
+			// After execution, currentStreamingDidCheckpoint should be true (from "after" checkpoint)
+			expect(mockTask.currentStreamingDidCheckpoint).toBe(true)
+			expect(mockTask.checkpointSave).toHaveBeenCalledTimes(2)
 		})
 	})
 
