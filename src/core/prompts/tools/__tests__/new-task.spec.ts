@@ -1,15 +1,33 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { getNewTaskDescription } from "../new-task"
 import { ToolArgs } from "../types"
 
+// Mock vscode module
+vi.mock("vscode", () => ({
+	workspace: {
+		getConfiguration: vi.fn(() => ({
+			get: vi.fn(),
+		})),
+	},
+}))
+
+import * as vscode from "vscode"
+
 describe("getNewTaskDescription", () => {
-	it("should show todos as optional when experiment is disabled", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it("should show todos as optional when VSCode setting is disabled", () => {
+		const mockConfig = {
+			get: vi.fn().mockReturnValue(false),
+		}
+		vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
+
 		const args: ToolArgs = {
 			cwd: "/test",
 			supportsComputerUse: false,
-			experiments: {
-				newTaskRequireTodos: false,
-			},
+			experiments: {},
 		}
 
 		const description = getNewTaskDescription(args)
@@ -20,15 +38,22 @@ describe("getNewTaskDescription", () => {
 
 		// Should not contain any mention of required
 		expect(description).not.toContain("todos: (required)")
+
+		// Verify VSCode configuration was checked
+		expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith("roo-cline")
+		expect(mockConfig.get).toHaveBeenCalledWith("newTaskRequireTodos", false)
 	})
 
-	it("should show todos as required when experiment is enabled", () => {
+	it("should show todos as required when VSCode setting is enabled", () => {
+		const mockConfig = {
+			get: vi.fn().mockReturnValue(true),
+		}
+		vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
+
 		const args: ToolArgs = {
 			cwd: "/test",
 			supportsComputerUse: false,
-			experiments: {
-				newTaskRequireTodos: true,
-			},
+			experiments: {},
 		}
 
 		const description = getNewTaskDescription(args)
@@ -40,23 +65,18 @@ describe("getNewTaskDescription", () => {
 		// Should not contain any mention of optional for todos
 		expect(description).not.toContain("todos: (optional)")
 		expect(description).not.toContain("optional initial todo list")
+
+		// Verify VSCode configuration was checked
+		expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith("roo-cline")
+		expect(mockConfig.get).toHaveBeenCalledWith("newTaskRequireTodos", false)
 	})
 
-	it("should default to optional when experiments is undefined", () => {
-		const args: ToolArgs = {
-			cwd: "/test",
-			supportsComputerUse: false,
-			experiments: undefined,
+	it("should default to optional when VSCode setting returns undefined", () => {
+		const mockConfig = {
+			get: vi.fn().mockReturnValue(undefined),
 		}
+		vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
 
-		const description = getNewTaskDescription(args)
-
-		// Check that todos is marked as optional by default
-		expect(description).toContain("todos: (optional)")
-		expect(description).toContain("optional initial todo list")
-	})
-
-	it("should default to optional when newTaskRequireTodos is undefined", () => {
 		const args: ToolArgs = {
 			cwd: "/test",
 			supportsComputerUse: false,
@@ -71,24 +91,27 @@ describe("getNewTaskDescription", () => {
 	})
 
 	it("should always include the example with todos", () => {
-		const argsWithExperimentOff: ToolArgs = {
+		// Test with setting off
+		const mockConfigOff = {
+			get: vi.fn().mockReturnValue(false),
+		}
+		vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfigOff as any)
+
+		const args: ToolArgs = {
 			cwd: "/test",
 			supportsComputerUse: false,
-			experiments: {
-				newTaskRequireTodos: false,
-			},
+			experiments: {},
 		}
 
-		const argsWithExperimentOn: ToolArgs = {
-			cwd: "/test",
-			supportsComputerUse: false,
-			experiments: {
-				newTaskRequireTodos: true,
-			},
-		}
+		const descriptionOff = getNewTaskDescription(args)
 
-		const descriptionOff = getNewTaskDescription(argsWithExperimentOff)
-		const descriptionOn = getNewTaskDescription(argsWithExperimentOn)
+		// Test with setting on
+		const mockConfigOn = {
+			get: vi.fn().mockReturnValue(true),
+		}
+		vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfigOn as any)
+
+		const descriptionOn = getNewTaskDescription(args)
 
 		// Both should include the example with todos
 		const examplePattern = /<todos>\s*\[\s*\]\s*Set up auth middleware/s

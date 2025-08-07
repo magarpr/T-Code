@@ -1,7 +1,8 @@
+import * as vscode from "vscode"
 import { ToolArgs } from "./types"
 
 export function getNewTaskDescription(args: ToolArgs): string {
-	const todosRequired = args.experiments?.newTaskRequireTodos === true
+	const todosRequired = vscode.workspace.getConfiguration("roo-cline").get<boolean>("newTaskRequireTodos", false)
 	const todosStatus = todosRequired ? "(required)" : "(optional)"
 
 	return `## new_task

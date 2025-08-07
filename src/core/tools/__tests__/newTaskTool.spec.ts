@@ -8,12 +8,11 @@ vi.mock("../../../shared/modes", () => ({
 	defaultModeSlug: "ask",
 }))
 
-vi.mock("../../../shared/experiments", () => ({
-	experiments: {
-		isEnabled: vi.fn(),
-	},
-	EXPERIMENT_IDS: {
-		NEW_TASK_REQUIRE_TODOS: "newTaskRequireTodos",
+vi.mock("vscode", () => ({
+	workspace: {
+		getConfiguration: vi.fn(() => ({
+			get: vi.fn(),
+		})),
 	},
 }))
 
@@ -87,7 +86,7 @@ const mockCline = {
 import { newTaskTool } from "../newTaskTool"
 import type { ToolUse } from "../../../shared/tools"
 import { getModeBySlug } from "../../../shared/modes"
-import { experiments } from "../../../shared/experiments"
+import * as vscode from "vscode"
 
 describe("newTaskTool", () => {
 	beforeEach(() => {
@@ -102,8 +101,11 @@ describe("newTaskTool", () => {
 		}) // Default valid mode
 		mockCline.consecutiveMistakeCount = 0
 		mockCline.isPaused = false
-		// Default: experimental setting is disabled
-		vi.mocked(experiments.isEnabled).mockReturnValue(false)
+		// Default: VSCode setting is disabled
+		const mockConfig = {
+			get: vi.fn().mockReturnValue(false),
+		}
+		vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
 	})
 
 	it("should correctly un-escape \\\\@ to \\@ in the message passed to the new task", async () => {
@@ -407,10 +409,13 @@ describe("newTaskTool", () => {
 		)
 	})
 
-	describe("experimental setting: newTaskRequireTodos", () => {
-		it("should NOT require todos when experimental setting is disabled (default)", async () => {
-			// Ensure experimental setting is disabled
-			vi.mocked(experiments.isEnabled).mockReturnValue(false)
+	describe("VSCode setting: newTaskRequireTodos", () => {
+		it("should NOT require todos when VSCode setting is disabled (default)", async () => {
+			// Ensure VSCode setting is disabled
+			const mockConfig = {
+				get: vi.fn().mockReturnValue(false),
+			}
+			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
 
 			const block: ToolUse = {
 				type: "tool_use",
@@ -432,7 +437,7 @@ describe("newTaskTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Should NOT error when todos is missing and setting is disabled
+			// Should NOT error when todos is missing and VSCode setting is disabled
 			expect(mockSayAndCreateMissingParamError).not.toHaveBeenCalledWith("new_task", "todos")
 			expect(mockCline.consecutiveMistakeCount).toBe(0)
 			expect(mockCline.recordToolError).not.toHaveBeenCalledWith("new_task")
@@ -451,9 +456,12 @@ describe("newTaskTool", () => {
 			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
 		})
 
-		it("should REQUIRE todos when experimental setting is enabled", async () => {
-			// Enable experimental setting
-			vi.mocked(experiments.isEnabled).mockReturnValue(true)
+		it("should REQUIRE todos when VSCode setting is enabled", async () => {
+			// Enable VSCode setting
+			const mockConfig = {
+				get: vi.fn().mockReturnValue(true),
+			}
+			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
 
 			const block: ToolUse = {
 				type: "tool_use",
@@ -475,7 +483,7 @@ describe("newTaskTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Should error when todos is missing and setting is enabled
+			// Should error when todos is missing and VSCode setting is enabled
 			expect(mockSayAndCreateMissingParamError).toHaveBeenCalledWith("new_task", "todos")
 			expect(mockCline.consecutiveMistakeCount).toBe(1)
 			expect(mockCline.recordToolError).toHaveBeenCalledWith("new_task")
@@ -487,9 +495,12 @@ describe("newTaskTool", () => {
 			)
 		})
 
-		it("should work with todos when experimental setting is enabled", async () => {
-			// Enable experimental setting
-			vi.mocked(experiments.isEnabled).mockReturnValue(true)
+		it("should work with todos when VSCode setting is enabled", async () => {
+			// Enable VSCode setting
+			const mockConfig = {
+				get: vi.fn().mockReturnValue(true),
+			}
+			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
 
 			const block: ToolUse = {
 				type: "tool_use",
@@ -511,7 +522,7 @@ describe("newTaskTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Should NOT error when todos is provided and setting is enabled
+			// Should NOT error when todos is provided and VSCode setting is enabled
 			expect(mockSayAndCreateMissingParamError).not.toHaveBeenCalledWith("new_task", "todos")
 			expect(mockCline.consecutiveMistakeCount).toBe(0)
 
@@ -532,9 +543,12 @@ describe("newTaskTool", () => {
 			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
 		})
 
-		it("should work with empty todos string when experimental setting is enabled", async () => {
-			// Enable experimental setting
-			vi.mocked(experiments.isEnabled).mockReturnValue(true)
+		it("should work with empty todos string when VSCode setting is enabled", async () => {
+			// Enable VSCode setting
+			const mockConfig = {
+				get: vi.fn().mockReturnValue(true),
+			}
+			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
 
 			const block: ToolUse = {
 				type: "tool_use",
@@ -556,7 +570,7 @@ describe("newTaskTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Should NOT error when todos is empty string and setting is enabled
+			// Should NOT error when todos is empty string and VSCode setting is enabled
 			expect(mockSayAndCreateMissingParamError).not.toHaveBeenCalledWith("new_task", "todos")
 			expect(mockCline.consecutiveMistakeCount).toBe(0)
 
@@ -574,7 +588,13 @@ describe("newTaskTool", () => {
 			expect(mockPushToolResult).toHaveBeenCalledWith(expect.stringContaining("Successfully created new task"))
 		})
 
-		it("should check experimental setting with correct experiment ID", async () => {
+		it("should check VSCode configuration with correct setting name", async () => {
+			const mockGet = vi.fn().mockReturnValue(false)
+			const mockConfig = {
+				get: mockGet,
+			}
+			vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any)
+
 			const block: ToolUse = {
 				type: "tool_use",
 				name: "new_task",
@@ -594,8 +614,9 @@ describe("newTaskTool", () => {
 				mockRemoveClosingTag,
 			)
 
-			// Verify that experiments.isEnabled was called with correct experiment ID
-			expect(experiments.isEnabled).toHaveBeenCalledWith(expect.any(Object), "newTaskRequireTodos")
+			// Verify that VSCode configuration was checked with correct setting name
+			expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith("roo-cline")
+			expect(mockGet).toHaveBeenCalledWith("newTaskRequireTodos", false)
 		})
 	})
 
