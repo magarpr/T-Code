@@ -1,0 +1,44 @@
+id: mcp-shrimp-task-manager
+name: Shrimp Task Manager
+description: Shrimp Task Manager is a task tool built for AI Agents, emphasizing chain-of-thought, reflection, and style consistency. It converts natural language into structured dev tasks with dependency tracking and iterative refinement, enabling agent-like developer behavior in reasoning AI systems.
+author: cjo4m06
+authorUrl: https://github.com/cjo4m06
+url: https://github.com/cjo4m06/mcp-shrimp-task-manager
+tags:
+  - task-manager
+  - agent
+  - ai
+  - chain-of-thought
+  - reflection
+  - development
+  - task-tracking
+  - dependency-tracking
+  - roocode
+  - cursor-ai
+  - windsurf
+content:
+  - name: NPM Installation
+    content: |
+      {
+        "mcpServers": {
+          "mcp-shrimp-task-manager": {
+            "command": "npx",
+            "args": ["-y", "mcp-shrimp-task-manager"]
+          }
+        }
+      }
+    prerequisites:
+      - Node.js and npm installed
+  - name: Local Installation
+    content: |
+      {
+        "mcpServers": {
+          "mcp-shrimp-task-manager": {
+            "command": "node",
+            "args": ["/path/to/mcp-shrimp-task-manager/dist/index.js"]
+          }
+        }
+      }
+    prerequisites:
+      - Node.js installed
+      - Clone the repository and build the project

@@ -1,0 +1,40 @@
+id: mcp-feedback-enhanced
+name: MCP Feedback Enhanced
+description: Enhanced MCP server for interactive user feedback and command execution in AI-assisted development, featuring dual interface support (Web UI and Desktop Application) with intelligent environment detection and cross-platform compatibility.
+author: Minidoracat
+authorUrl: https://github.com/Minidoracat
+url: https://github.com/Minidoracat/mcp-feedback-enhanced
+tags:
+  - feedback
+  - interactive
+  - ui
+  - desktop
+  - web
+  - development
+  - cross-platform
+content:
+  - name: NPM Installation
+    content: |
+      {
+        "mcpServers": {
+          "mcp-feedback-enhanced": {
+            "command": "npx",
+            "args": ["-y", "mcp-feedback-enhanced"]
+          }
+        }
+      }
+    prerequisites:
+      - Node.js and npm installed
+  - name: Local Installation
+    content: |
+      {
+        "mcpServers": {
+          "mcp-feedback-enhanced": {
+            "command": "node",
+            "args": ["/path/to/mcp-feedback-enhanced/dist/index.js"]
+          }
+        }
+      }
+    prerequisites:
+      - Node.js installed
+      - Clone the repository and build the project
