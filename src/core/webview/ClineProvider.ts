@@ -113,6 +113,7 @@ export class ClineProvider
 	private marketplaceManager: MarketplaceManager
 	private mdmService?: MdmService
 	private isModeSwitching = false
+	private pendingModeSwitch: Mode | null = null
 
 	// Constants for mode switching delays
 	private static readonly MODE_SWITCH_TIMEOUT_MS = 150
@@ -960,10 +961,27 @@ export class ClineProvider
 	 * @param newMode The mode to switch to
 	 */
 	public async handleModeSwitch(newMode: Mode) {
-		// Prevent concurrent mode switches
+		// If a mode switch is in progress, update the pending mode
+		// The most recent request wins
 		if (this.isModeSwitching) {
-			this.log(`Mode switch already in progress, ignoring switch to ${newMode}`)
-			return
+			this.log(`Mode switch in progress, updating pending switch to ${newMode}`)
+			this.pendingModeSwitch = newMode
+			// Return a promise that resolves when the pending switch completes
+			return new Promise<void>((resolve, reject) => {
+				const checkInterval = setInterval(() => {
+					// Check if our pending mode has been processed
+					if (!this.isModeSwitching && this.pendingModeSwitch !== newMode) {
+						clearInterval(checkInterval)
+						resolve()
+					}
+				}, 50)
+
+				// Timeout after 1 second to prevent hanging
+				setTimeout(() => {
+					clearInterval(checkInterval)
+					resolve()
+				}, 1000)
+			})
 		}
 
 		this.isModeSwitching = true
@@ -975,10 +993,20 @@ export class ClineProvider
 			this.log(`Error during mode switch: ${error instanceof Error ? error.message : String(error)}`)
 			throw error
 		} finally {
+			// Use configurable timeout for testing
+			const timeoutMs = (globalThis as any).__TEST_MODE_SWITCH_TIMEOUT_MS ?? ClineProvider.MODE_SWITCH_TIMEOUT_MS
+
 			// Reset the flag after a delay to ensure synchronization with frontend
-			setTimeout(() => {
+			setTimeout(async () => {
 				this.isModeSwitching = false
-			}, ClineProvider.MODE_SWITCH_TIMEOUT_MS)
+
+				// Process any pending mode switch
+				if (this.pendingModeSwitch) {
+					const pendingMode = this.pendingModeSwitch
+					this.pendingModeSwitch = null
+					await this.handleModeSwitch(pendingMode)
+				}
+			}, timeoutMs)
 		}
 	}
 
