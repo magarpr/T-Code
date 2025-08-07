@@ -356,7 +356,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		if (startTask) {
 			if (task || images) {
-				this.startTask(task, images, initialTodos)
+				this.startTask(task, images)
 			} else if (historyItem) {
 				this.resumeTaskFromHistory()
 			} else {
@@ -937,7 +937,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	// Start / Abort / Resume
 
-	private async startTask(task?: string, images?: string[], initialTodos?: TodoItem[]): Promise<void> {
+	private async startTask(task?: string, images?: string[]): Promise<void> {
 		// `conversationHistory` (for API) and `clineMessages` (for webview)
 		// need to be in sync.
 		// If the extension process were killed, then on restart the
