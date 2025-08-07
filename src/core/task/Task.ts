@@ -1273,6 +1273,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	/**
+	 * Aborts the current task and optionally saves messages.
+	 *
+	 * @param isAbandoned - If true, marks the task as abandoned (no cleanup needed)
+	 * @param skipSave - If true, skips saving messages (used during user cancellation when messages are already saved)
+	 */
 	public async abortTask(isAbandoned = false, skipSave = false) {
 		console.log(`[subtasks] aborting task ${this.taskId}.${this.instanceId}`)
 
@@ -1305,6 +1311,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	/**
 	 * Reset the task to a resumable state without recreating the instance.
 	 * This is used when canceling a task to avoid unnecessary rerenders.
+	 *
+	 * IMPORTANT: This method cleans up resources to prevent memory leaks
+	 * while preserving the task instance for resumption.
 	 */
 	public async resetToResumableState() {
 		console.log(`[subtasks] resetting task ${this.taskId}.${this.instanceId} to resumable state`)
@@ -1350,9 +1359,27 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			await this.diffViewProvider.reset()
 		}
 
-		// The task is now ready to be resumed
-		// The API request status has already been updated by abortStream
-		// We don't add the resume_task message here because ask() will add it
+		// Dispose of resources that could accumulate if tasks are repeatedly cancelled
+		// These will be recreated as needed when the task resumes
+		try {
+			// Close browser sessions to free memory and browser processes
+			if (this.urlContentFetcher) {
+				this.urlContentFetcher.closeBrowser()
+			}
+			if (this.browserSession) {
+				this.browserSession.closeBrowser()
+			}
+
+			// Release any terminals associated with this task
+			// They will be recreated if needed when the task resumes
+			if (this.terminalProcess) {
+				this.terminalProcess.abort()
+				this.terminalProcess = undefined
+			}
+		} catch (error) {
+			console.error(`Error disposing resources during resetToResumableState: ${error}`)
+			// Continue even if resource cleanup fails
+		}
 
 		// Keep messages and history intact for resumption
 		// The task is now ready to be resumed without recreation
@@ -1758,30 +1785,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 			// Need to call here in case the stream was aborted.
 			if (this.abort || this.abandoned) {
-				// If this was a user cancellation, reset and show resume prompt
+				// If this was a user cancellation, handle resumption
 				if (this.abort && !this.abandoned) {
-					// Reset the task to a resumable state
-					this.abort = false
-					await this.resetToResumableState()
-
-					// Show the resume prompt
-					const { response, text, images } = await this.ask("resume_task")
-
-					if (response === "messageResponse") {
-						await this.say("user_feedback", text, images)
-						// Continue with the new user input
-						const newUserContent: Anthropic.Messages.ContentBlockParam[] = []
-						if (text) {
-							newUserContent.push({ type: "text", text })
-						}
-						if (images && images.length > 0) {
-							newUserContent.push(...formatResponse.imageBlocks(images))
-						}
-						// Recursively continue with the new content
-						return await this.recursivelyMakeClineRequests(newUserContent)
-					}
-					// If not messageResponse, the task will end
-					return true
+					return await this.handleUserCancellationResume()
 				}
 				throw new Error(`[RooCode#recursivelyMakeRooRequests] task ${this.taskId}.${this.instanceId} aborted`)
 			}
@@ -2250,6 +2256,45 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		if (error) {
 			this.emit(RooCodeEventName.TaskToolFailed, this.taskId, toolName, error)
+		}
+	}
+
+	/**
+	 * Handles the resumption flow after a user cancels a task.
+	 * This method resets the task state, shows the resume prompt,
+	 * and continues with new user input if provided.
+	 *
+	 * @returns Promise<boolean> - true if the task should end, false to continue
+	 */
+	private async handleUserCancellationResume(): Promise<boolean> {
+		try {
+			// Reset the task to a resumable state
+			this.abort = false
+			await this.resetToResumableState()
+
+			// Show the resume prompt
+			const { response, text, images } = await this.ask("resume_task")
+
+			if (response === "messageResponse") {
+				await this.say("user_feedback", text, images)
+				// Continue with the new user input
+				const newUserContent: Anthropic.Messages.ContentBlockParam[] = []
+				if (text) {
+					newUserContent.push({ type: "text", text })
+				}
+				if (images && images.length > 0) {
+					newUserContent.push(...formatResponse.imageBlocks(images))
+				}
+				// Recursively continue with the new content
+				return await this.recursivelyMakeClineRequests(newUserContent)
+			}
+			// If not messageResponse, the task will end
+			return true
+		} catch (error) {
+			// If there's an error during resumption, log it and end the task
+			console.error(`Error during user cancellation resume: ${error}`)
+			// Re-throw to maintain existing error handling behavior
+			throw error
 		}
 	}
 
