@@ -174,6 +174,7 @@ export async function applyDiffTool(
 1. The XML structure is malformed or incomplete
 2. Missing required <file>, <path>, or <diff> tags
 3. Invalid characters or encoding in the XML
+4. The XML structure is too complex for the parser
 
 Expected structure:
 <args>
@@ -187,7 +188,7 @@ Expected structure:
 </args>
 
 Original error: ${errorMessage}
-${hasAddChild ? "\n⚠️ NOTE: There may be a conflict with another extension. If you have XML-related extensions installed in VSCode, try disabling them and retrying." : ""}`
+${hasAddChild ? "\n⚠️ NOTE: The parser encountered an error with complex XML structure. The fallback parser will be used if available." : ""}`
 
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("apply_diff")

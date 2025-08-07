@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { parseXml } from "../../../../utils/xml"
 
-describe("Issue #4852 - addChild error investigation", () => {
+describe("Issue #4852 - fast-xml-parser error on complex XML", () => {
 	let consoleErrorSpy: any
 	let consoleWarnSpy: any
 
@@ -9,36 +9,16 @@ describe("Issue #4852 - addChild error investigation", () => {
 		// Spy on console methods
 		consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 		consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-
-		// Reset any global state
-		if ((global as any).xml2js) {
-			delete (global as any).xml2js
-		}
 	})
 
 	afterEach(() => {
 		// Restore console methods
 		consoleErrorSpy.mockRestore()
 		consoleWarnSpy.mockRestore()
-
-		// Clean up global state
-		if ((global as any).xml2js) {
-			delete (global as any).xml2js
-		}
 	})
 
-	describe("External xml2js interference detection", () => {
-		it("should detect xml2js presence and handle it silently", () => {
-			// Simulate xml2js being loaded by another extension
-			;(global as any).xml2js = {
-				Parser: function () {
-					this.parseString = function (xml: string, callback: (error: Error | null, result?: any) => void) {
-						// Simulate xml2js behavior
-						callback(new Error("Cannot read properties of undefined (reading 'addChild')"))
-					}
-				},
-			}
-
+	describe("Fast-xml-parser error detection", () => {
+		it("should detect parser errors and handle them gracefully", () => {
 			const testXml = `<args>
 				<file>
 					<path>test.txt</path>
@@ -48,16 +28,15 @@ describe("Issue #4852 - addChild error investigation", () => {
 				</file>
 			</args>`
 
-			// Our parseXml should detect xml2js presence and handle it silently
-			// (no console warnings as per code review requirements)
+			// Our parseXml should handle parser errors gracefully
 			let result
 			try {
 				result = parseXml(testXml)
 			} catch (error) {
-				// Expected to potentially fail
+				// Expected to potentially fail on complex structures
 			}
 
-			// Verify that no warnings were logged (as per code review requirements)
+			// Verify that no warnings were logged
 			expect(consoleWarnSpy).not.toHaveBeenCalled()
 
 			// The parser should still work correctly
@@ -76,7 +55,7 @@ describe("Issue #4852 - addChild error investigation", () => {
 				</file>
 			</args>`
 
-			// Test that our code can detect addChild errors
+			// Test that our code can detect addChild errors from fast-xml-parser
 			const mockError = new Error("Cannot read properties of undefined (reading 'addChild')")
 
 			// Check that the error message contains addChild
@@ -90,9 +69,9 @@ describe("Issue #4852 - addChild error investigation", () => {
 			if (hasAddChild) {
 				// This is what would be logged
 				const expectedLog =
-					'[XML_PARSER_ERROR] Detected "addChild" error - this is from xml2js, not fast-xml-parser'
-				expect(expectedLog).toContain("xml2js")
+					'[XML_PARSER_ERROR] Detected "addChild" error from fast-xml-parser on complex XML structure'
 				expect(expectedLog).toContain("fast-xml-parser")
+				expect(expectedLog).toContain("complex XML")
 			}
 		})
 	})
@@ -319,7 +298,7 @@ function newFunction() {
 			// Create a mock error with stack trace
 			const mockError = new Error("Cannot read properties of undefined (reading 'addChild')")
 			mockError.stack = `Error: Cannot read properties of undefined (reading 'addChild')
-    at XMLParser.parse (node_modules/xml2js/lib/parser.js:123:45)
+    at XMLParser.parse (node_modules/fast-xml-parser/src/xmlparser/XMLParser.js:123:45)
     at parseXml (src/utils/xml.ts:15:20)
     at multiApplyDiffTool (src/core/tools/multiApplyDiffTool.ts:111:30)`
 

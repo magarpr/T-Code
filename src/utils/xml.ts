@@ -3,10 +3,9 @@ import { XMLParser } from "fast-xml-parser"
 /**
  * Encapsulated XML parser with fallback mechanism
  *
- * This dual-parser system handles interference from external XML parsers (like xml2js)
- * that may be loaded globally by other VSCode extensions. When the primary parser
- * (fast-xml-parser) fails due to external interference, it automatically falls back
- * to a regex-based parser.
+ * This dual-parser system handles parsing errors that may occur when fast-xml-parser
+ * encounters complex or deeply nested XML structures. When the primary parser
+ * (fast-xml-parser) fails, it automatically falls back to a regex-based parser.
  */
 class XmlParserWithFallback {
 	private readonly MAX_XML_SIZE = 10 * 1024 * 1024 // 10MB limit for fallback parser
@@ -128,16 +127,15 @@ class XmlParserWithFallback {
 			}
 
 			// Try fallback parser for any parsing error
-			// This handles both xml2js interference (addChild errors) and other parse failures
+			// This handles parsing failures on complex XML structures
 			try {
 				const result = this.fallbackXmlParse(xmlString)
 				return result
 			} catch (fallbackError) {
 				const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : "Unknown error"
-				// Provide context about which error was from xml2js interference
-				const isXml2jsError = errorMessage.includes("addChild")
-				const errorContext = isXml2jsError
-					? "XML parsing failed due to external parser interference (xml2js)."
+				// Provide context about the parsing failure
+				const errorContext = errorMessage.includes("addChild")
+					? "XML parsing failed due to fast-xml-parser error on complex structure."
 					: "XML parsing failed."
 
 				throw new Error(

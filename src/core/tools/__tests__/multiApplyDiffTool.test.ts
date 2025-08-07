@@ -135,11 +135,11 @@ describe("multiApplyDiffTool", () => {
 			expect(() => parseXml(malformedXml)).toThrow("XML parsing failed")
 		})
 
-		it("should detect and warn about xml2js addChild errors", async () => {
+		it("should detect and warn about fast-xml-parser addChild errors", async () => {
 			const consoleSpy = vi.spyOn(console, "error")
 			const xml = `<args><file><path>test.txt</path><diff><content>test</content></diff></file></args>`
 
-			// Mock parseXml to throw an addChild error (simulating xml2js interference)
+			// Mock parseXml to throw an addChild error (simulating fast-xml-parser error on complex XML)
 			vi.mocked(parseXml).mockImplementation(() => {
 				const error = new Error("Cannot read properties of undefined (reading 'addChild')")
 				throw error
