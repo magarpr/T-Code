@@ -163,6 +163,7 @@ describe("ChatView - Keyboard Shortcut Fix for Dvorak", () => {
 		})
 
 		// Wait for event to be processed and debounce delay (150ms)
+		// Adding extra buffer to ensure debounce completes
 		await new Promise((resolve) => setTimeout(resolve, 200))
 
 		// Check if mode switch was triggered
@@ -245,6 +246,7 @@ describe("ChatView - Keyboard Shortcut Fix for Dvorak", () => {
 		})
 
 		// Wait for event to be processed and debounce delay (150ms)
+		// Adding extra buffer to ensure debounce completes
 		await new Promise((resolve) => setTimeout(resolve, 200))
 
 		// Check if mode switch was triggered
@@ -278,6 +280,7 @@ describe("ChatView - Keyboard Shortcut Fix for Dvorak", () => {
 		})
 
 		// Wait for event to be processed and debounce delay (150ms)
+		// Adding extra buffer to ensure debounce completes
 		await new Promise((resolve) => setTimeout(resolve, 200))
 
 		// Check if mode switch was triggered

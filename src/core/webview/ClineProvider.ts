@@ -114,6 +114,9 @@ export class ClineProvider
 	private mdmService?: MdmService
 	private isModeSwitching = false
 
+	// Constants for mode switching delays
+	private static readonly MODE_SWITCH_TIMEOUT_MS = 150
+
 	public isViewLaunched = false
 	public settingsImportedAt?: number
 	public readonly latestAnnouncementId = "jul-29-2025-3-25-0" // Update for v3.25.0 announcement
@@ -967,9 +970,15 @@ export class ClineProvider
 
 		try {
 			await this.performModeSwitch(newMode)
+		} catch (error) {
+			// Log the error and re-throw to maintain existing behavior
+			this.log(`Error during mode switch: ${error instanceof Error ? error.message : String(error)}`)
+			throw error
 		} finally {
-			// Always reset the flag, even if an error occurs
-			this.isModeSwitching = false
+			// Reset the flag after a delay to ensure synchronization with frontend
+			setTimeout(() => {
+				this.isModeSwitching = false
+			}, ClineProvider.MODE_SWITCH_TIMEOUT_MS)
 		}
 	}
 

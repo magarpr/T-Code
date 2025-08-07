@@ -1,6 +1,10 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
 import { useDeepCompareEffect, useEvent, useMount } from "react-use"
 import debounce from "debounce"
+
+// Constants for mode switching delays
+const MODE_SWITCH_DEBOUNCE_MS = 150
+const MODE_SWITCH_RESET_DELAY_MS = 150 // Aligned with debounce for consistency
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import removeMd from "remove-markdown"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
@@ -1462,22 +1466,30 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				return
 			}
 
-			// Set flag to prevent concurrent switches
-			setIsModeSwitching(true)
+			try {
+				// Set flag to prevent concurrent switches
+				setIsModeSwitching(true)
 
-			// Update local state and notify extension to sync mode change
-			setMode(modeSlug)
+				// Update local state and notify extension to sync mode change
+				setMode(modeSlug)
 
-			// Send the mode switch message
-			vscode.postMessage({
-				type: "mode",
-				text: modeSlug,
-			})
+				// Send the mode switch message
+				vscode.postMessage({
+					type: "mode",
+					text: modeSlug,
+				})
 
-			// Reset the flag after a short delay to allow the mode switch to complete
-			setTimeout(() => {
+				// Reset the flag after a short delay to allow the mode switch to complete
+				setTimeout(() => {
+					setIsModeSwitching(false)
+				}, MODE_SWITCH_RESET_DELAY_MS)
+			} catch (error) {
+				// Reset the flag on error to allow retry
 				setIsModeSwitching(false)
-			}, 300)
+				console.error("Failed to switch mode:", error)
+				// Optionally show user-friendly error message
+				// You could add a toast notification here if available
+			}
 		},
 		[setMode, isModeSwitching],
 	)
@@ -1737,7 +1749,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				const nextModeIndex = (currentModeIndex + 1) % allModes.length
 				// Update local state and notify extension to sync mode change
 				switchToMode(allModes[nextModeIndex].slug)
-			}, 150),
+			}, MODE_SWITCH_DEBOUNCE_MS),
 		[mode, customModes, switchToMode],
 	)
 
@@ -1750,7 +1762,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				const previousModeIndex = (currentModeIndex - 1 + allModes.length) % allModes.length
 				// Update local state and notify extension to sync mode change
 				switchToMode(allModes[previousModeIndex].slug)
-			}, 150),
+			}, MODE_SWITCH_DEBOUNCE_MS),
 		[mode, customModes, switchToMode],
 	)
 
