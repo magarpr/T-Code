@@ -797,112 +797,59 @@ export class McpHub {
 			}
 			this.connections.push(connection)
 
-			// For stdio transports, we need to handle the connection differently
+			// For stdio transports, we need to handle the connection properly to avoid race conditions
 			if (configInjected.type === "stdio") {
-				// Store command and args for retry logic
-				const isWindows = process.platform === "win32"
-				const isAlreadyWrapped =
-					configInjected.command.toLowerCase() === "cmd.exe" || configInjected.command.toLowerCase() === "cmd"
-				const command = isWindows && !isAlreadyWrapped ? "cmd.exe" : configInjected.command
-				const args =
-					isWindows && !isAlreadyWrapped
-						? ["/c", configInjected.command, ...(configInjected.args || [])]
-						: configInjected.args
+				// Set up stderr handler BEFORE starting the transport to avoid race conditions
+				const stderrStream = (transport as StdioClientTransport).stderr
+				if (stderrStream) {
+					stderrStream.on("data", async (data: Buffer) => {
+						const output = data.toString()
+						// Check if output contains INFO level log
+						const isInfoLog = /INFO/i.test(output)
 
-				// Try to connect with retry logic for stdio servers
-				let connected = false
-				let retryCount = 0
-				const maxRetries = 3
-				const retryDelay = 1000 // 1 second
-
-				while (!connected && retryCount < maxRetries) {
-					try {
-						// Start the transport and connect
-						await (transport as StdioClientTransport).start()
-
-						// Set up stderr handler after transport is started
-						const stderrStream = (transport as StdioClientTransport).stderr
-						if (stderrStream) {
-							stderrStream.on("data", async (data: Buffer) => {
-								const output = data.toString()
-								// Check if output contains INFO level log
-								const isInfoLog = /INFO/i.test(output)
-
-								if (isInfoLog) {
-									// Log normal informational messages
-									console.log(`Server "${name}" info:`, output)
-								} else {
-									// Treat as error log
-									console.error(`Server "${name}" stderr:`, output)
-									const connection = this.findConnection(name, source)
-									if (connection) {
-										this.appendErrorMessage(connection, output)
-										if (connection.server.status === "disconnected") {
-											await this.notifyWebviewOfServerChanges()
-										}
-									}
-								}
-							})
-						}
-
-						// Now connect the client
-						await client.connect(transport)
-						connected = true
-						connection.server.status = "connected"
-						connection.server.error = ""
-					} catch (connectError) {
-						retryCount++
-						console.error(
-							`Failed to connect to MCP server "${name}" (attempt ${retryCount}/${maxRetries}):`,
-							connectError,
-						)
-
-						if (retryCount < maxRetries) {
-							// Wait before retrying
-							await new Promise((resolve) => setTimeout(resolve, retryDelay))
-
-							// Create a new transport for the retry
-							if (configInjected.type === "stdio") {
-								transport = new StdioClientTransport({
-									command,
-									args,
-									cwd: configInjected.cwd,
-									env: {
-										...getDefaultEnvironment(),
-										...(configInjected.env || {}),
-									},
-									stderr: "pipe",
-								})
-
-								// Re-setup error handlers for the new transport
-								transport.onerror = async (error) => {
-									console.error(`Transport error for "${name}":`, error)
-									const connection = this.findConnection(name, source)
-									if (connection) {
-										connection.server.status = "disconnected"
-										this.appendErrorMessage(
-											connection,
-											error instanceof Error ? error.message : `${error}`,
-										)
-									}
-									await this.notifyWebviewOfServerChanges()
-								}
-
-								transport.onclose = async () => {
-									const connection = this.findConnection(name, source)
-									if (connection) {
-										connection.server.status = "disconnected"
-									}
-									await this.notifyWebviewOfServerChanges()
-								}
-
-								// Update the connection's transport reference
-								connection.transport = transport
-							}
+						if (isInfoLog) {
+							// Log normal informational messages
+							console.log(`Server "${name}" info:`, output)
 						} else {
-							throw connectError
+							// Treat as error log
+							console.error(`Server "${name}" stderr:`, output)
+							const connection = this.findConnection(name, source)
+							if (connection) {
+								this.appendErrorMessage(connection, output)
+								if (connection.server.status === "disconnected") {
+									await this.notifyWebviewOfServerChanges()
+								}
+							}
 						}
+					})
+				}
+
+				try {
+					// Start the transport AFTER setting up handlers
+					await (transport as StdioClientTransport).start()
+
+					// Now connect the client
+					await client.connect(transport)
+					connection.server.status = "connected"
+					connection.server.error = ""
+				} catch (connectError) {
+					console.error(`Failed to connect to MCP server "${name}":`, connectError)
+
+					// Update status with error
+					connection.server.status = "disconnected"
+					this.appendErrorMessage(
+						connection,
+						connectError instanceof Error ? connectError.message : `${connectError}`,
+					)
+
+					// Clean up on failure
+					try {
+						await transport.close()
+					} catch (closeError) {
+						console.error(`Failed to close transport after connection error:`, closeError)
 					}
+
+					throw connectError
 				}
 			} else {
 				// For non-stdio transports, connect normally

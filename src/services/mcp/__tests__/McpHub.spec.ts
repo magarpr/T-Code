@@ -237,8 +237,8 @@ describe("McpHub", () => {
 			if (connection && connection.type === "connected") {
 				expect(connection.client).toBeDefined()
 				expect(connection.transport).toBeDefined()
-				// Status could be "connecting" or "connected" depending on timing
-				expect(["connecting", "connected"]).toContain(connection.server.status)
+				// Status should be "connected" after successful connection
+				expect(connection.server.status).toBe("connected")
 			} else {
 				throw new Error("Connection should be of type 'connected'")
 			}
@@ -1569,8 +1569,8 @@ describe("McpHub", () => {
 			// Verify server is connected
 			const connectedServer = mcpHub.connections.find((conn) => conn.server.name === "toggle-test-server")
 			expect(connectedServer).toBeDefined()
-			// Status could be "connecting" or "connected" depending on timing
-			expect(["connecting", "connected"]).toContain(connectedServer!.server.status)
+			// Status should be "connected" after successful connection
+			expect(connectedServer!.server.status).toBe("connected")
 			expect(connectedServer!.client).toBeDefined()
 			expect(connectedServer!.transport).toBeDefined()
 
@@ -1698,8 +1698,8 @@ describe("McpHub", () => {
 
 			// Verify that the server is connected
 			expect(enabledServer).toBeDefined()
-			// Status could be "connecting" or "connected" depending on timing
-			expect(["connecting", "connected"]).toContain(enabledServer!.server.status)
+			// Status should be "connected" after successful connection
+			expect(enabledServer!.server.status).toBe("connected")
 			expect(enabledServer!.client).toBeDefined()
 			expect(enabledServer!.transport).toBeDefined()
 
