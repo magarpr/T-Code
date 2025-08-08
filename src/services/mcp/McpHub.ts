@@ -706,32 +706,6 @@ export class McpHub {
 					}
 					await this.notifyWebviewOfServerChanges()
 				}
-
-				// Set up stderr handling before starting the transport
-				// We'll use a different approach that doesn't require starting the transport early
-				let stderrHandler: ((data: Buffer) => void) | undefined
-
-				// Create the stderr handler
-				stderrHandler = async (data: Buffer) => {
-					const output = data.toString()
-					// Check if output contains INFO level log
-					const isInfoLog = /INFO/i.test(output)
-
-					if (isInfoLog) {
-						// Log normal informational messages
-						console.log(`Server "${name}" info:`, output)
-					} else {
-						// Treat as error log
-						console.error(`Server "${name}" stderr:`, output)
-						const connection = this.findConnection(name, source)
-						if (connection) {
-							this.appendErrorMessage(connection, output)
-							if (connection.server.status === "disconnected") {
-								await this.notifyWebviewOfServerChanges()
-							}
-						}
-					}
-				}
 			} else if (configInjected.type === "streamable-http") {
 				// Streamable HTTP connection
 				transport = new StreamableHTTPClientTransport(new URL(configInjected.url), {
@@ -825,6 +799,16 @@ export class McpHub {
 
 			// For stdio transports, we need to handle the connection differently
 			if (configInjected.type === "stdio") {
+				// Store command and args for retry logic
+				const isWindows = process.platform === "win32"
+				const isAlreadyWrapped =
+					configInjected.command.toLowerCase() === "cmd.exe" || configInjected.command.toLowerCase() === "cmd"
+				const command = isWindows && !isAlreadyWrapped ? "cmd.exe" : configInjected.command
+				const args =
+					isWindows && !isAlreadyWrapped
+						? ["/c", configInjected.command, ...(configInjected.args || [])]
+						: configInjected.args
+
 				// Try to connect with retry logic for stdio servers
 				let connected = false
 				let retryCount = 0
@@ -834,12 +818,31 @@ export class McpHub {
 				while (!connected && retryCount < maxRetries) {
 					try {
 						// Start the transport and connect
-						await transport.start()
+						await (transport as StdioClientTransport).start()
 
 						// Set up stderr handler after transport is started
-						const stderrStream = transport.stderr
-						if (stderrStream && stderrHandler) {
-							stderrStream.on("data", stderrHandler)
+						const stderrStream = (transport as StdioClientTransport).stderr
+						if (stderrStream) {
+							stderrStream.on("data", async (data: Buffer) => {
+								const output = data.toString()
+								// Check if output contains INFO level log
+								const isInfoLog = /INFO/i.test(output)
+
+								if (isInfoLog) {
+									// Log normal informational messages
+									console.log(`Server "${name}" info:`, output)
+								} else {
+									// Treat as error log
+									console.error(`Server "${name}" stderr:`, output)
+									const connection = this.findConnection(name, source)
+									if (connection) {
+										this.appendErrorMessage(connection, output)
+										if (connection.server.status === "disconnected") {
+											await this.notifyWebviewOfServerChanges()
+										}
+									}
+								}
+							})
 						}
 
 						// Now connect the client
