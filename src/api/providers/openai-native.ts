@@ -147,10 +147,13 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	): ApiStream {
 		const { reasoning, verbosity } = this.getModel()
 
+		// For GPT-5 models, use temperature 1.0 as default when user hasn't set a temperature
+		const defaultTemp = this.isGpt5Model(model.id) ? 1.0 : OPENAI_NATIVE_DEFAULT_TEMPERATURE
+
 		// Prepare the request parameters
 		const params: any = {
 			model: model.id,
-			temperature: this.options.modelTemperature ?? OPENAI_NATIVE_DEFAULT_TEMPERATURE,
+			temperature: this.options.modelTemperature ?? defaultTemp,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
@@ -401,12 +404,15 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 
 		const info: ModelInfo = openAiNativeModels[id]
 
+		// For GPT-5 models, use temperature 1.0 as default when user hasn't set a temperature
+		const defaultTemp = this.isGpt5Model(id) ? 1.0 : OPENAI_NATIVE_DEFAULT_TEMPERATURE
+
 		const params = getModelParams({
 			format: "openai",
 			modelId: id,
 			model: info,
 			settings: this.options,
-			defaultTemperature: OPENAI_NATIVE_DEFAULT_TEMPERATURE,
+			defaultTemperature: defaultTemp,
 		})
 
 		// For GPT-5 models, ensure we support minimal reasoning effort
