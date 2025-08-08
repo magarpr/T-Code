@@ -707,33 +707,30 @@ export class McpHub {
 					await this.notifyWebviewOfServerChanges()
 				}
 
-				// transport.stderr is only available after the process has been started. However we can't start it separately from the .connect() call because it also starts the transport. And we can't place this after the connect call since we need to capture the stderr stream before the connection is established, in order to capture errors during the connection process.
-				// As a workaround, we start the transport ourselves, and then monkey-patch the start method to no-op so that .connect() doesn't try to start it again.
-				await transport.start()
-				const stderrStream = transport.stderr
-				if (stderrStream) {
-					stderrStream.on("data", async (data: Buffer) => {
-						const output = data.toString()
-						// Check if output contains INFO level log
-						const isInfoLog = /INFO/i.test(output)
+				// Set up stderr handling before starting the transport
+				// We'll use a different approach that doesn't require starting the transport early
+				let stderrHandler: ((data: Buffer) => void) | undefined
 
-						if (isInfoLog) {
-							// Log normal informational messages
-							console.log(`Server "${name}" info:`, output)
-						} else {
-							// Treat as error log
-							console.error(`Server "${name}" stderr:`, output)
-							const connection = this.findConnection(name, source)
-							if (connection) {
-								this.appendErrorMessage(connection, output)
-								if (connection.server.status === "disconnected") {
-									await this.notifyWebviewOfServerChanges()
-								}
+				// Create the stderr handler
+				stderrHandler = async (data: Buffer) => {
+					const output = data.toString()
+					// Check if output contains INFO level log
+					const isInfoLog = /INFO/i.test(output)
+
+					if (isInfoLog) {
+						// Log normal informational messages
+						console.log(`Server "${name}" info:`, output)
+					} else {
+						// Treat as error log
+						console.error(`Server "${name}" stderr:`, output)
+						const connection = this.findConnection(name, source)
+						if (connection) {
+							this.appendErrorMessage(connection, output)
+							if (connection.server.status === "disconnected") {
+								await this.notifyWebviewOfServerChanges()
 							}
 						}
-					})
-				} else {
-					console.error(`No stderr stream for ${name}`)
+					}
 				}
 			} else if (configInjected.type === "streamable-http") {
 				// Streamable HTTP connection
@@ -809,11 +806,6 @@ export class McpHub {
 				throw new Error(`Unsupported MCP server type: ${(configInjected as any).type}`)
 			}
 
-			// Only override transport.start for stdio transports that have already been started
-			if (configInjected.type === "stdio") {
-				transport.start = async () => {}
-			}
-
 			// Create a connected connection
 			const connection: ConnectedMcpConnection = {
 				type: "connected",
@@ -831,16 +823,100 @@ export class McpHub {
 			}
 			this.connections.push(connection)
 
-			// Connect (this will automatically start the transport)
-			await client.connect(transport)
-			connection.server.status = "connected"
-			connection.server.error = ""
-			connection.server.instructions = client.getInstructions()
+			// For stdio transports, we need to handle the connection differently
+			if (configInjected.type === "stdio") {
+				// Try to connect with retry logic for stdio servers
+				let connected = false
+				let retryCount = 0
+				const maxRetries = 3
+				const retryDelay = 1000 // 1 second
 
-			// Initial fetch of tools and resources
-			connection.server.tools = await this.fetchToolsList(name, source)
-			connection.server.resources = await this.fetchResourcesList(name, source)
-			connection.server.resourceTemplates = await this.fetchResourceTemplatesList(name, source)
+				while (!connected && retryCount < maxRetries) {
+					try {
+						// Start the transport and connect
+						await transport.start()
+
+						// Set up stderr handler after transport is started
+						const stderrStream = transport.stderr
+						if (stderrStream && stderrHandler) {
+							stderrStream.on("data", stderrHandler)
+						}
+
+						// Now connect the client
+						await client.connect(transport)
+						connected = true
+						connection.server.status = "connected"
+						connection.server.error = ""
+					} catch (connectError) {
+						retryCount++
+						console.error(
+							`Failed to connect to MCP server "${name}" (attempt ${retryCount}/${maxRetries}):`,
+							connectError,
+						)
+
+						if (retryCount < maxRetries) {
+							// Wait before retrying
+							await new Promise((resolve) => setTimeout(resolve, retryDelay))
+
+							// Create a new transport for the retry
+							if (configInjected.type === "stdio") {
+								transport = new StdioClientTransport({
+									command,
+									args,
+									cwd: configInjected.cwd,
+									env: {
+										...getDefaultEnvironment(),
+										...(configInjected.env || {}),
+									},
+									stderr: "pipe",
+								})
+
+								// Re-setup error handlers for the new transport
+								transport.onerror = async (error) => {
+									console.error(`Transport error for "${name}":`, error)
+									const connection = this.findConnection(name, source)
+									if (connection) {
+										connection.server.status = "disconnected"
+										this.appendErrorMessage(
+											connection,
+											error instanceof Error ? error.message : `${error}`,
+										)
+									}
+									await this.notifyWebviewOfServerChanges()
+								}
+
+								transport.onclose = async () => {
+									const connection = this.findConnection(name, source)
+									if (connection) {
+										connection.server.status = "disconnected"
+									}
+									await this.notifyWebviewOfServerChanges()
+								}
+
+								// Update the connection's transport reference
+								connection.transport = transport
+							}
+						} else {
+							throw connectError
+						}
+					}
+				}
+			} else {
+				// For non-stdio transports, connect normally
+				await client.connect(transport)
+				connection.server.status = "connected"
+				connection.server.error = ""
+			}
+
+			// Get instructions and fetch initial data only if connected
+			if (connection.server.status === "connected") {
+				connection.server.instructions = client.getInstructions()
+
+				// Initial fetch of tools and resources
+				connection.server.tools = await this.fetchToolsList(name, source)
+				connection.server.resources = await this.fetchResourcesList(name, source)
+				connection.server.resourceTemplates = await this.fetchResourceTemplatesList(name, source)
+			}
 		} catch (error) {
 			// Update status with error
 			const connection = this.findConnection(name, source)

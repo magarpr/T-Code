@@ -127,7 +127,51 @@ async function executeToolAndProcessResult(
 		toolName,
 	})
 
-	const toolResult = await cline.providerRef.deref()?.getMcpHub()?.callTool(serverName, toolName, parsedArguments)
+	// Try to execute the tool with retry logic for connection failures
+	let toolResult: any
+	let retryCount = 0
+	const maxRetries = 2
+	const retryDelay = 1000 // 1 second
+
+	while (retryCount <= maxRetries) {
+		try {
+			const mcpHub = cline.providerRef.deref()?.getMcpHub()
+			if (!mcpHub) {
+				throw new Error("MCP Hub not available")
+			}
+
+			toolResult = await mcpHub.callTool(serverName, toolName, parsedArguments)
+			break // Success, exit the retry loop
+		} catch (error: any) {
+			const errorMessage = error?.message || String(error)
+
+			// Check if this is a connection closed error that might benefit from a retry
+			if (errorMessage.includes("Connection closed") || errorMessage.includes("No connection found")) {
+				retryCount++
+
+				if (retryCount <= maxRetries) {
+					console.log(
+						`MCP tool execution failed with connection error, retrying (${retryCount}/${maxRetries})...`,
+					)
+
+					// Wait before retrying
+					await new Promise((resolve) => setTimeout(resolve, retryDelay))
+
+					// Send retry status
+					await sendExecutionStatus(cline, {
+						executionId,
+						status: "output",
+						response: `Connection error, retrying (${retryCount}/${maxRetries})...`,
+					})
+
+					continue // Try again
+				}
+			}
+
+			// If we've exhausted retries or it's a different error, throw it
+			throw error
+		}
+	}
 
 	let toolResultPretty = "(No response)"
 
