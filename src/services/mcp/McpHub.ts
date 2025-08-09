@@ -1007,8 +1007,28 @@ export class McpHub {
 		for (const connection of connections) {
 			try {
 				if (connection.type === "connected") {
-					await connection.transport.close()
+					// First close the client to stop any ongoing operations
 					await connection.client.close()
+
+					// For stdio transports, we need to ensure the process is terminated
+					if (connection.transport && "proc" in connection.transport) {
+						const proc = (connection.transport as any).proc
+						if (proc && !proc.killed) {
+							// Try to gracefully terminate the process first
+							proc.kill("SIGTERM")
+
+							// Give it a moment to terminate gracefully
+							await new Promise((resolve) => setTimeout(resolve, 100))
+
+							// If still not killed, force kill it
+							if (!proc.killed) {
+								proc.kill("SIGKILL")
+							}
+						}
+					}
+
+					// Now close the transport
+					await connection.transport.close()
 				}
 			} catch (error) {
 				console.error(`Failed to close transport for ${name}:`, error)
@@ -1188,7 +1208,12 @@ export class McpHub {
 			await this.notifyWebviewOfServerChanges()
 			await delay(500) // artificial delay to show user that server is restarting
 			try {
+				// Ensure complete cleanup before reconnecting
 				await this.deleteConnection(serverName, connection.server.source)
+
+				// Add a small delay to ensure the process is fully terminated
+				await delay(200)
+
 				// Parse the config to validate it
 				const parsedConfig = JSON.parse(config)
 				try {
@@ -1264,6 +1289,9 @@ export class McpHub {
 			for (const conn of existingConnections) {
 				await this.deleteConnection(conn.server.name, conn.server.source)
 			}
+
+			// Add a delay to ensure all processes are fully terminated
+			await delay(300)
 
 			// Re-initialize all servers from scratch
 			// This ensures proper initialization including fetching tools, resources, etc.
