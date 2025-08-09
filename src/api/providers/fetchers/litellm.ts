@@ -1,7 +1,5 @@
 import axios from "axios"
 
-import { LITELLM_COMPUTER_USE_MODELS } from "@roo-code/types"
-
 import type { ModelRecord } from "../../../shared/api"
 
 import { DEFAULT_HEADERS } from "../constants"
@@ -33,33 +31,28 @@ export async function getLiteLLMModels(apiKey: string, baseUrl: string): Promise
 		const response = await axios.get(url, { headers, timeout: 5000 })
 		const models: ModelRecord = {}
 
-		const computerModels = Array.from(LITELLM_COMPUTER_USE_MODELS)
-
 		// Process the model info from the response
 		if (response.data && response.data.data && Array.isArray(response.data.data)) {
 			for (const model of response.data.data) {
 				const modelName = model.model_name
 				const modelInfo = model.model_info
-				const litellmModelName = model?.litellm_params?.model as string | undefined
 
-				if (!modelName || !modelInfo || !litellmModelName) continue
+				if (!modelName || !modelInfo) continue
 
-				// Use explicit supports_computer_use if available, otherwise fall back to hardcoded list
+				// Use explicit supports_computer_use if available, otherwise use image support
 				let supportsComputerUse: boolean
 				if (modelInfo.supports_computer_use !== undefined) {
 					supportsComputerUse = Boolean(modelInfo.supports_computer_use)
 				} else {
-					// Fallback for older LiteLLM versions that don't have supports_computer_use field
-					supportsComputerUse = computerModels.some((computer_model) =>
-						litellmModelName.endsWith(computer_model),
-					)
+					// Browser automation requires screenshot analysis, which requires image/vision capabilities
+					// Any model that can process images can theoretically use the browser tool
+					supportsComputerUse = Boolean(modelInfo.supports_vision)
 				}
 
 				models[modelName] = {
 					maxTokens: modelInfo.max_tokens || 8192,
 					contextWindow: modelInfo.max_input_tokens || 200000,
 					supportsImages: Boolean(modelInfo.supports_vision),
-					// litellm_params.model may have a prefix like openrouter/
 					supportsComputerUse,
 					supportsPromptCache: Boolean(modelInfo.supports_prompt_caching),
 					inputPrice: modelInfo.input_cost_per_token ? modelInfo.input_cost_per_token * 1000000 : undefined,

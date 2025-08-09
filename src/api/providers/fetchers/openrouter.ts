@@ -4,7 +4,6 @@ import { z } from "zod"
 import {
 	type ModelInfo,
 	isModelParameter,
-	OPEN_ROUTER_COMPUTER_USE_MODELS,
 	OPEN_ROUTER_REASONING_BUDGET_MODELS,
 	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
 	anthropicModels,
@@ -204,9 +203,10 @@ export const parseOpenRouterModel = ({
 		supportedParameters: supportedParameters ? supportedParameters.filter(isModelParameter) : undefined,
 	}
 
-	// The OpenRouter model definition doesn't give us any hints about
-	// computer use, so we need to set that manually.
-	if (OPEN_ROUTER_COMPUTER_USE_MODELS.has(id)) {
+	// Browser automation requires screenshot analysis, which requires image/vision capabilities
+	// Any model that can process images can theoretically use the browser tool
+	// This makes the approach both simpler and more inclusive
+	if (modelInfo.supportsImages) {
 		modelInfo.supportsComputerUse = true
 	}
 

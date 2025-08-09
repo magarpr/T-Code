@@ -404,12 +404,12 @@ describe("getLiteLLMModels", () => {
 		expect(result).toEqual({})
 	})
 
-	it("uses fallback computer use detection when supports_computer_use is not available", async () => {
+	it("uses image support as fallback for computer use when supports_computer_use is not available", async () => {
 		const mockResponse = {
 			data: {
 				data: [
 					{
-						model_name: "claude-3-5-sonnet-latest",
+						model_name: "model-with-vision",
 						model_info: {
 							max_tokens: 4096,
 							max_input_tokens: 200000,
@@ -417,21 +417,15 @@ describe("getLiteLLMModels", () => {
 							supports_prompt_caching: false,
 							// Note: no supports_computer_use field
 						},
-						litellm_params: {
-							model: "anthropic/claude-3-5-sonnet-latest", // This should match the fallback list
-						},
 					},
 					{
-						model_name: "gpt-4-turbo",
+						model_name: "model-without-vision",
 						model_info: {
 							max_tokens: 8192,
 							max_input_tokens: 128000,
 							supports_vision: false,
 							supports_prompt_caching: false,
 							// Note: no supports_computer_use field
-						},
-						litellm_params: {
-							model: "openai/gpt-4-turbo", // This should NOT match the fallback list
 						},
 					},
 				],
@@ -442,70 +436,61 @@ describe("getLiteLLMModels", () => {
 
 		const result = await getLiteLLMModels("test-api-key", "http://localhost:4000")
 
-		expect(result["claude-3-5-sonnet-latest"]).toEqual({
+		expect(result["model-with-vision"]).toEqual({
 			maxTokens: 4096,
 			contextWindow: 200000,
 			supportsImages: true,
-			supportsComputerUse: true, // Should be true due to fallback
+			supportsComputerUse: true, // Should be true because supports_vision is true
 			supportsPromptCache: false,
 			inputPrice: undefined,
 			outputPrice: undefined,
-			description: "claude-3-5-sonnet-latest via LiteLLM proxy",
+			description: "model-with-vision via LiteLLM proxy",
 		})
 
-		expect(result["gpt-4-turbo"]).toEqual({
+		expect(result["model-without-vision"]).toEqual({
 			maxTokens: 8192,
 			contextWindow: 128000,
 			supportsImages: false,
-			supportsComputerUse: false, // Should be false as it's not in fallback list
+			supportsComputerUse: false, // Should be false because supports_vision is false
 			supportsPromptCache: false,
 			inputPrice: undefined,
 			outputPrice: undefined,
-			description: "gpt-4-turbo via LiteLLM proxy",
+			description: "model-without-vision via LiteLLM proxy",
 		})
 	})
 
-	it("prioritizes explicit supports_computer_use over fallback detection", async () => {
+	it("prioritizes explicit supports_computer_use over image-based fallback", async () => {
 		const mockResponse = {
 			data: {
 				data: [
 					{
-						model_name: "claude-3-5-sonnet-latest",
+						model_name: "model-with-vision-but-no-computer",
 						model_info: {
 							max_tokens: 4096,
 							max_input_tokens: 200000,
 							supports_vision: true,
 							supports_prompt_caching: false,
-							supports_computer_use: false, // Explicitly set to false
-						},
-						litellm_params: {
-							model: "anthropic/claude-3-5-sonnet-latest", // This matches fallback list but should be ignored
+							supports_computer_use: false, // Explicitly set to false despite vision support
 						},
 					},
 					{
-						model_name: "custom-model",
+						model_name: "model-without-vision-but-computer",
 						model_info: {
 							max_tokens: 8192,
 							max_input_tokens: 128000,
 							supports_vision: false,
 							supports_prompt_caching: false,
-							supports_computer_use: true, // Explicitly set to true
-						},
-						litellm_params: {
-							model: "custom/custom-model", // This would NOT match fallback list
+							supports_computer_use: true, // Explicitly set to true despite no vision support
 						},
 					},
 					{
-						model_name: "another-custom-model",
+						model_name: "model-with-both-false",
 						model_info: {
 							max_tokens: 8192,
 							max_input_tokens: 128000,
 							supports_vision: false,
 							supports_prompt_caching: false,
 							supports_computer_use: false, // Explicitly set to false
-						},
-						litellm_params: {
-							model: "custom/another-custom-model", // This would NOT match fallback list
 						},
 					},
 				],
@@ -516,18 +501,18 @@ describe("getLiteLLMModels", () => {
 
 		const result = await getLiteLLMModels("test-api-key", "http://localhost:4000")
 
-		expect(result["claude-3-5-sonnet-latest"]).toEqual({
+		expect(result["model-with-vision-but-no-computer"]).toEqual({
 			maxTokens: 4096,
 			contextWindow: 200000,
 			supportsImages: true,
-			supportsComputerUse: false, // False because explicitly set to false (fallback ignored)
+			supportsComputerUse: false, // False because explicitly set to false (image fallback ignored)
 			supportsPromptCache: false,
 			inputPrice: undefined,
 			outputPrice: undefined,
-			description: "claude-3-5-sonnet-latest via LiteLLM proxy",
+			description: "model-with-vision-but-no-computer via LiteLLM proxy",
 		})
 
-		expect(result["custom-model"]).toEqual({
+		expect(result["model-without-vision-but-computer"]).toEqual({
 			maxTokens: 8192,
 			contextWindow: 128000,
 			supportsImages: false,
@@ -535,10 +520,10 @@ describe("getLiteLLMModels", () => {
 			supportsPromptCache: false,
 			inputPrice: undefined,
 			outputPrice: undefined,
-			description: "custom-model via LiteLLM proxy",
+			description: "model-without-vision-but-computer via LiteLLM proxy",
 		})
 
-		expect(result["another-custom-model"]).toEqual({
+		expect(result["model-with-both-false"]).toEqual({
 			maxTokens: 8192,
 			contextWindow: 128000,
 			supportsImages: false,
@@ -546,48 +531,39 @@ describe("getLiteLLMModels", () => {
 			supportsPromptCache: false,
 			inputPrice: undefined,
 			outputPrice: undefined,
-			description: "another-custom-model via LiteLLM proxy",
+			description: "model-with-both-false via LiteLLM proxy",
 		})
 	})
 
-	it("handles fallback detection with various model name formats", async () => {
+	it("handles image-based computer use detection for various models", async () => {
 		const mockResponse = {
 			data: {
 				data: [
 					{
-						model_name: "vertex-claude",
+						model_name: "vertex-model",
 						model_info: {
 							max_tokens: 4096,
 							max_input_tokens: 200000,
 							supports_vision: true,
 							supports_prompt_caching: false,
-						},
-						litellm_params: {
-							model: "vertex_ai/claude-3-5-sonnet", // Should match fallback list
 						},
 					},
 					{
-						model_name: "openrouter-claude",
+						model_name: "openrouter-model",
 						model_info: {
 							max_tokens: 4096,
 							max_input_tokens: 200000,
 							supports_vision: true,
 							supports_prompt_caching: false,
-						},
-						litellm_params: {
-							model: "openrouter/anthropic/claude-3.5-sonnet", // Should match fallback list
 						},
 					},
 					{
-						model_name: "bedrock-claude",
+						model_name: "bedrock-model",
 						model_info: {
 							max_tokens: 4096,
 							max_input_tokens: 200000,
-							supports_vision: true,
+							supports_vision: false,
 							supports_prompt_caching: false,
-						},
-						litellm_params: {
-							model: "anthropic.claude-3-5-sonnet-20241022-v2:0", // Should match fallback list
 						},
 					},
 				],
@@ -598,8 +574,10 @@ describe("getLiteLLMModels", () => {
 
 		const result = await getLiteLLMModels("test-api-key", "http://localhost:4000")
 
-		expect(result["vertex-claude"].supportsComputerUse).toBe(true)
-		expect(result["openrouter-claude"].supportsComputerUse).toBe(true)
-		expect(result["bedrock-claude"].supportsComputerUse).toBe(true)
+		// Models with vision support should have computer use enabled
+		expect(result["vertex-model"].supportsComputerUse).toBe(true)
+		expect(result["openrouter-model"].supportsComputerUse).toBe(true)
+		// Model without vision support should not have computer use enabled
+		expect(result["bedrock-model"].supportsComputerUse).toBe(false)
 	})
 })

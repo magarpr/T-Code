@@ -6,7 +6,6 @@ import { back as nockBack } from "nock"
 
 import {
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
-	OPEN_ROUTER_COMPUTER_USE_MODELS,
 	OPEN_ROUTER_REASONING_BUDGET_MODELS,
 	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
 } from "@roo-code/types"
@@ -49,20 +48,20 @@ describe("OpenRouter API", () => {
 
 			expect(ourCachingModels.sort()).toEqual(expectedCachingModels)
 
-			const excludedComputerUseModels = new Set([
-				"anthropic/claude-opus-4.1", // Not yet available in OpenRouter API
-			])
+			// Computer use is now determined by image support
+			// Verify that models with image support have computer use enabled
+			const modelsWithImages = Object.entries(models)
+				.filter(([_, model]) => model.supportsImages)
+				.map(([id, _]) => id)
 
-			const expectedComputerUseModels = Array.from(OPEN_ROUTER_COMPUTER_USE_MODELS)
-				.filter((id) => !excludedComputerUseModels.has(id))
-				.sort()
+			const modelsWithComputerUse = Object.entries(models)
+				.filter(([_, model]) => model.supportsComputerUse)
+				.map(([id, _]) => id)
 
-			expect(
-				Object.entries(models)
-					.filter(([_, model]) => model.supportsComputerUse)
-					.map(([id, _]) => id)
-					.sort(),
-			).toEqual(expectedComputerUseModels)
+			// All models with image support should have computer use enabled
+			for (const modelId of modelsWithImages) {
+				expect(modelsWithComputerUse).toContain(modelId)
+			}
 
 			expect(
 				Object.entries(models)
@@ -233,6 +232,7 @@ describe("OpenRouter API", () => {
 					maxTokens: 65535,
 					contextWindow: 1048576,
 					supportsImages: true,
+					supportsComputerUse: true, // Added because supportsImages is true
 					supportsPromptCache: true,
 					supportsReasoningBudget: true,
 					inputPrice: 1.25,
@@ -247,6 +247,7 @@ describe("OpenRouter API", () => {
 					maxTokens: 65536,
 					contextWindow: 1048576,
 					supportsImages: true,
+					supportsComputerUse: true, // Added because supportsImages is true
 					supportsPromptCache: true,
 					supportsReasoningBudget: true,
 					inputPrice: 1.25,

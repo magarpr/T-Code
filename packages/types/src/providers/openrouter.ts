@@ -51,17 +51,9 @@ export const OPEN_ROUTER_PROMPT_CACHING_MODELS = new Set([
 	"google/gemini-flash-1.5-8b",
 ])
 
-// https://www.anthropic.com/news/3-5-models-and-computer-use
-export const OPEN_ROUTER_COMPUTER_USE_MODELS = new Set([
-	"anthropic/claude-3.5-sonnet",
-	"anthropic/claude-3.5-sonnet:beta",
-	"anthropic/claude-3.7-sonnet",
-	"anthropic/claude-3.7-sonnet:beta",
-	"anthropic/claude-3.7-sonnet:thinking",
-	"anthropic/claude-sonnet-4",
-	"anthropic/claude-opus-4",
-	"anthropic/claude-opus-4.1",
-])
+// Computer use capability is now determined by image support
+// Any model that supports images can theoretically use browser tools
+// This approach is simpler and more inclusive than maintaining hardcoded lists
 
 // When we first launched these models we didn't have support for
 // enabling/disabling the reasoning budget for hybrid models. Now that we
