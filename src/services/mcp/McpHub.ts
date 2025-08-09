@@ -1007,8 +1007,13 @@ export class McpHub {
 		for (const connection of connections) {
 			try {
 				if (connection.type === "connected") {
-					await connection.transport.close()
-					await connection.client.close()
+					// Close transport first, then client
+					if (connection.transport) {
+						await connection.transport.close()
+					}
+					if (connection.client) {
+						await connection.client.close()
+					}
 				}
 			} catch (error) {
 				console.error(`Failed to close transport for ${name}:`, error)
@@ -1188,7 +1193,13 @@ export class McpHub {
 			await this.notifyWebviewOfServerChanges()
 			await delay(500) // artificial delay to show user that server is restarting
 			try {
-				await this.deleteConnection(serverName, connection.server.source)
+				// Ensure complete cleanup before restarting
+				const serverSource = connection.server.source || "global"
+				await this.deleteConnection(serverName, serverSource)
+
+				// Add small delay to ensure cleanup is complete
+				await delay(100)
+
 				// Parse the config to validate it
 				const parsedConfig = JSON.parse(config)
 				try {
@@ -1196,7 +1207,7 @@ export class McpHub {
 					const validatedConfig = this.validateServerConfig(parsedConfig, serverName)
 
 					// Try to connect again using validated config
-					await this.connectToServer(serverName, validatedConfig, connection.server.source || "global")
+					await this.connectToServer(serverName, validatedConfig, serverSource)
 					vscode.window.showInformationMessage(t("mcp:info.server_connected", { serverName }))
 				} catch (validationError) {
 					this.showErrorMessage(`Invalid configuration for MCP server "${serverName}"`, validationError)
@@ -1264,6 +1275,9 @@ export class McpHub {
 			for (const conn of existingConnections) {
 				await this.deleteConnection(conn.server.name, conn.server.source)
 			}
+
+			// Add small delay to ensure cleanup is complete
+			await delay(100)
 
 			// Re-initialize all servers from scratch
 			// This ensures proper initialization including fetching tools, resources, etc.
