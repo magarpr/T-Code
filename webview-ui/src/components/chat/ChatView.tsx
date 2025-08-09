@@ -1942,25 +1942,46 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											</VSCodeButton>
 										</StandardTooltip>
 									)}
-									{(secondaryButtonText || isStreaming) && (
+									{(secondaryButtonText || isStreaming) && !isStreaming && (
 										<StandardTooltip
 											content={
-												isStreaming
-													? t("chat:cancel.tooltip")
-													: secondaryButtonText === t("chat:startNewTask.title")
-														? t("chat:startNewTask.tooltip")
-														: secondaryButtonText === t("chat:reject.title")
-															? t("chat:reject.tooltip")
-															: secondaryButtonText === t("chat:terminate.title")
-																? t("chat:terminate.tooltip")
-																: undefined
+												secondaryButtonText === t("chat:startNewTask.title")
+													? t("chat:startNewTask.tooltip")
+													: secondaryButtonText === t("chat:reject.title")
+														? t("chat:reject.tooltip")
+														: secondaryButtonText === t("chat:terminate.title")
+															? t("chat:terminate.tooltip")
+															: undefined
 											}>
 											<VSCodeButton
 												appearance="secondary"
-												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
-												className={isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"}
+												disabled={!enableButtons}
+												className="flex-1 ml-[6px]"
 												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
-												{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
+												{secondaryButtonText}
+											</VSCodeButton>
+										</StandardTooltip>
+									)}
+									{isStreaming && (
+										<StandardTooltip content={t("chat:cancel.tooltip")}>
+											<VSCodeButton
+												appearance="secondary"
+												disabled={!(isStreaming && !didClickCancel)}
+												className="flex-[2] ml-0"
+												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
+												{t("chat:cancel.title")}
+											</VSCodeButton>
+										</StandardTooltip>
+									)}
+									{/* Add stop/close button when not streaming but showing approval buttons */}
+									{!isStreaming && enableButtons && primaryButtonText && (
+										<StandardTooltip content={t("chat:terminate.tooltip")}>
+											<VSCodeButton
+												appearance="icon"
+												disabled={false}
+												className="ml-2"
+												onClick={() => startNewTask()}>
+												<span className="codicon codicon-x"></span>
 											</VSCodeButton>
 										</StandardTooltip>
 									)}
