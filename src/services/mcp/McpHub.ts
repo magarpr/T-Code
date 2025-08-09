@@ -618,8 +618,14 @@ export class McpHub {
 		config: z.infer<typeof ServerConfigSchema>,
 		source: "global" | "project" = "global",
 	): Promise<void> {
-		// Remove existing connection if it exists with the same source
-		await this.deleteConnection(name, source)
+		// Check if a connection already exists with the same name and source
+		const existingConnection = this.findConnection(name, source)
+		if (existingConnection) {
+			// Ensure complete cleanup of existing connection
+			await this.deleteConnection(name, source)
+			// Wait a moment to ensure cleanup is complete
+			await delay(100)
+		}
 
 		// Check if MCP is globally enabled
 		const mcpEnabled = await this.isMcpEnabled()
@@ -1007,8 +1013,14 @@ export class McpHub {
 		for (const connection of connections) {
 			try {
 				if (connection.type === "connected") {
-					await connection.transport.close()
-					await connection.client.close()
+					// Close transport first
+					if (connection.transport) {
+						await connection.transport.close()
+					}
+					// Then close client
+					if (connection.client) {
+						await connection.client.close()
+					}
 				}
 			} catch (error) {
 				console.error(`Failed to close transport for ${name}:`, error)
@@ -1186,9 +1198,17 @@ export class McpHub {
 			connection.server.status = "connecting"
 			connection.server.error = ""
 			await this.notifyWebviewOfServerChanges()
-			await delay(500) // artificial delay to show user that server is restarting
+
 			try {
-				await this.deleteConnection(serverName, connection.server.source)
+				// Store the source before deleting
+				const serverSource = connection.server.source || "global"
+
+				// Ensure complete cleanup of the old connection
+				await this.deleteConnection(serverName, serverSource)
+
+				// Wait a bit to ensure cleanup is complete
+				await delay(500)
+
 				// Parse the config to validate it
 				const parsedConfig = JSON.parse(config)
 				try {
@@ -1196,7 +1216,7 @@ export class McpHub {
 					const validatedConfig = this.validateServerConfig(parsedConfig, serverName)
 
 					// Try to connect again using validated config
-					await this.connectToServer(serverName, validatedConfig, connection.server.source || "global")
+					await this.connectToServer(serverName, validatedConfig, serverSource)
 					vscode.window.showInformationMessage(t("mcp:info.server_connected", { serverName }))
 				} catch (validationError) {
 					this.showErrorMessage(`Invalid configuration for MCP server "${serverName}"`, validationError)
