@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import * as path from "path"
 
 export type IndexingState = "Standby" | "Indexing" | "Indexed" | "Error"
 
@@ -78,7 +79,12 @@ export class CodeIndexStateManager {
 		}
 	}
 
-	public reportFileQueueProgress(processedFiles: number, totalFiles: number, currentFileBasename?: string): void {
+	public reportFileQueueProgress(
+		processedFiles: number,
+		totalFiles: number,
+		currentFilePath?: string,
+		packageName?: string,
+	): void {
 		const progressChanged = processedFiles !== this._processedItems || totalFiles !== this._totalItems
 
 		if (progressChanged || this._systemStatus !== "Indexing") {
@@ -89,9 +95,16 @@ export class CodeIndexStateManager {
 
 			let message: string
 			if (totalFiles > 0 && processedFiles < totalFiles) {
-				message = `Processing ${processedFiles} / ${totalFiles} ${this._currentItemUnit}. Current: ${
-					currentFileBasename || "..."
-				}`
+				// Extract file information for display
+				const fileBasename = currentFilePath ? path.basename(currentFilePath) : "..."
+				const packageDisplay = packageName ? `${packageName}` : ""
+				const pathDisplay = currentFilePath ? `${currentFilePath}` : ""
+
+				if (packageName) {
+					message = `Processing ${processedFiles} / ${totalFiles} ${this._currentItemUnit}. Package: ${packageDisplay}, File: ${fileBasename}`
+				} else {
+					message = `Processing ${processedFiles} / ${totalFiles} ${this._currentItemUnit}. Path: ${pathDisplay}`
+				}
 			} else if (totalFiles > 0 && processedFiles === totalFiles) {
 				message = `Finished processing ${totalFiles} ${this._currentItemUnit} from queue.`
 			} else {

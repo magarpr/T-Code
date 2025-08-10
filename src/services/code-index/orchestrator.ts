@@ -45,11 +45,11 @@ export class CodeIndexOrchestrator {
 					if (totalInBatch > 0 && this.stateManager.state !== "Indexing") {
 						this.stateManager.setSystemState("Indexing", "Processing file changes...")
 					}
-					this.stateManager.reportFileQueueProgress(
-						processedInBatch,
-						totalInBatch,
-						currentFile ? path.basename(currentFile) : undefined,
-					)
+
+					// Extract package name from file path if possible
+					let packageName = this.extractPackageName(currentFile)
+
+					this.stateManager.reportFileQueueProgress(processedInBatch, totalInBatch, currentFile, packageName)
 					if (processedInBatch === totalInBatch) {
 						// Covers (N/N) and (0/0)
 						if (totalInBatch > 0) {
@@ -290,5 +290,41 @@ export class CodeIndexOrchestrator {
 	 */
 	public get state(): IndexingState {
 		return this.stateManager.state
+	}
+
+	/**
+	 * Extracts package name from a file path
+	 * @param filePath Path to extract package name from
+	 * @returns Package name if identified, otherwise undefined
+	 */
+	private extractPackageName(filePath?: string): string | undefined {
+		if (!filePath) return undefined
+
+		// Check if path contains node_modules
+		const nodeModulesMatch = filePath.match(/node_modules[\\/\\\\](@[^\\/\\\\]+[\\/\\\\][^\\/\\\\]+|[^\\/\\\\]+)/)
+		if (nodeModulesMatch && nodeModulesMatch[1]) {
+			return nodeModulesMatch[1]
+		}
+
+		// Check if path contains packages directory structure (monorepo)
+		const packagesMatch = filePath.match(/packages[\\/\\\\]([^\\/\\\\]+)/)
+		if (packagesMatch && packagesMatch[1]) {
+			return packagesMatch[1]
+		}
+
+		// Extract npm package name from package.json if close to the file
+		try {
+			const dirPath = path.dirname(filePath)
+
+			// Check if it's part of the src/ directory structure
+			const srcMatch = filePath.match(/src[\\/\\\\]([^\\/\\\\]+)/)
+			if (srcMatch && srcMatch[1]) {
+				return srcMatch[1]
+			}
+		} catch (error) {
+			// Ignore errors in package name extraction
+		}
+
+		return undefined
 	}
 }
