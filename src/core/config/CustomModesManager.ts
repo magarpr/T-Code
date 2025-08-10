@@ -96,8 +96,18 @@ export class CustomModesManager {
 			return undefined
 		}
 
-		const workspaceRoot = getWorkspacePath()
-		const roomodesPath = path.join(workspaceRoot, ROOMODES_FILENAME)
+		// Check if .roo is a workspace folder itself
+		const rooWorkspaceFolder = workspaceFolders.find((folder) => path.basename(folder.uri.fsPath) === ".roo")
+
+		let roomodesPath: string
+		if (rooWorkspaceFolder) {
+			// .roo is a workspace folder itself, look for .roomodes directly in it
+			roomodesPath = path.join(rooWorkspaceFolder.uri.fsPath, ROOMODES_FILENAME.replace(".roo/", ""))
+		} else {
+			// Use the current workspace path (which considers the active file's workspace)
+			const workspaceRoot = getWorkspacePath()
+			roomodesPath = path.join(workspaceRoot, ROOMODES_FILENAME)
+		}
 		const exists = await fileExistsAtPath(roomodesPath)
 		return exists ? roomodesPath : undefined
 	}

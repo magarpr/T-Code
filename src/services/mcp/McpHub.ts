@@ -347,6 +347,20 @@ export class McpHub {
 			return
 		}
 
+		// Watch for mcp.json in all workspace folders
+		for (const workspaceFolder of vscode.workspace.workspaceFolders) {
+			// Check if .roo is a workspace folder itself
+			if (path.basename(workspaceFolder.uri.fsPath) === ".roo") {
+				const projectMcpPattern = new vscode.RelativePattern(workspaceFolder, "mcp.json")
+				this.projectMcpWatcher = vscode.workspace.createFileSystemWatcher(projectMcpPattern)
+			} else {
+				// Watch for .roo/mcp.json in regular workspace folders
+				const projectMcpPattern = new vscode.RelativePattern(workspaceFolder, ".roo/mcp.json")
+				this.projectMcpWatcher = vscode.workspace.createFileSystemWatcher(projectMcpPattern)
+			}
+		}
+
+		// Use the first watcher if multiple were created (for simplicity)
 		const workspaceFolder = vscode.workspace.workspaceFolders[0]
 		const projectMcpPattern = new vscode.RelativePattern(workspaceFolder, ".roo/mcp.json")
 
@@ -553,8 +567,31 @@ export class McpHub {
 			return null
 		}
 
-		const workspaceFolder = vscode.workspace.workspaceFolders[0]
-		const projectMcpDir = path.join(workspaceFolder.uri.fsPath, ".roo")
+		// Check if there's a .roo folder in any workspace folder
+		// First, check if there's a .roo folder that is itself a workspace folder
+		const rooWorkspaceFolder = vscode.workspace.workspaceFolders.find(
+			(folder) => path.basename(folder.uri.fsPath) === ".roo",
+		)
+
+		if (rooWorkspaceFolder) {
+			// .roo is a workspace folder itself
+			const projectMcpPath = path.join(rooWorkspaceFolder.uri.fsPath, "mcp.json")
+			return projectMcpPath
+		}
+
+		// Otherwise, look for .roo subfolder in workspace folders
+		// Prioritize the workspace folder containing the active file
+		const activeFileUri = vscode.window.activeTextEditor?.document.uri
+		let targetWorkspaceFolder = vscode.workspace.workspaceFolders[0]
+
+		if (activeFileUri) {
+			const activeWorkspaceFolder = vscode.workspace.getWorkspaceFolder(activeFileUri)
+			if (activeWorkspaceFolder) {
+				targetWorkspaceFolder = activeWorkspaceFolder
+			}
+		}
+
+		const projectMcpDir = path.join(targetWorkspaceFolder.uri.fsPath, ".roo")
 		const projectMcpPath = path.join(projectMcpDir, "mcp.json")
 
 		try {

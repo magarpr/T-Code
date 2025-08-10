@@ -274,20 +274,41 @@ async function getFileOrFolderContent(
 	maxReadFileLine?: number,
 ): Promise<string> {
 	const unescapedPath = unescapeSpaces(mentionPath)
-	const absPath = path.resolve(cwd, unescapedPath)
+
+	// Check if this is an absolute path from a different workspace folder
+	let absPath: string
+	let displayPath: string = mentionPath
+
+	if (path.isAbsolute(unescapedPath)) {
+		absPath = unescapedPath
+
+		// In multi-folder workspaces, convert absolute paths to relative paths
+		// based on the workspace folder they belong to
+		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
+			const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(absPath))
+			if (workspaceFolder) {
+				// Use relative path from the workspace folder
+				const relativePath = path.relative(workspaceFolder.uri.fsPath, absPath)
+				displayPath = path.join(workspaceFolder.name, relativePath).toPosix()
+			}
+		}
+	} else {
+		absPath = path.resolve(cwd, unescapedPath)
+		displayPath = mentionPath
+	}
 
 	try {
 		const stats = await fs.stat(absPath)
 
 		if (stats.isFile()) {
 			if (rooIgnoreController && !rooIgnoreController.validateAccess(absPath)) {
-				return `(File ${mentionPath} is ignored by .rooignore)`
+				return `(File ${displayPath} is ignored by .rooignore)`
 			}
 			try {
 				const content = await extractTextFromFile(absPath, maxReadFileLine)
 				return content
 			} catch (error) {
-				return `(Failed to read contents of ${mentionPath}): ${error.message}`
+				return `(Failed to read contents of ${displayPath}): ${error.message}`
 			}
 		} else if (stats.isDirectory()) {
 			const entries = await fs.readdir(absPath, { withFileTypes: true })
@@ -315,8 +336,24 @@ async function getFileOrFolderContent(
 				if (entry.isFile()) {
 					folderContent += `${linePrefix}${displayName}\n`
 					if (!isIgnored) {
-						const filePath = path.join(mentionPath, entry.name)
 						const absoluteFilePath = path.resolve(absPath, entry.name)
+
+						// Determine the display path for the file
+						let fileDisplayPath: string
+						if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
+							const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+								vscode.Uri.file(absoluteFilePath),
+							)
+							if (workspaceFolder) {
+								const relativePath = path.relative(workspaceFolder.uri.fsPath, absoluteFilePath)
+								fileDisplayPath = path.join(workspaceFolder.name, relativePath).toPosix()
+							} else {
+								fileDisplayPath = path.join(displayPath, entry.name).toPosix()
+							}
+						} else {
+							fileDisplayPath = path.join(displayPath, entry.name).toPosix()
+						}
+
 						fileContentPromises.push(
 							(async () => {
 								try {
@@ -325,7 +362,7 @@ async function getFileOrFolderContent(
 										return undefined
 									}
 									const content = await extractTextFromFile(absoluteFilePath, maxReadFileLine)
-									return `<file_content path="${filePath.toPosix()}">\n${content}\n</file_content>`
+									return `<file_content path="${fileDisplayPath}">\n${content}\n</file_content>`
 								} catch (error) {
 									return undefined
 								}
@@ -341,10 +378,10 @@ async function getFileOrFolderContent(
 			const fileContents = (await Promise.all(fileContentPromises)).filter((content) => content)
 			return `${folderContent}\n${fileContents.join("\n\n")}`.trim()
 		} else {
-			return `(Failed to read contents of ${mentionPath})`
+			return `(Failed to read contents of ${displayPath})`
 		}
 	} catch (error) {
-		throw new Error(`Failed to access path "${mentionPath}": ${error.message}`)
+		throw new Error(`Failed to access path "${displayPath}": ${error.message}`)
 	}
 }
 

@@ -279,10 +279,23 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.taskId = historyItem ? historyItem.id : crypto.randomUUID()
 
-		// Normal use-case is usually retry similar history task with new workspace.
-		this.workspacePath = parentTask
-			? parentTask.workspacePath
-			: getWorkspacePath(path.join(os.homedir(), "Desktop"))
+		// Store the initial workspace path when the task is created
+		// In multi-folder workspaces, we want to maintain the same workspace context throughout the task
+		if (parentTask) {
+			// Inherit workspace from parent task
+			this.workspacePath = parentTask.workspacePath
+		} else {
+			// Determine workspace based on current context
+			// If there's an active editor, use its workspace folder
+			// Otherwise, use the first workspace folder or fallback to Desktop
+			const currentFileUri = vscode.window.activeTextEditor?.document.uri
+			if (currentFileUri) {
+				const workspaceFolder = vscode.workspace.getWorkspaceFolder(currentFileUri)
+				this.workspacePath = workspaceFolder?.uri.fsPath || getWorkspacePath(path.join(os.homedir(), "Desktop"))
+			} else {
+				this.workspacePath = getWorkspacePath(path.join(os.homedir(), "Desktop"))
+			}
+		}
 
 		this.instanceId = crypto.randomUUID().slice(0, 8)
 		this.taskNumber = -1

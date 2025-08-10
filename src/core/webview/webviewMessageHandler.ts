@@ -800,9 +800,33 @@ export const webviewMessageHandler = async (
 				return
 			}
 
-			const workspaceFolder = vscode.workspace.workspaceFolders[0]
-			const rooDir = path.join(workspaceFolder.uri.fsPath, ".roo")
-			const mcpPath = path.join(rooDir, "mcp.json")
+			// Check if .roo is a workspace folder itself
+			const rooWorkspaceFolder = vscode.workspace.workspaceFolders.find(
+				(folder) => path.basename(folder.uri.fsPath) === ".roo",
+			)
+
+			let rooDir: string
+			let mcpPath: string
+
+			if (rooWorkspaceFolder) {
+				// .roo is a workspace folder itself
+				rooDir = rooWorkspaceFolder.uri.fsPath
+				mcpPath = path.join(rooDir, "mcp.json")
+			} else {
+				// Use the workspace folder of the active file, or fall back to first workspace folder
+				const activeFileUri = vscode.window.activeTextEditor?.document.uri
+				let targetWorkspaceFolder = vscode.workspace.workspaceFolders[0]
+
+				if (activeFileUri) {
+					const activeWorkspaceFolder = vscode.workspace.getWorkspaceFolder(activeFileUri)
+					if (activeWorkspaceFolder) {
+						targetWorkspaceFolder = activeWorkspaceFolder
+					}
+				}
+
+				rooDir = path.join(targetWorkspaceFolder.uri.fsPath, ".roo")
+				mcpPath = path.join(rooDir, "mcp.json")
+			}
 
 			try {
 				await fs.mkdir(rooDir, { recursive: true })
