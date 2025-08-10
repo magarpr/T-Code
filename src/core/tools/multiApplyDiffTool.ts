@@ -656,8 +656,11 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 		let totalSearchBlocks = 0
 		for (const operation of operations) {
 			for (const diffItem of operation.diff) {
-				const searchBlocks = (diffItem.content.match(/<<<<<<< SEARCH/g) || []).length
-				totalSearchBlocks += searchBlocks
+				// Ensure content is a string before calling match
+				if (typeof diffItem.content === "string") {
+					const searchBlocks = (diffItem.content.match(/<<<<<<< SEARCH/g) || []).length
+					totalSearchBlocks += searchBlocks
+				}
 			}
 		}
 
