@@ -204,6 +204,26 @@ export class ClineProvider
 	}
 
 	/**
+	 * Override EventEmitter's on method to match TaskProviderLike interface
+	 */
+	override on<K extends keyof TaskProviderEvents>(
+		event: K,
+		listener: (...args: TaskProviderEvents[K]) => void | Promise<void>,
+	): this {
+		return super.on(event, listener as any)
+	}
+
+	/**
+	 * Override EventEmitter's off method to match TaskProviderLike interface
+	 */
+	override off<K extends keyof TaskProviderEvents>(
+		event: K,
+		listener: (...args: TaskProviderEvents[K]) => void | Promise<void>,
+	): this {
+		return super.off(event, listener as any)
+	}
+
+	/**
 	 * Initialize cloud profile synchronization
 	 */
 	private async initializeCloudProfileSync() {
