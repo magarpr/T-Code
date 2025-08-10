@@ -6,6 +6,7 @@ import { type ModelInfo, geminiDefaultModelId } from "@roo-code/types"
 
 import { t } from "i18next"
 import { GeminiHandler } from "../gemini"
+import { BaseProvider } from "../base-provider"
 
 const GEMINI_20_FLASH_THINKING_NAME = "gemini-2.0-flash-thinking-exp-1219"
 
@@ -246,6 +247,104 @@ describe("GeminiHandler", () => {
 			const incompleteInfo: ModelInfo = { ...mockInfo, outputPrice: undefined }
 			const cost = handler.calculateCost({ info: incompleteInfo, inputTokens: 1000, outputTokens: 1000 })
 			expect(cost).toBeUndefined()
+		})
+	})
+
+	describe("countTokens", () => {
+		const mockContent: Anthropic.Messages.ContentBlockParam[] = [
+			{
+				type: "text",
+				text: "Hello world",
+			},
+		]
+
+		beforeEach(() => {
+			// Add countTokens mock to the client
+			handler["client"].models.countTokens = vitest.fn()
+		})
+
+		it("should return token count from Gemini API when valid", async () => {
+			// Mock successful response with valid totalTokens
+			;(handler["client"].models.countTokens as any).mockResolvedValue({
+				totalTokens: 42,
+			})
+
+			const result = await handler.countTokens(mockContent)
+			expect(result).toBe(42)
+
+			// Verify the API was called correctly
+			expect(handler["client"].models.countTokens).toHaveBeenCalledWith({
+				model: GEMINI_20_FLASH_THINKING_NAME,
+				contents: expect.any(Object),
+			})
+		})
+
+		it("should fall back to base provider when totalTokens is undefined", async () => {
+			// Mock response with undefined totalTokens
+			;(handler["client"].models.countTokens as any).mockResolvedValue({
+				totalTokens: undefined,
+			})
+
+			// Spy on the base provider's countTokens method
+			const baseCountTokensSpy = vitest.spyOn(BaseProvider.prototype, "countTokens")
+			baseCountTokensSpy.mockResolvedValue(100)
+
+			const result = await handler.countTokens(mockContent)
+			expect(result).toBe(100)
+			expect(baseCountTokensSpy).toHaveBeenCalledWith(mockContent)
+		})
+
+		it("should fall back to base provider when totalTokens is null", async () => {
+			// Mock response with null totalTokens
+			;(handler["client"].models.countTokens as any).mockResolvedValue({
+				totalTokens: null,
+			})
+
+			// Spy on the base provider's countTokens method
+			const baseCountTokensSpy = vitest.spyOn(BaseProvider.prototype, "countTokens")
+			baseCountTokensSpy.mockResolvedValue(100)
+
+			const result = await handler.countTokens(mockContent)
+			expect(result).toBe(100)
+			expect(baseCountTokensSpy).toHaveBeenCalledWith(mockContent)
+		})
+
+		it("should fall back to base provider when totalTokens is NaN", async () => {
+			// Mock response with NaN totalTokens
+			;(handler["client"].models.countTokens as any).mockResolvedValue({
+				totalTokens: NaN,
+			})
+
+			// Spy on the base provider's countTokens method
+			const baseCountTokensSpy = vitest.spyOn(BaseProvider.prototype, "countTokens")
+			baseCountTokensSpy.mockResolvedValue(100)
+
+			const result = await handler.countTokens(mockContent)
+			expect(result).toBe(100)
+			expect(baseCountTokensSpy).toHaveBeenCalledWith(mockContent)
+		})
+
+		it("should return 0 when totalTokens is 0", async () => {
+			// Mock response with 0 totalTokens - this should be valid
+			;(handler["client"].models.countTokens as any).mockResolvedValue({
+				totalTokens: 0,
+			})
+
+			const result = await handler.countTokens(mockContent)
+			expect(result).toBe(0)
+		})
+
+		it("should fall back to base provider on API error", async () => {
+			// Mock API error
+			;(handler["client"].models.countTokens as any).mockRejectedValue(new Error("API Error"))
+
+			// Spy on the base provider's countTokens method
+			const baseCountTokensSpy = vitest.spyOn(BaseProvider.prototype, "countTokens")
+			baseCountTokensSpy.mockResolvedValue(100)
+
+			const result = await handler.countTokens(mockContent)
+			expect(result).toBe(100)
+			expect(baseCountTokensSpy).toHaveBeenCalledWith(mockContent)
 		})
 	})
 })
