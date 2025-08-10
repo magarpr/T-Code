@@ -4,7 +4,6 @@ import { execa } from "execa"
 import { ClaudeCodeMessage } from "./types"
 import readline from "readline"
 import { CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS } from "@roo-code/types"
-import * as os from "os"
 import { t } from "../../i18n"
 
 const cwd = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0)
@@ -151,17 +150,10 @@ function runProcess({
 	maxOutputTokens,
 }: ClaudeCodeOptions & { maxOutputTokens?: number }) {
 	const claudePath = path || "claude"
-	const isWindows = os.platform() === "win32"
 
-	// Build args based on platform
-	const args = ["-p"]
-
-	// Pass system prompt as flag on non-Windows, via stdin on Windows (avoids cmd length limits)
-	if (!isWindows) {
-		args.push("--system-prompt", systemPrompt)
-	}
-
-	args.push(
+	// Build args - no longer passing system prompt as command line argument
+	const args = [
+		"-p",
 		"--verbose",
 		"--output-format",
 		"stream-json",
@@ -170,7 +162,7 @@ function runProcess({
 		// Roo Code will handle recursive calls
 		"--max-turns",
 		"1",
-	)
+	]
 
 	if (modelId) {
 		args.push("--model", modelId)
@@ -193,17 +185,12 @@ function runProcess({
 		timeout: CLAUDE_CODE_TIMEOUT,
 	})
 
-	// Prepare stdin data: Windows gets both system prompt & messages (avoids 8191 char limit),
-	// other platforms get messages only (avoids Linux E2BIG error from ~128KiB execve limit)
-	let stdinData: string
-	if (isWindows) {
-		stdinData = JSON.stringify({
-			systemPrompt,
-			messages,
-		})
-	} else {
-		stdinData = JSON.stringify(messages)
-	}
+	// Always pass both system prompt and messages via stdin to avoid E2BIG errors
+	// This prevents command line argument length limits on all platforms
+	const stdinData = JSON.stringify({
+		systemPrompt,
+		messages,
+	})
 
 	// Use setImmediate to ensure process is spawned before writing (prevents stdin race conditions)
 	setImmediate(() => {
