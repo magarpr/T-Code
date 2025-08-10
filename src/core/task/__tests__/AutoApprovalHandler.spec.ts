@@ -183,17 +183,67 @@ describe("AutoApprovalHandler", () => {
 			expect(result3.requiresApproval).toBe(true)
 		})
 
-		it("should not reset cost to zero on approval", async () => {
+		it("should reset cost tracking on approval", async () => {
+			const messages: ClineMessage[] = [
+				{ type: "say", say: "api_req_started", text: '{"cost": 3.0}', ts: 1000 },
+				{ type: "say", say: "api_req_started", text: '{"cost": 3.0}', ts: 2000 },
+			]
+
+			// First check - cost exceeds limit (6.0 > 5.0)
+			mockGetApiMetrics.mockReturnValue({ totalCost: 6.0 })
+			mockAskForApproval.mockResolvedValue({ response: "yesButtonClicked" })
+
+			const result1 = await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
+			expect(result1.shouldProceed).toBe(true)
+			expect(result1.requiresApproval).toBe(true)
+
+			// Add more messages after reset
+			messages.push(
+				{ type: "say", say: "api_req_started", text: '{"cost": 2.0}', ts: 3000 },
+				{ type: "say", say: "api_req_started", text: '{"cost": 1.0}', ts: 4000 },
+			)
+
+			// Second check - should only count messages after reset (3.0 < 5.0)
+			mockGetApiMetrics.mockReturnValue({ totalCost: 3.0 })
+			const result2 = await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
+
+			// Should not require approval since cost after reset is under limit
+			expect(result2.shouldProceed).toBe(true)
+			expect(result2.requiresApproval).toBe(false)
+
+			// Verify it's only calculating cost from messages after reset point
+			expect(mockGetApiMetrics).toHaveBeenLastCalledWith(messages.slice(2))
+		})
+
+		it("should track multiple cost resets correctly", async () => {
 			const messages: ClineMessage[] = []
 
+			// First cost limit hit
+			messages.push({ type: "say", say: "api_req_started", text: '{"cost": 6.0}', ts: 1000 })
 			mockGetApiMetrics.mockReturnValue({ totalCost: 6.0 })
 			mockAskForApproval.mockResolvedValue({ response: "yesButtonClicked" })
 
 			await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
 
-			// Cost should still be calculated from messages, not reset
-			const state = handler.getApprovalState()
-			expect(state.currentCost).toBe(6.0)
+			// Add more messages
+			messages.push(
+				{ type: "say", say: "api_req_started", text: '{"cost": 3.0}', ts: 2000 },
+				{ type: "say", say: "api_req_started", text: '{"cost": 3.0}', ts: 3000 },
+			)
+
+			// Second cost limit hit (only counting from index 1)
+			mockGetApiMetrics.mockReturnValue({ totalCost: 6.0 })
+			await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
+
+			// Add more messages after second reset
+			messages.push({ type: "say", say: "api_req_started", text: '{"cost": 2.0}', ts: 4000 })
+
+			// Third check - should only count from last reset
+			mockGetApiMetrics.mockReturnValue({ totalCost: 2.0 })
+			const result = await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
+
+			expect(result.requiresApproval).toBe(false)
+			expect(mockGetApiMetrics).toHaveBeenLastCalledWith(messages.slice(3))
 		})
 	})
 

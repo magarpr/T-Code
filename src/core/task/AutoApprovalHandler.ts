@@ -12,6 +12,7 @@ export interface AutoApprovalResult {
 export class AutoApprovalHandler {
 	private consecutiveAutoApprovedRequestsCount: number = 0
 	private consecutiveAutoApprovedCost: number = 0
+	private costResetMessageIndex: number = 0
 
 	/**
 	 * Check if auto-approval limits have been reached and handle user approval if needed
@@ -91,8 +92,9 @@ export class AutoApprovalHandler {
 	): Promise<AutoApprovalResult> {
 		const maxCost = state?.allowedMaxCost || Infinity
 
-		// Calculate total cost from messages
-		this.consecutiveAutoApprovedCost = getApiMetrics(messages).totalCost
+		// Calculate total cost from messages after the last reset point
+		const messagesAfterReset = messages.slice(this.costResetMessageIndex)
+		this.consecutiveAutoApprovedCost = getApiMetrics(messagesAfterReset).totalCost
 
 		// Use epsilon for floating-point comparison to avoid precision issues
 		const EPSILON = 0.0001
@@ -104,8 +106,9 @@ export class AutoApprovalHandler {
 
 			// If we get past the promise, it means the user approved and did not start a new task
 			if (response === "yesButtonClicked") {
-				// Note: We don't reset the cost to 0 here because the actual cost
-				// is calculated from the messages. This is different from the request count.
+				// Reset the cost tracking by recording the current message count
+				// Future cost calculations will only include messages after this point
+				this.costResetMessageIndex = messages.length
 				return {
 					shouldProceed: true,
 					requiresApproval: true,
@@ -126,10 +129,11 @@ export class AutoApprovalHandler {
 	}
 
 	/**
-	 * Reset the request counter (typically called when starting a new task)
+	 * Reset the request counter and cost tracking (typically called when starting a new task)
 	 */
 	resetRequestCount(): void {
 		this.consecutiveAutoApprovedRequestsCount = 0
+		this.costResetMessageIndex = 0
 	}
 
 	/**
