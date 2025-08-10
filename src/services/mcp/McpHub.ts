@@ -903,6 +903,48 @@ export class McpHub {
 			(conn) => conn.server.name === serverName && (conn.server.source === "global" || !conn.server.source),
 		)
 	}
+	/**
+	 * Wait until a server connection is fully ready (client connected and status updated).
+	 * Guards against race conditions where a tool/resource call arrives before initial connect completes.
+	 */
+	private async waitForServerReady(
+		serverName: string,
+		source?: "global" | "project",
+		timeoutMs: number = 10000,
+	): Promise<ConnectedMcpConnection> {
+		// Immediately error if there's no connected-type connection to wait on (preserves legacy error for tests/UX)
+		const initial = this.findConnection(serverName, source)
+		const notFoundMsg = `No connection found for server: ${serverName}${source ? ` with source ${source}` : ""}`
+		if (!initial || initial.type !== "connected") {
+			throw new Error(notFoundMsg)
+		}
+
+		// If we have a connected-type connection but it's still "connecting", wait briefly for readiness.
+		const start = Date.now()
+		while (Date.now() - start < timeoutMs) {
+			const connection = this.findConnection(serverName, source)
+			if (connection && connection.type === "connected" && connection.server.status === "connected") {
+				return connection
+			}
+			await delay(50)
+		}
+		const conn = this.findConnection(serverName, source)
+		const status = conn?.type === "connected" ? conn.server.status : "disconnected"
+		throw new Error(`MCP server "${serverName}" is not ready (status: ${status}). Try again in a moment.`)
+	}
+
+	/**
+	 * Detect transient connection-closed errors from MCP transport to allow a single retry.
+	 */
+	private isTransientClosedError(error: unknown): boolean {
+		const code = (error as any)?.code
+		const msg = error instanceof Error ? error.message : String(error)
+		if (typeof code === "number" && code === -32000) return true
+		if (typeof code === "string" && /-?32000/.test(code)) return true
+		return /connection closed|closed before|socket hang up|ECONNRESET|EPIPE|ERR_STREAM_PREMATURE_CLOSE/i.test(
+			msg || "",
+		)
+	}
 
 	private async fetchToolsList(serverName: string, source?: "global" | "project"): Promise<McpTool[]> {
 		try {
@@ -1559,22 +1601,31 @@ export class McpHub {
 	}
 
 	async readResource(serverName: string, uri: string, source?: "global" | "project"): Promise<McpResourceResponse> {
-		const connection = this.findConnection(serverName, source)
-		if (!connection || connection.type !== "connected") {
-			throw new Error(`No connection found for server: ${serverName}${source ? ` with source ${source}` : ""}`)
-		}
+		let connection = await this.waitForServerReady(serverName, source)
 		if (connection.server.disabled) {
 			throw new Error(`Server "${serverName}" is disabled`)
 		}
-		return await connection.client.request(
-			{
-				method: "resources/read",
-				params: {
-					uri,
+
+		const doRequest = async () =>
+			connection.client.request(
+				{
+					method: "resources/read",
+					params: { uri },
 				},
-			},
-			ReadResourceResultSchema,
-		)
+				ReadResourceResultSchema,
+			)
+
+		try {
+			return await doRequest()
+		} catch (error) {
+			// Handle initial transient "Connection closed" on first invocation after install/start
+			if (this.isTransientClosedError(error)) {
+				await delay(200)
+				connection = await this.waitForServerReady(serverName, source)
+				return await doRequest()
+			}
+			throw error
+		}
 	}
 
 	async callTool(
@@ -1583,12 +1634,7 @@ export class McpHub {
 		toolArguments?: Record<string, unknown>,
 		source?: "global" | "project",
 	): Promise<McpToolCallResponse> {
-		const connection = this.findConnection(serverName, source)
-		if (!connection || connection.type !== "connected") {
-			throw new Error(
-				`No connection found for server: ${serverName}${source ? ` with source ${source}` : ""}. Please make sure to use MCP servers available under 'Connected MCP Servers'.`,
-			)
-		}
+		let connection = await this.waitForServerReady(serverName, source)
 		if (connection.server.disabled) {
 			throw new Error(`Server "${serverName}" is disabled and cannot be used`)
 		}
@@ -1599,23 +1645,33 @@ export class McpHub {
 			timeout = (parsedConfig.timeout ?? 60) * 1000
 		} catch (error) {
 			console.error("Failed to parse server config for timeout:", error)
-			// Default to 60 seconds if parsing fails
 			timeout = 60 * 1000
 		}
 
-		return await connection.client.request(
-			{
-				method: "tools/call",
-				params: {
-					name: toolName,
-					arguments: toolArguments,
+		const doRequest = async () =>
+			connection.client.request(
+				{
+					method: "tools/call",
+					params: {
+						name: toolName,
+						arguments: toolArguments,
+					},
 				},
-			},
-			CallToolResultSchema,
-			{
-				timeout,
-			},
-		)
+				CallToolResultSchema,
+				{ timeout },
+			)
+
+		try {
+			return await doRequest()
+		} catch (error) {
+			// Handle initial transient "Connection closed" that can happen on the very first call
+			if (this.isTransientClosedError(error)) {
+				await delay(200)
+				connection = await this.waitForServerReady(serverName, source)
+				return await doRequest()
+			}
+			throw error
+		}
 	}
 
 	/**
