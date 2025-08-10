@@ -12,9 +12,62 @@ const mockCreate = vitest.fn()
 
 vitest.mock("openai", () => {
 	const mockConstructor = vitest.fn()
+	const mockAzureConstructor = vitest.fn()
 	return {
 		__esModule: true,
 		default: mockConstructor.mockImplementation(() => ({
+			chat: {
+				completions: {
+					create: mockCreate.mockImplementation(async (options) => {
+						if (!options.stream) {
+							return {
+								id: "test-completion",
+								choices: [
+									{
+										message: { role: "assistant", content: "Test response", refusal: null },
+										finish_reason: "stop",
+										index: 0,
+									},
+								],
+								usage: {
+									prompt_tokens: 10,
+									completion_tokens: 5,
+									total_tokens: 15,
+								},
+							}
+						}
+
+						return {
+							[Symbol.asyncIterator]: async function* () {
+								yield {
+									choices: [
+										{
+											delta: { content: "Test response" },
+											index: 0,
+										},
+									],
+									usage: null,
+								}
+								yield {
+									choices: [
+										{
+											delta: {},
+											index: 0,
+										},
+									],
+									usage: {
+										prompt_tokens: 10,
+										completion_tokens: 5,
+										total_tokens: 15,
+									},
+								}
+							},
+						}
+					}),
+				},
+			},
+		})),
+		AzureOpenAI: mockAzureConstructor.mockImplementation(() => ({
 			chat: {
 				completions: {
 					create: mockCreate.mockImplementation(async (options) => {
@@ -781,6 +834,166 @@ describe("OpenAiHandler", () => {
 				}),
 				{ path: "/models/chat/completions" },
 			)
+		})
+	})
+
+	describe("GPT-5 Azure Support", () => {
+		it("should use responses API for GPT-5 models on Azure", async () => {
+			// Mock fetch for responses API
+			const mockFetch = vitest.fn().mockResolvedValue({
+				ok: true,
+				body: {
+					getReader: () => ({
+						read: vitest
+							.fn()
+							.mockResolvedValueOnce({
+								done: false,
+								value: new TextEncoder().encode(
+									'data: {"type":"response.text.delta","delta":"Hello"}\n\n',
+								),
+							})
+							.mockResolvedValueOnce({
+								done: false,
+								value: new TextEncoder().encode(
+									'data: {"type":"response.done","response":{"usage":{"input_tokens":10,"output_tokens":5}}}\n\n',
+								),
+							})
+							.mockResolvedValueOnce({ done: true }),
+						releaseLock: vitest.fn(),
+					}),
+				},
+			})
+			global.fetch = mockFetch
+
+			const gpt5Handler = new OpenAiHandler({
+				...mockOptions,
+				openAiModelId: "gpt-5",
+				openAiUseAzure: true,
+				openAiBaseUrl: "https://test-resource.openai.azure.com/openai/responses",
+				azureApiVersion: "2025-04-01-preview",
+				reasoningEffort: "high",
+				modelTemperature: 1,
+			})
+
+			const systemPrompt = "You are a helpful assistant."
+			const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Hello!" }]
+
+			const stream = gpt5Handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Verify fetch was called with correct URL and body
+			expect(mockFetch).toHaveBeenCalledWith(
+				"https://test-resource.openai.azure.com/openai/responses",
+				expect.objectContaining({
+					method: "POST",
+					headers: expect.objectContaining({
+						"Content-Type": "application/json",
+						"api-key": "test-api-key",
+						Accept: "text/event-stream",
+					}),
+					body: expect.stringContaining(
+						'"input":"Developer: You are a helpful assistant.\\n\\nUser: Hello!"',
+					),
+				}),
+			)
+
+			// Verify the request body contains GPT-5 specific parameters
+			const requestBody = JSON.parse((mockFetch.mock.calls[0][1] as any).body)
+			expect(requestBody.model).toBe("gpt-5")
+			expect(requestBody.input).toContain("Developer: You are a helpful assistant")
+			expect(requestBody.input).toContain("User: Hello!")
+			expect(requestBody.reasoning?.effort).toBe("high")
+			expect(requestBody.temperature).toBe(1)
+			expect(requestBody.stream).toBe(true)
+
+			// Verify response chunks
+			expect(chunks).toHaveLength(2)
+			expect(chunks[0]).toEqual({ type: "text", text: "Hello" })
+			expect(chunks[1]).toMatchObject({
+				type: "usage",
+				inputTokens: 10,
+				outputTokens: 5,
+			})
+		})
+
+		afterEach(() => {
+			// Clear the global fetch mock after each test
+			delete (global as any).fetch
+		})
+
+		it("should handle GPT-5 models with minimal reasoning effort", async () => {
+			// Mock fetch for responses API
+			const mockFetch = vitest.fn().mockResolvedValue({
+				ok: true,
+				body: {
+					getReader: () => ({
+						read: vitest
+							.fn()
+							.mockResolvedValueOnce({
+								done: false,
+								value: new TextEncoder().encode(
+									'data: {"type":"response.text.delta","delta":"Test"}\n\n',
+								),
+							})
+							.mockResolvedValueOnce({ done: true }),
+						releaseLock: vitest.fn(),
+					}),
+				},
+			})
+			global.fetch = mockFetch
+
+			const gpt5Handler = new OpenAiHandler({
+				...mockOptions,
+				openAiModelId: "gpt-5-mini",
+				openAiUseAzure: true,
+				openAiBaseUrl: "https://test-resource.openai.azure.com/openai/responses",
+				reasoningEffort: "minimal",
+			})
+
+			const systemPrompt = "Test"
+			const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test" }]
+
+			const stream = gpt5Handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Verify minimal reasoning effort is set
+			const requestBody = JSON.parse((mockFetch.mock.calls[0][1] as any).body)
+			expect(requestBody.reasoning?.effort).toBe("minimal")
+		})
+
+		it("should not use responses API for GPT-5 models when not on Azure", async () => {
+			// Clear any previous fetch mock
+			delete (global as any).fetch
+
+			const gpt5Handler = new OpenAiHandler({
+				...mockOptions,
+				openAiModelId: "gpt-5",
+				openAiUseAzure: false, // Not using Azure
+				openAiBaseUrl: "https://api.openai.com/v1",
+			})
+
+			// This should use the regular chat completions API
+			const systemPrompt = "You are a helpful assistant."
+			const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Hello!" }]
+
+			const stream = gpt5Handler.createMessage(systemPrompt, messages)
+			const chunks: any[] = []
+
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			// Should call the OpenAI client's chat.completions.create, not fetch
+			expect(mockCreate).toHaveBeenCalled()
+			expect(global.fetch).toBeUndefined()
 		})
 	})
 })

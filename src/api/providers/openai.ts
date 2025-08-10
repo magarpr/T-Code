@@ -8,6 +8,9 @@ import {
 	openAiModelInfoSaneDefaults,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
 	OPENAI_AZURE_AI_INFERENCE_PATH,
+	type ReasoningEffortWithMinimal,
+	type VerbosityLevel,
+	GPT5_DEFAULT_TEMPERATURE,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -85,6 +88,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		const isAzureAiInference = this._isAzureAiInference(modelUrl)
 		const deepseekReasoner = modelId.includes("deepseek-reasoner") || enabledR1Format
 		const ark = modelUrl.includes(".volces.com")
+
+		// Check if this is a GPT-5 model on Azure that needs the responses API
+		if (this.isGpt5Model(modelId) && this.options.openAiUseAzure) {
+			yield* this.handleGpt5ResponsesAPI(modelId, systemPrompt, messages, metadata)
+			return
+		}
 
 		if (modelId.includes("o1") || modelId.includes("o3") || modelId.includes("o4")) {
 			yield* this.handleO3FamilyMessage(modelId, systemPrompt, messages)
@@ -240,8 +249,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 	protected processUsageMetrics(usage: any, _modelInfo?: ModelInfo): ApiStreamUsageChunk {
 		return {
 			type: "usage",
-			inputTokens: usage?.prompt_tokens || 0,
-			outputTokens: usage?.completion_tokens || 0,
+			inputTokens: usage?.input_tokens || usage?.prompt_tokens || 0,
+			outputTokens: usage?.output_tokens || usage?.completion_tokens || 0,
 			cacheWriteTokens: usage?.cache_creation_input_tokens || undefined,
 			cacheReadTokens: usage?.cache_read_input_tokens || undefined,
 		}
@@ -406,6 +415,286 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// Use user-configured modelMaxTokens if available, otherwise fall back to model's default maxTokens
 			// Using max_completion_tokens as max_tokens is deprecated
 			requestOptions.max_completion_tokens = this.options.modelMaxTokens || modelInfo.maxTokens
+		}
+	}
+
+	/**
+	 * Checks if the model ID is a GPT-5 model
+	 */
+	private isGpt5Model(modelId: string): boolean {
+		return modelId.startsWith("gpt-5") || modelId.toLowerCase().startsWith("gpt-5")
+	}
+
+	/**
+	 * Handles GPT-5 models using the Azure responses API format
+	 */
+	private async *handleGpt5ResponsesAPI(
+		modelId: string,
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata,
+	): ApiStream {
+		const apiKey = this.options.openAiApiKey ?? "not-provided"
+		const baseUrl = this.options.openAiBaseUrl ?? ""
+
+		// Extract the base URL without the path for Azure endpoints
+		// Azure URLs typically look like: https://<resource>.openai.azure.com/openai/responses?api-version=...
+		const urlParts = baseUrl.match(/^(https?:\/\/[^\/]+)(\/.*)?$/)
+		const azureBaseUrl = urlParts ? urlParts[1] : baseUrl
+		const responsesUrl = `${azureBaseUrl}/openai/responses`
+
+		// Format the input for the responses API
+		const formattedInput = this.formatInputForResponsesAPI(systemPrompt, messages)
+
+		// Get model parameters
+		const { info: modelInfo, reasoning, verbosity } = this.getModel()
+		const reasoningEffort = this.getGpt5ReasoningEffort(reasoning)
+
+		// Build request body for GPT-5 responses API
+		const requestBody: any = {
+			model: modelId,
+			input: formattedInput,
+			stream: true,
+			temperature: this.options.modelTemperature ?? GPT5_DEFAULT_TEMPERATURE,
+		}
+
+		// Add reasoning effort if configured
+		if (reasoningEffort) {
+			requestBody.reasoning = {
+				effort: reasoningEffort,
+			}
+			// Add reasoning summary if enabled
+			if (this.options.enableGpt5ReasoningSummary !== false) {
+				requestBody.reasoning.summary = "auto"
+			}
+		}
+
+		// Add verbosity if configured
+		if (verbosity) {
+			requestBody.text = { verbosity: verbosity }
+		}
+
+		// Add max_output_tokens if configured
+		if (modelInfo.maxTokens) {
+			requestBody.max_output_tokens = modelInfo.maxTokens
+		}
+
+		try {
+			const response = await fetch(responsesUrl, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"api-key": apiKey,
+					Accept: "text/event-stream",
+				},
+				body: JSON.stringify(requestBody),
+			})
+
+			if (!response.ok) {
+				const errorText = await response.text()
+				let errorMessage = `GPT-5 API request failed (${response.status})`
+
+				try {
+					const errorJson = JSON.parse(errorText)
+					if (errorJson.error?.message) {
+						errorMessage += `: ${errorJson.error.message}`
+					}
+				} catch {
+					errorMessage += `: ${errorText}`
+				}
+
+				throw new Error(errorMessage)
+			}
+
+			if (!response.body) {
+				throw new Error("GPT-5 Responses API error: No response body")
+			}
+
+			// Handle streaming response
+			yield* this.handleGpt5StreamResponse(response.body, modelInfo)
+		} catch (error) {
+			if (error instanceof Error) {
+				throw error
+			}
+			throw new Error("Unexpected error connecting to GPT-5 API")
+		}
+	}
+
+	/**
+	 * Formats the conversation for the GPT-5 responses API input field
+	 */
+	private formatInputForResponsesAPI(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): string {
+		// Use Developer role format for GPT-5 (consistent with OpenAI Native implementation)
+		let formattedInput = `Developer: ${systemPrompt}\n\n`
+
+		for (const message of messages) {
+			const role = message.role === "user" ? "User" : "Assistant"
+
+			// Handle text content
+			if (typeof message.content === "string") {
+				formattedInput += `${role}: ${message.content}\n\n`
+			} else if (Array.isArray(message.content)) {
+				// Handle content blocks
+				const textContent = message.content
+					.filter((block) => block.type === "text")
+					.map((block) => (block as any).text)
+					.join("\n")
+				if (textContent) {
+					formattedInput += `${role}: ${textContent}\n\n`
+				}
+			}
+		}
+
+		return formattedInput.trim()
+	}
+
+	/**
+	 * Gets the GPT-5 reasoning effort from model configuration
+	 */
+	private getGpt5ReasoningEffort(reasoning: any): ReasoningEffortWithMinimal | undefined {
+		if (reasoning && "reasoning_effort" in reasoning) {
+			const effort = reasoning.reasoning_effort as string
+			if (effort === "minimal" || effort === "low" || effort === "medium" || effort === "high") {
+				return effort as ReasoningEffortWithMinimal
+			}
+		}
+
+		// Check if reasoning effort is in options
+		const effort = this.options.reasoningEffort
+		if (effort === "minimal" || effort === "low" || effort === "medium" || effort === "high") {
+			return effort as ReasoningEffortWithMinimal
+		}
+
+		return undefined
+	}
+
+	/**
+	 * Handles the streaming response from the GPT-5 Responses API
+	 */
+	private async *handleGpt5StreamResponse(body: ReadableStream<Uint8Array>, modelInfo: ModelInfo): ApiStream {
+		const reader = body.getReader()
+		const decoder = new TextDecoder()
+		let buffer = ""
+		let hasContent = false
+
+		try {
+			while (true) {
+				const { done, value } = await reader.read()
+				if (done) break
+
+				buffer += decoder.decode(value, { stream: true })
+				const lines = buffer.split("\n")
+				buffer = lines.pop() || ""
+
+				for (const line of lines) {
+					if (line.startsWith("data: ")) {
+						const data = line.slice(6).trim()
+						if (data === "[DONE]") {
+							continue
+						}
+
+						try {
+							const parsed = JSON.parse(data)
+
+							// Handle text delta events
+							if (parsed.type === "response.text.delta" || parsed.type === "response.output_text.delta") {
+								if (parsed.delta) {
+									hasContent = true
+									yield {
+										type: "text",
+										text: parsed.delta,
+									}
+								}
+							}
+							// Handle reasoning delta events
+							else if (
+								parsed.type === "response.reasoning.delta" ||
+								parsed.type === "response.reasoning_text.delta" ||
+								parsed.type === "response.reasoning_summary.delta" ||
+								parsed.type === "response.reasoning_summary_text.delta"
+							) {
+								if (parsed.delta) {
+									hasContent = true
+									yield {
+										type: "reasoning",
+										text: parsed.delta,
+									}
+								}
+							}
+							// Handle refusal delta events
+							else if (parsed.type === "response.refusal.delta") {
+								if (parsed.delta) {
+									hasContent = true
+									yield {
+										type: "text",
+										text: `[Refusal] ${parsed.delta}`,
+									}
+								}
+							}
+							// Handle output item events
+							else if (parsed.type === "response.output_item.added") {
+								if (parsed.item) {
+									if (parsed.item.type === "text" && parsed.item.text) {
+										hasContent = true
+										yield { type: "text", text: parsed.item.text }
+									} else if (parsed.item.type === "reasoning" && parsed.item.text) {
+										hasContent = true
+										yield { type: "reasoning", text: parsed.item.text }
+									}
+								}
+							}
+							// Handle completion events with usage
+							else if (parsed.type === "response.done" || parsed.type === "response.completed") {
+								if (parsed.response?.usage || parsed.usage) {
+									const usage = parsed.response?.usage || parsed.usage
+									yield this.processUsageMetrics(usage, modelInfo)
+								}
+							}
+							// Handle complete response in initial event
+							else if (
+								parsed.response &&
+								parsed.response.output &&
+								Array.isArray(parsed.response.output)
+							) {
+								for (const outputItem of parsed.response.output) {
+									if (outputItem.type === "text" && outputItem.content) {
+										for (const content of outputItem.content) {
+											if (content.type === "text" && content.text) {
+												hasContent = true
+												yield {
+													type: "text",
+													text: content.text,
+												}
+											}
+										}
+									}
+								}
+								// Check for usage in the complete response
+								if (parsed.response.usage) {
+									yield this.processUsageMetrics(parsed.response.usage, modelInfo)
+								}
+							}
+							// Handle error events
+							else if (parsed.type === "response.error" || parsed.type === "error") {
+								if (parsed.error || parsed.message) {
+									throw new Error(
+										`GPT-5 API error: ${parsed.error?.message || parsed.message || "Unknown error"}`,
+									)
+								}
+							}
+						} catch (e) {
+							// Silently ignore parsing errors for non-critical SSE data
+						}
+					}
+				}
+			}
+		} catch (error) {
+			if (error instanceof Error) {
+				throw new Error(`Error processing GPT-5 response stream: ${error.message}`)
+			}
+			throw new Error("Unexpected error processing GPT-5 response stream")
+		} finally {
+			reader.releaseLock()
 		}
 	}
 }
