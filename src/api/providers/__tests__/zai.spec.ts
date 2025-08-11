@@ -193,7 +193,6 @@ describe("ZAiHandler", () => {
 
 		it("createMessage should pass correct parameters to Z AI client", async () => {
 			const modelId: InternationalZAiModelId = "glm-4.5"
-			const modelInfo = internationalZAiModels[modelId]
 			const handlerWithModel = new ZAiHandler({
 				apiModelId: modelId,
 				zaiApiKey: "test-zai-api-key",
@@ -216,14 +215,159 @@ describe("ZAiHandler", () => {
 			const messageGenerator = handlerWithModel.createMessage(systemPrompt, messages)
 			await messageGenerator.next()
 
+			// For GLM-4.5, expect enhanced system prompt and adjusted parameters
 			expect(mockCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
 					model: modelId,
-					max_tokens: modelInfo.maxTokens,
+					max_tokens: 32768, // Adjusted for GLM models
 					temperature: ZAI_DEFAULT_TEMPERATURE,
-					messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+					messages: expect.arrayContaining([
+						{
+							role: "system",
+							content: expect.stringContaining(systemPrompt), // Contains original prompt plus enhancements
+						},
+					]),
 					stream: true,
 					stream_options: { include_usage: true },
+					top_p: 0.95,
+					frequency_penalty: 0.1,
+					presence_penalty: 0.1,
+				}),
+			)
+		})
+
+		it("should enhance system prompt for GLM-4.5 models", async () => {
+			const modelId: InternationalZAiModelId = "glm-4.5"
+			const handlerWithGLM = new ZAiHandler({
+				apiModelId: modelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const systemPrompt = "Test system prompt"
+			const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message" }]
+
+			const messageGenerator = handlerWithGLM.createMessage(systemPrompt, messages)
+			await messageGenerator.next()
+
+			// Check that the system prompt was enhanced with GLM-specific instructions
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					messages: expect.arrayContaining([
+						{
+							role: "system",
+							content: expect.stringContaining("CRITICAL INSTRUCTIONS FOR GLM MODEL"),
+						},
+					]),
+				}),
+			)
+		})
+
+		it("should apply max token adjustment for GLM-4.5 models", async () => {
+			const modelId: InternationalZAiModelId = "glm-4.5"
+			const handlerWithGLM = new ZAiHandler({
+				apiModelId: modelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithGLM.createMessage("system", [])
+			await messageGenerator.next()
+
+			// Check that max_tokens is capped at 32768 for GLM models
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					max_tokens: 32768,
+					top_p: 0.95,
+					frequency_penalty: 0.1,
+					presence_penalty: 0.1,
+				}),
+			)
+		})
+
+		it("should enhance prompt in completePrompt for GLM-4.5 models", async () => {
+			const modelId: InternationalZAiModelId = "glm-4.5"
+			const handlerWithGLM = new ZAiHandler({
+				apiModelId: modelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international",
+			})
+
+			const expectedResponse = "Test response"
+			mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: expectedResponse } }] })
+
+			const testPrompt = "Test prompt"
+			await handlerWithGLM.completePrompt(testPrompt)
+
+			// Check that the prompt was enhanced with GLM-specific prefix
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					messages: [
+						{
+							role: "user",
+							content: expect.stringContaining(
+								"[INSTRUCTION] Please provide a direct and accurate response",
+							),
+						},
+					],
+					temperature: ZAI_DEFAULT_TEMPERATURE,
+					max_tokens: 4096,
+				}),
+			)
+		})
+
+		it("should handle GLM-4.5-air model correctly", async () => {
+			const modelId: InternationalZAiModelId = "glm-4.5-air"
+			const handlerWithGLMAir = new ZAiHandler({
+				apiModelId: modelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const messageGenerator = handlerWithGLMAir.createMessage("system", [])
+			await messageGenerator.next()
+
+			// Should apply GLM enhancements for glm-4.5-air as well
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: modelId,
+					max_tokens: 32768,
+					messages: expect.arrayContaining([
+						{
+							role: "system",
+							content: expect.stringContaining("CRITICAL INSTRUCTIONS FOR GLM MODEL"),
+						},
+					]),
 				}),
 			)
 		})
