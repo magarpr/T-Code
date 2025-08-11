@@ -325,10 +325,51 @@ describe("ChutesHandler", () => {
 		)
 	})
 
-	it("createMessage should pass correct parameters to Chutes client for non-DeepSeek models", async () => {
+	it("createMessage should not include max_tokens by default for non-DeepSeek models", async () => {
+		const modelId: ChutesModelId = "unsloth/Llama-3.3-70B-Instruct"
+		const handlerWithModel = new ChutesHandler({ apiModelId: modelId, chutesApiKey: "test-chutes-api-key" })
+
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}
+		})
+
+		const systemPrompt = "Test system prompt for Chutes"
+		const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message for Chutes" }]
+
+		const messageGenerator = handlerWithModel.createMessage(systemPrompt, messages)
+		await messageGenerator.next()
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: modelId,
+				temperature: 0.5,
+				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+				stream: true,
+				stream_options: { include_usage: true },
+			}),
+		)
+		// Verify max_tokens is NOT included
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.not.objectContaining({
+				max_tokens: expect.anything(),
+			}),
+		)
+	})
+
+	it("createMessage should include max_tokens when includeMaxTokens is true for non-DeepSeek models", async () => {
 		const modelId: ChutesModelId = "unsloth/Llama-3.3-70B-Instruct"
 		const modelInfo = chutesModels[modelId]
-		const handlerWithModel = new ChutesHandler({ apiModelId: modelId, chutesApiKey: "test-chutes-api-key" })
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: modelId,
+			chutesApiKey: "test-chutes-api-key",
+			includeMaxTokens: true,
+		})
 
 		mockCreate.mockImplementationOnce(() => {
 			return {

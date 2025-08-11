@@ -111,9 +111,8 @@ describe("GroqHandler", () => {
 		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
 	})
 
-	it("createMessage should pass correct parameters to Groq client", async () => {
+	it("createMessage should not include max_tokens by default", async () => {
 		const modelId: GroqModelId = "llama-3.1-8b-instant"
-		const modelInfo = groqModels[modelId]
 		const handlerWithModel = new GroqHandler({ apiModelId: modelId, groqApiKey: "test-groq-api-key" })
 
 		mockCreate.mockImplementationOnce(() => {
@@ -135,7 +134,87 @@ describe("GroqHandler", () => {
 		expect(mockCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				model: modelId,
+				temperature: 0.5,
+				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+				stream: true,
+				stream_options: { include_usage: true },
+			}),
+		)
+		// Verify max_tokens is NOT included
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.not.objectContaining({
+				max_tokens: expect.anything(),
+			}),
+		)
+	})
+
+	it("createMessage should include max_tokens when includeMaxTokens is true", async () => {
+		const modelId: GroqModelId = "llama-3.1-8b-instant"
+		const modelInfo = groqModels[modelId]
+		const handlerWithModel = new GroqHandler({
+			apiModelId: modelId,
+			groqApiKey: "test-groq-api-key",
+			includeMaxTokens: true,
+		})
+
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}
+		})
+
+		const systemPrompt = "Test system prompt for Groq"
+		const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message for Groq" }]
+
+		const messageGenerator = handlerWithModel.createMessage(systemPrompt, messages)
+		await messageGenerator.next()
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: modelId,
 				max_tokens: modelInfo.maxTokens,
+				temperature: 0.5,
+				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+				stream: true,
+				stream_options: { include_usage: true },
+			}),
+		)
+	})
+
+	it("createMessage should use modelMaxTokens over default when includeMaxTokens is true", async () => {
+		const modelId: GroqModelId = "llama-3.1-8b-instant"
+		const customMaxTokens = 2048
+		const handlerWithModel = new GroqHandler({
+			apiModelId: modelId,
+			groqApiKey: "test-groq-api-key",
+			includeMaxTokens: true,
+			modelMaxTokens: customMaxTokens,
+		})
+
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}
+		})
+
+		const systemPrompt = "Test system prompt for Groq"
+		const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message for Groq" }]
+
+		const messageGenerator = handlerWithModel.createMessage(systemPrompt, messages)
+		await messageGenerator.next()
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: modelId,
+				max_tokens: customMaxTokens,
 				temperature: 0.5,
 				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
 				stream: true,

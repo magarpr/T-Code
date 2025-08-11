@@ -67,20 +67,22 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		const {
-			id: model,
-			info: { maxTokens: max_tokens },
-		} = this.getModel()
+		const { id: model, info } = this.getModel()
 
 		const temperature = this.options.modelTemperature ?? this.defaultTemperature
 
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model,
-			max_tokens,
 			temperature,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
+		}
+
+		// Only add max_tokens if includeMaxTokens is true
+		if (this.options.includeMaxTokens === true) {
+			// Use user-configured modelMaxTokens if available, otherwise fall back to model's default maxTokens
+			params.max_tokens = this.options.modelMaxTokens || info.maxTokens
 		}
 
 		const stream = await this.client.chat.completions.create(params)

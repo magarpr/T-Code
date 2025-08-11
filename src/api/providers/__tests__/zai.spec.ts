@@ -191,13 +191,55 @@ describe("ZAiHandler", () => {
 			expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
 		})
 
-		it("createMessage should pass correct parameters to Z AI client", async () => {
+		it("createMessage should not include max_tokens by default", async () => {
+			const modelId: InternationalZAiModelId = "glm-4.5"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: modelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international",
+			})
+
+			mockCreate.mockImplementationOnce(() => {
+				return {
+					[Symbol.asyncIterator]: () => ({
+						async next() {
+							return { done: true }
+						},
+					}),
+				}
+			})
+
+			const systemPrompt = "Test system prompt for Z AI"
+			const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message for Z AI" }]
+
+			const messageGenerator = handlerWithModel.createMessage(systemPrompt, messages)
+			await messageGenerator.next()
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: modelId,
+					temperature: ZAI_DEFAULT_TEMPERATURE,
+					messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+					stream: true,
+					stream_options: { include_usage: true },
+				}),
+			)
+			// Verify max_tokens is NOT included
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.not.objectContaining({
+					max_tokens: expect.anything(),
+				}),
+			)
+		})
+
+		it("createMessage should include max_tokens when includeMaxTokens is true", async () => {
 			const modelId: InternationalZAiModelId = "glm-4.5"
 			const modelInfo = internationalZAiModels[modelId]
 			const handlerWithModel = new ZAiHandler({
 				apiModelId: modelId,
 				zaiApiKey: "test-zai-api-key",
 				zaiApiLine: "international",
+				includeMaxTokens: true,
 			})
 
 			mockCreate.mockImplementationOnce(() => {

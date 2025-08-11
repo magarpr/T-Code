@@ -324,12 +324,53 @@ describe("FireworksHandler", () => {
 		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
 	})
 
-	it("createMessage should pass correct parameters to Fireworks client", async () => {
+	it("createMessage should not include max_tokens by default", async () => {
+		const modelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-instruct"
+		const handlerWithModel = new FireworksHandler({
+			apiModelId: modelId,
+			fireworksApiKey: "test-fireworks-api-key",
+		})
+
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					async next() {
+						return { done: true }
+					},
+				}),
+			}
+		})
+
+		const systemPrompt = "Test system prompt for Fireworks"
+		const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Test message for Fireworks" }]
+
+		const messageGenerator = handlerWithModel.createMessage(systemPrompt, messages)
+		await messageGenerator.next()
+
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.objectContaining({
+				model: modelId,
+				temperature: 0.5,
+				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
+				stream: true,
+				stream_options: { include_usage: true },
+			}),
+		)
+		// Verify max_tokens is NOT included
+		expect(mockCreate).toHaveBeenCalledWith(
+			expect.not.objectContaining({
+				max_tokens: expect.anything(),
+			}),
+		)
+	})
+
+	it("createMessage should include max_tokens when includeMaxTokens is true", async () => {
 		const modelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-instruct"
 		const modelInfo = fireworksModels[modelId]
 		const handlerWithModel = new FireworksHandler({
 			apiModelId: modelId,
 			fireworksApiKey: "test-fireworks-api-key",
+			includeMaxTokens: true,
 		})
 
 		mockCreate.mockImplementationOnce(() => {
