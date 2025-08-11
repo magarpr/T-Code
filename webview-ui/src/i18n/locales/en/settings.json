@@ -172,7 +172,7 @@
 		},
 		"followupQuestions": {
 			"label": "Question",
-			"description": "Automatically select the first suggested answer for follow-up questions after the configured timeout",
+			"description": "Allow the AI to ask follow-up questions. When disabled, the AI will not have access to the question-asking tool and must proceed without clarification",
 			"timeoutLabel": "Time to wait before auto-selecting the first answer"
 		},
 		"execute": {

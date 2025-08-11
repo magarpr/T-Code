@@ -118,6 +118,11 @@ export function getToolDescriptionsForMode(
 		tools.delete("update_todo_list")
 	}
 
+	// Conditionally exclude ask_followup_question if disabled in settings
+	if (settings?.alwaysAllowFollowupQuestions === false) {
+		tools.delete("ask_followup_question")
+	}
+
 	// Map tool descriptions for allowed tools
 	const descriptions = Array.from(tools).map((toolName) => {
 		const descriptionFn = toolDescriptionMap[toolName]

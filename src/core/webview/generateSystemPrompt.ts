@@ -25,6 +25,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		language,
 		maxReadFileLine,
 		maxConcurrentFileReads,
+		alwaysAllowFollowupQuestions,
 	} = await provider.getState()
 
 	// Check experiment to determine which diff strategy to use
@@ -85,6 +86,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 			useAgentRules: vscode.workspace.getConfiguration("roo-cline").get<boolean>("useAgentRules") ?? true,
+			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? true,
 		},
 	)
 
