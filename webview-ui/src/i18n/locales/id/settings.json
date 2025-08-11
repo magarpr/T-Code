@@ -840,9 +840,5 @@
 		"customArn": "ARN Kustom",
 		"useCustomArn": "Gunakan ARN kustom..."
 	},
-	"includeMaxOutputTokens": "Sertakan token output maksimum",
-	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini.",
-	"limitMaxTokensDescription": "Batasi jumlah maksimum token dalam respons",
-	"maxOutputTokensLabel": "Token output maksimum",
-	"maxTokensGenerateDescription": "Token maksimum untuk dihasilkan dalam respons"
+	"limitMaxTokensDescription": "Batasi jumlah maksimum token dalam respons"
 }

@@ -811,9 +811,5 @@
 		"customArn": "ARN personalizzato",
 		"useCustomArn": "Usa ARN personalizzato..."
 	},
-	"includeMaxOutputTokens": "Includi token di output massimi",
-	"includeMaxOutputTokensDescription": "Invia il parametro dei token di output massimi nelle richieste API. Alcuni provider potrebbero non supportarlo.",
-	"limitMaxTokensDescription": "Limita il numero massimo di token nella risposta",
-	"maxOutputTokensLabel": "Token di output massimi",
-	"maxTokensGenerateDescription": "Token massimi da generare nella risposta"
+	"limitMaxTokensDescription": "Limita il numero massimo di token nella risposta"
 }

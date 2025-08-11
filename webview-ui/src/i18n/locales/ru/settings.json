@@ -811,9 +811,5 @@
 		"customArn": "Пользовательский ARN",
 		"useCustomArn": "Использовать пользовательский ARN..."
 	},
-	"includeMaxOutputTokens": "Включить максимальные выходные токены",
-	"includeMaxOutputTokensDescription": "Отправлять параметр максимальных выходных токенов в API-запросах. Некоторые провайдеры могут не поддерживать это.",
-	"limitMaxTokensDescription": "Ограничить максимальное количество токенов в ответе",
-	"maxOutputTokensLabel": "Максимальные выходные токены",
-	"maxTokensGenerateDescription": "Максимальные токены для генерации в ответе"
+	"limitMaxTokensDescription": "Ограничить максимальное количество токенов в ответе"
 }
