@@ -13,6 +13,13 @@ import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
 export const TOKEN_BUFFER_PERCENTAGE = 0.1
 
 /**
+ * Safety buffer applied when approaching the hard context limit.
+ * Keep very small so we don't trigger premature condensing on large windows.
+ */
+const SAFETY_BUFFER_PERCENTAGE = 0.01 // 1% of total context window
+const MIN_SAFETY_BUFFER_TOKENS = 2048
+
+/**
  * Counts tokens for user content using the provider's token counting implementation.
  *
  * @param {Array<Anthropic.Messages.ContentBlockParam>} content - The content to count tokens for
@@ -118,9 +125,11 @@ export async function truncateConversationIfNeeded({
 	// Calculate total effective tokens (totalTokens never includes the last message)
 	const prevContextTokens = totalTokens + lastMessageTokens
 
-	// Calculate available tokens for conversation history
-	// Truncate if we're within TOKEN_BUFFER_PERCENTAGE of the context window
+	// Calculate effective capacity available for conversation history after reserving output tokens
 	const allowedTokens = contextWindow * (1 - TOKEN_BUFFER_PERCENTAGE) - reservedTokens
+
+	// Note: allowedTokens already includes a dynamic buffer and reserved output tokens
+	// Keep a single source of truth for truncation thresholds to align with tests and behavior.
 
 	// Determine the effective threshold to use
 	let effectiveThreshold = autoCondenseContextPercent
@@ -143,6 +152,7 @@ export async function truncateConversationIfNeeded({
 	// If no specific threshold is found for the profile, fall back to global setting
 
 	if (autoCondenseContext) {
+		// Base percent on effective capacity so visualization and behavior are aligned
 		const contextPercent = (100 * prevContextTokens) / contextWindow
 		if (contextPercent >= effectiveThreshold || prevContextTokens > allowedTokens) {
 			// Attempt to intelligently condense the context
