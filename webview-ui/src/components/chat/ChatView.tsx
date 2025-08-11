@@ -437,6 +437,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setExpandedRows({})
 		everVisibleMessagesTsRef.current.clear() // Clear for new task
 		setCurrentFollowUpTs(null) // Clear follow-up answered state for new task
+		setIsCondensing(false) // Reset condensing state when switching tasks
 
 		// Clear any pending auto-approval timeout from previous task
 		if (autoApproveTimeoutRef.current) {
