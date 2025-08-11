@@ -140,7 +140,7 @@ describe("LMStudio Fetcher", () => {
 			expect(mockListLoaded).toHaveBeenCalledTimes(1)
 
 			const expectedParsedModel = parseLMStudioModel(mockRawModel)
-			expect(result).toEqual({ [mockRawModel.modelKey]: expectedParsedModel })
+			expect(result).toEqual({ [mockRawModel.path]: expectedParsedModel })
 		})
 
 		it("should use default baseUrl if an empty string is provided", async () => {

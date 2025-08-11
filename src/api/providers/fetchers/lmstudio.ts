@@ -87,8 +87,9 @@ export async function getLMStudioModels(baseUrl = "http://localhost:1234"): Prom
 		})) as Array<LLMInstanceInfo>
 
 		for (const lmstudioModel of loadedModels) {
-			models[lmstudioModel.modelKey] = parseLMStudioModel(lmstudioModel)
-			modelsWithLoadedDetails.add(lmstudioModel.modelKey)
+			// Use path as the key to avoid duplicates when a model is both downloaded and loaded
+			models[lmstudioModel.path] = parseLMStudioModel(lmstudioModel)
+			modelsWithLoadedDetails.add(lmstudioModel.path)
 		}
 	} catch (error) {
 		if (error.code === "ECONNREFUSED") {
