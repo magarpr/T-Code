@@ -1835,15 +1835,32 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// If there's no assistant_responses, that means we got no text
 				// or tool_use content blocks from API which we should assume is
 				// an error.
-				await this.say(
-					"error",
-					"Unexpected API Response: The language model did not provide any assistant messages. This may indicate an issue with the API or the model's output.",
-				)
+				// Note: GPT-5 can emit reasoning without assistant tokens, so
+				// also check if there is reasoning.
 
-				await this.addToApiConversationHistory({
-					role: "assistant",
-					content: [{ type: "text", text: "Failure: I did not provide a response." }],
-				})
+				const modelId = getModelId(this.apiConfiguration)
+				const isGPT5 = modelId?.startsWith("gpt-5")
+
+				if (reasoningMessage.length > 0 && isGPT5) {
+					// GPT-5 produced only reasoning tokens, inform the model
+					await this.addToApiConversationHistory({
+						role: "assistant",
+						content: [
+							{ type: "text", text: "I only provided reasoning tokens without an actual response." },
+						],
+					})
+				} else {
+					// Show error for: no reasoning at all, or non-GPT5 models
+					await this.say(
+						"error",
+						"Unexpected API Response: The language model did not provide any assistant messages. This may indicate an issue with the API or the model's output.",
+					)
+
+					await this.addToApiConversationHistory({
+						role: "assistant",
+						content: [{ type: "text", text: "Failure: I did not provide a response." }],
+					})
+				}
 			}
 
 			return didEndLoop // Will always be false for now.
