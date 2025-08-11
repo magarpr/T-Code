@@ -34,6 +34,9 @@ export enum RooCodeEventName {
 	TaskTokenUsageUpdated = "taskTokenUsageUpdated",
 	TaskToolFailed = "taskToolFailed",
 
+	// Command Execution
+	TaskCommandExecuted = "taskCommandExecuted",
+
 	// Evals
 	EvalPass = "evalPass",
 	EvalFail = "evalFail",
@@ -79,7 +82,7 @@ export const rooCodeEventsSchema = z.object({
 	[RooCodeEventName.TaskTokenUsageUpdated]: z.tuple([z.string(), tokenUsageSchema]),
 
 	// Command Execution
-	taskCommandExecuted: z.tuple([
+	[RooCodeEventName.TaskCommandExecuted]: z.tuple([
 		z.string(),
 		z.object({
 			command: z.string(),
@@ -185,6 +188,13 @@ export const taskEventSchema = z.discriminatedUnion("eventName", [
 	z.object({
 		eventName: z.literal(RooCodeEventName.TaskTokenUsageUpdated),
 		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskTokenUsageUpdated],
+		taskId: z.number().optional(),
+	}),
+
+	// Command Execution
+	z.object({
+		eventName: z.literal(RooCodeEventName.TaskCommandExecuted),
+		payload: rooCodeEventsSchema.shape[RooCodeEventName.TaskCommandExecuted],
 		taskId: z.number().optional(),
 	}),
 

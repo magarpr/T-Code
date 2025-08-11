@@ -114,7 +114,7 @@ export type ClineEvents = {
 	taskCompleted: [taskId: string, tokenUsage: TokenUsage, toolUsage: ToolUsage]
 	taskTokenUsageUpdated: [taskId: string, tokenUsage: TokenUsage]
 	taskToolFailed: [taskId: string, tool: ToolName, error: string]
-	taskCommandExecuted: [
+	[RooCodeEventName.TaskCommandExecuted]: [
 		taskId: string,
 		details: {
 			command: string

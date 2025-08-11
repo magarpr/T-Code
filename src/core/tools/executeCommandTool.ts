@@ -4,7 +4,7 @@ import * as vscode from "vscode"
 
 import delay from "delay"
 
-import { CommandExecutionStatus, DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT } from "@roo-code/types"
+import { CommandExecutionStatus, DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT, RooCodeEventName } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { Task } from "../task/Task"
@@ -143,6 +143,26 @@ export type ExecuteCommandOptions = {
 	commandExecutionTimeout?: number
 }
 
+/**
+ * Helper function to emit taskCommandExecuted event with consistent payload
+ */
+function emitCommandExecutedEvent(
+	task: Task,
+	command: string,
+	exitCode: number | undefined,
+	output: string,
+	succeeded: boolean,
+	failureReason?: string,
+) {
+	task.emit(RooCodeEventName.TaskCommandExecuted, task.taskId, {
+		command,
+		exitCode,
+		output,
+		succeeded,
+		failureReason,
+	})
+}
+
 export async function executeCommand(
 	task: Task,
 	{
@@ -275,13 +295,14 @@ export async function executeCommand(
 				task.terminalProcess = undefined
 
 				// Emit taskCommandExecuted event for timeout
-				task.emit("taskCommandExecuted", task.taskId, {
+				emitCommandExecutedEvent(
+					task,
 					command,
-					exitCode: undefined,
-					output: accumulatedOutput, // Use accumulatedOutput instead of result
-					succeeded: false,
-					failureReason: `Command timed out after ${commandExecutionTimeoutSeconds}s`,
-				})
+					undefined,
+					accumulatedOutput,
+					false,
+					`Command timed out after ${commandExecutionTimeoutSeconds}s`,
+				)
 
 				return [
 					false,
@@ -321,13 +342,14 @@ export async function executeCommand(
 		await task.say("user_feedback", text, images)
 
 		// Emit taskCommandExecuted event for running command with user feedback
-		task.emit("taskCommandExecuted", task.taskId, {
+		emitCommandExecutedEvent(
+			task,
 			command,
-			exitCode: undefined,
-			output: accumulatedOutput, // Use accumulatedOutput instead of result
-			succeeded: false,
-			failureReason: "Command is still running (user provided feedback)",
-		})
+			undefined,
+			accumulatedOutput,
+			false,
+			"Command is still running (user provided feedback)",
+		)
 
 		return [
 			true,
@@ -371,13 +393,7 @@ export async function executeCommand(
 
 		// Emit taskCommandExecuted event
 		const succeeded = exitCode === 0
-		task.emit("taskCommandExecuted", task.taskId, {
-			command,
-			exitCode,
-			output: result,
-			succeeded,
-			failureReason: succeeded ? undefined : exitStatus,
-		})
+		emitCommandExecutedEvent(task, command, exitCode, result, succeeded, succeeded ? undefined : exitStatus)
 
 		return [false, `Command executed in terminal ${workingDirInfo}. ${exitStatus}\nOutput:\n${result}`]
 	} else {

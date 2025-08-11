@@ -98,7 +98,7 @@ export type TaskEvents = {
 	[RooCodeEventName.TaskTokenUsageUpdated]: [taskId: string, tokenUsage: TokenUsage]
 
 	// Command Execution
-	taskCommandExecuted: [
+	[RooCodeEventName.TaskCommandExecuted]: [
 		taskId: string,
 		details: {
 			command: string
