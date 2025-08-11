@@ -580,6 +580,7 @@ describe("SYSTEM_PROMPT", () => {
 			maxConcurrentFileReads: 5,
 			todoListEnabled: false,
 			useAgentRules: true,
+			alwaysAllowFollowupQuestions: true,
 		}
 
 		const prompt = await SYSTEM_PROMPT(
@@ -612,6 +613,7 @@ describe("SYSTEM_PROMPT", () => {
 			maxConcurrentFileReads: 5,
 			todoListEnabled: true,
 			useAgentRules: true,
+			alwaysAllowFollowupQuestions: true,
 		}
 
 		const prompt = await SYSTEM_PROMPT(
@@ -643,6 +645,7 @@ describe("SYSTEM_PROMPT", () => {
 			maxConcurrentFileReads: 5,
 			todoListEnabled: true,
 			useAgentRules: true,
+			alwaysAllowFollowupQuestions: true,
 		}
 
 		const prompt = await SYSTEM_PROMPT(

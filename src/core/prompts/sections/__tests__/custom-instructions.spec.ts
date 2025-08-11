@@ -535,7 +535,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					alwaysAllowFollowupQuestions: true,
+				},
+			},
 		)
 
 		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
@@ -560,7 +567,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: false } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: false,
+					alwaysAllowFollowupQuestions: true,
+				},
+			},
 		)
 
 		expect(result).not.toContain("# Agent Rules Standard (AGENTS.md):")
@@ -614,7 +628,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					alwaysAllowFollowupQuestions: true,
+				},
+			},
 		)
 
 		expect(result).toContain("Global Instructions:\nglobal instructions")
@@ -653,7 +674,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					alwaysAllowFollowupQuestions: true,
+				},
+			},
 		)
 
 		// Should contain both AGENTS.md and .roorules content
@@ -714,7 +742,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					alwaysAllowFollowupQuestions: true,
+				},
+			},
 		)
 
 		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
@@ -759,7 +794,14 @@ describe("addCustomInstructions", () => {
 			"global instructions",
 			"/fake/path",
 			"test-mode",
-			{ settings: { maxConcurrentFileReads: 5, todoListEnabled: true, useAgentRules: true } },
+			{
+				settings: {
+					maxConcurrentFileReads: 5,
+					todoListEnabled: true,
+					useAgentRules: true,
+					alwaysAllowFollowupQuestions: true,
+				},
+			},
 		)
 
 		expect(result).toContain("# Agent Rules Standard (AGENTS.md):")
