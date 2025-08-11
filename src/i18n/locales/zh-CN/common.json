@@ -105,6 +105,11 @@
 			"genericError": "Cerebras API 错误 ({{status}})：{{message}}",
 			"noResponseBody": "Cerebras API 错误：无响应主体",
 			"completionError": "Cerebras 完成错误：{{error}}"
+		},
+		"openaiCompatible": {
+			"rateLimitExceeded": "{{provider}} API 速率限制已超出。请稍等片刻后再发起请求。如果您使用的是免费套餐，请考虑升级您的计划或降低请求频率。",
+			"genericError": "{{provider}} API 错误：{{error}}",
+			"completionError": "{{provider}} 完成错误：{{error}}"
 		}
 	},
 	"warnings": {

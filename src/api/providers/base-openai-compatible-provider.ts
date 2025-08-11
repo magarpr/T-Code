@@ -6,6 +6,7 @@ import type { ModelInfo } from "@roo-code/types"
 import type { ApiHandlerOptions } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
+import { t } from "../../i18n"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants"
@@ -83,25 +84,47 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			stream_options: { include_usage: true },
 		}
 
-		const stream = await this.client.chat.completions.create(params)
+		try {
+			const stream = await this.client.chat.completions.create(params)
 
-		for await (const chunk of stream) {
-			const delta = chunk.choices[0]?.delta
+			for await (const chunk of stream) {
+				const delta = chunk.choices[0]?.delta
 
-			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+				if (delta?.content) {
+					yield {
+						type: "text",
+						text: delta.content,
+					}
+				}
+
+				if (chunk.usage) {
+					yield {
+						type: "usage",
+						inputTokens: chunk.usage.prompt_tokens || 0,
+						outputTokens: chunk.usage.completion_tokens || 0,
+					}
 				}
 			}
-
-			if (chunk.usage) {
-				yield {
-					type: "usage",
-					inputTokens: chunk.usage.prompt_tokens || 0,
-					outputTokens: chunk.usage.completion_tokens || 0,
-				}
+		} catch (error: any) {
+			// Handle rate limiting errors specifically
+			if (error?.status === 429 || error?.response?.status === 429) {
+				const errorMessage = t("common:errors.openaiCompatible.rateLimitExceeded", {
+					provider: this.providerName,
+				})
+				throw new Error(errorMessage)
 			}
+
+			// Handle other errors
+			if (error instanceof Error) {
+				throw new Error(
+					t("common:errors.openaiCompatible.genericError", {
+						provider: this.providerName,
+						error: error.message,
+					}),
+				)
+			}
+
+			throw error
 		}
 	}
 
@@ -115,9 +138,22 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			})
 
 			return response.choices[0]?.message.content || ""
-		} catch (error) {
+		} catch (error: any) {
+			// Handle rate limiting errors specifically
+			if (error?.status === 429 || error?.response?.status === 429) {
+				const errorMessage = t("common:errors.openaiCompatible.rateLimitExceeded", {
+					provider: this.providerName,
+				})
+				throw new Error(errorMessage)
+			}
+
 			if (error instanceof Error) {
-				throw new Error(`${this.providerName} completion error: ${error.message}`)
+				throw new Error(
+					t("common:errors.openaiCompatible.completionError", {
+						provider: this.providerName,
+						error: error.message,
+					}),
+				)
 			}
 
 			throw error
