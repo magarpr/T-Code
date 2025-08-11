@@ -58,6 +58,12 @@ describe("TelemetryClient", () => {
 					api_host: "https://us.i.posthog.com",
 					persistence: "localStorage",
 					loaded: expect.any(Function),
+					capture_pageview: false,
+					capture_pageleave: false,
+					autocapture: false,
+					disable_session_recording: true,
+					advanced_disable_decide: true,
+					advanced_disable_toolbar_metrics: true,
 				}),
 			)
 
