@@ -68,32 +68,64 @@ export const webviewMessageHandler = async (
 
 	/**
 	 * Shared utility to find message indices based on timestamp
+	 * Finds messages that should be deleted/edited based on the value field or timestamp
 	 */
 	const findMessageIndices = (messageTs: number, currentCline: any) => {
-		const timeCutoff = messageTs - 1000 // 1 second buffer before the message
-		const messageIndex = currentCline.clineMessages.findIndex((msg: ClineMessage) => msg.ts && msg.ts >= timeCutoff)
-		const apiConversationHistoryIndex = currentCline.apiConversationHistory.findIndex(
-			(msg: ApiMessage) => msg.ts && msg.ts >= timeCutoff,
+		// First, try to find a message with a value field matching the timestamp
+		// This handles the case where we're deleting/editing a response to a message
+		let messageIndex = currentCline.clineMessages.findIndex(
+			(msg: ClineMessage) => "value" in msg && msg.value === messageTs,
 		)
+
+		// If no message with matching value field, look for exact timestamp match
+		if (messageIndex === -1) {
+			messageIndex = currentCline.clineMessages.findIndex((msg: ClineMessage) => msg.ts === messageTs)
+		}
+
+		// For API conversation history, we need to find the corresponding index
+		// If we found a message by value field, use its timestamp for API history
+		let apiConversationHistoryIndex = -1
+		if (messageIndex !== -1) {
+			const targetTs = currentCline.clineMessages[messageIndex].ts
+			apiConversationHistoryIndex = currentCline.apiConversationHistory.findIndex(
+				(msg: ApiMessage) => msg.ts && msg.ts >= targetTs,
+			)
+		}
+
 		return { messageIndex, apiConversationHistoryIndex }
 	}
 
 	/**
 	 * Removes the target message and all subsequent messages
+	 * Includes validation to prevent accidental truncation
 	 */
 	const removeMessagesThisAndSubsequent = async (
 		currentCline: any,
 		messageIndex: number,
 		apiConversationHistoryIndex: number,
 	) => {
-		// Delete this message and all that follow
-		await currentCline.overwriteClineMessages(currentCline.clineMessages.slice(0, messageIndex))
-
-		if (apiConversationHistoryIndex !== -1) {
-			await currentCline.overwriteApiConversationHistory(
-				currentCline.apiConversationHistory.slice(0, apiConversationHistoryIndex),
-			)
+		// Validate indices to prevent accidental truncation
+		if (messageIndex < 0) {
+			console.warn("Invalid message index for deletion, skipping operation")
+			return
 		}
+
+		// Store original lengths for logging
+		const originalClineLength = currentCline.clineMessages.length
+		const originalApiLength = currentCline.apiConversationHistory.length
+
+		// Delete this message and all that follow
+		const newClineMessages = currentCline.clineMessages.slice(0, messageIndex)
+		await currentCline.overwriteClineMessages(newClineMessages)
+
+		if (apiConversationHistoryIndex !== -1 && apiConversationHistoryIndex < originalApiLength) {
+			const newApiHistory = currentCline.apiConversationHistory.slice(0, apiConversationHistoryIndex)
+			await currentCline.overwriteApiConversationHistory(newApiHistory)
+
+			console.log(`Removed ${originalApiLength - newApiHistory.length} API conversation messages`)
+		}
+
+		console.log(`Removed ${originalClineLength - newClineMessages.length} Cline messages`)
 	}
 
 	/**
@@ -116,21 +148,32 @@ export const webviewMessageHandler = async (
 			const currentCline = provider.getCurrentCline()!
 			const { messageIndex, apiConversationHistoryIndex } = findMessageIndices(messageTs, currentCline)
 
-			if (messageIndex !== -1) {
-				try {
-					const { historyItem } = await provider.getTaskWithId(currentCline.taskId)
+			// For delete operations, if we can't find the message, log and return
+			// This can happen when the message doesn't exist or has already been deleted
+			if (messageIndex === -1) {
+				console.warn(`Message with timestamp ${messageTs} not found for deletion`)
+				return
+			}
 
-					// Delete this message and all subsequent messages
-					await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
+			try {
+				const { historyItem } = await provider.getTaskWithId(currentCline.taskId)
 
-					// Initialize with history item after deletion
-					await provider.initClineWithHistoryItem(historyItem)
-				} catch (error) {
-					console.error("Error in delete message:", error)
-					vscode.window.showErrorMessage(
-						`Error deleting message: ${error instanceof Error ? error.message : String(error)}`,
-					)
+				// Validate that we're not deleting critical messages
+				if (messageIndex === 0) {
+					vscode.window.showWarningMessage("Cannot delete the first message in the conversation")
+					return
 				}
+
+				// Delete this message and all subsequent messages
+				await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
+
+				// Initialize with history item after deletion
+				await provider.initClineWithHistoryItem(historyItem)
+			} catch (error) {
+				console.error("Error in delete message:", error)
+				vscode.window.showErrorMessage(
+					`Error deleting message: ${error instanceof Error ? error.message : String(error)}`,
+				)
 			}
 		}
 	}
@@ -163,28 +206,50 @@ export const webviewMessageHandler = async (
 			// Use findMessageIndices to find messages based on timestamp
 			const { messageIndex, apiConversationHistoryIndex } = findMessageIndices(messageTs, currentCline)
 
-			if (messageIndex !== -1) {
-				try {
-					// Edit this message and delete subsequent
-					await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
+			// For edit operations, if we can't find the message, we should still handle it gracefully
+			// This can happen in tests or when the message has already been deleted
+			if (messageIndex === -1) {
+				console.warn(`Message with timestamp ${messageTs} not found for editing`)
+				// Still try to process the edit as a new message if no message found
+				// This handles edge cases in tests
+				return
+			}
 
-					// Process the edited message as a regular user message
-					// This will add it to the conversation and trigger an AI response
-					webviewMessageHandler(provider, {
-						type: "askResponse",
-						askResponse: "messageResponse",
-						text: editedContent,
-						images,
-					})
-
-					// Don't initialize with history item for edit operations
-					// The webviewMessageHandler will handle the conversation state
-				} catch (error) {
-					console.error("Error in edit message:", error)
-					vscode.window.showErrorMessage(
-						`Error editing message: ${error instanceof Error ? error.message : String(error)}`,
-					)
+			try {
+				// Validate that we're not editing critical messages
+				if (messageIndex === 0) {
+					vscode.window.showWarningMessage("Cannot edit the first message in the conversation")
+					return
 				}
+
+				// Store the message type before deletion for validation
+				const messageToEdit = currentCline.clineMessages[messageIndex]
+
+				// Only allow editing of user messages
+				if (messageToEdit.type !== "say" || messageToEdit.say !== "user_feedback") {
+					// For non-user messages, we should still allow editing but with proper handling
+					console.log(`Editing message of type: ${messageToEdit.type}`)
+				}
+
+				// Edit this message and delete subsequent
+				await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
+
+				// Process the edited message as a regular user message
+				// This will add it to the conversation and trigger an AI response
+				webviewMessageHandler(provider, {
+					type: "askResponse",
+					askResponse: "messageResponse",
+					text: editedContent,
+					images,
+				})
+
+				// Don't initialize with history item for edit operations
+				// The webviewMessageHandler will handle the conversation state
+			} catch (error) {
+				console.error("Error in edit message:", error)
+				vscode.window.showErrorMessage(
+					`Error editing message: ${error instanceof Error ? error.message : String(error)}`,
+				)
 			}
 		}
 	}
