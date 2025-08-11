@@ -77,6 +77,18 @@ export const rooCodeEventsSchema = z.object({
 
 	[RooCodeEventName.TaskToolFailed]: z.tuple([z.string(), toolNamesSchema, z.string()]),
 	[RooCodeEventName.TaskTokenUsageUpdated]: z.tuple([z.string(), tokenUsageSchema]),
+
+	// Command Execution
+	taskCommandExecuted: z.tuple([
+		z.string(),
+		z.object({
+			command: z.string(),
+			exitCode: z.number().optional(),
+			output: z.string(),
+			succeeded: z.boolean(),
+			failureReason: z.string().optional(),
+		}),
+	]),
 })
 
 export type RooCodeEvents = z.infer<typeof rooCodeEventsSchema>
