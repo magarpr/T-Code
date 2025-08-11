@@ -242,7 +242,7 @@ describe("ChutesHandler", () => {
 		expect(model.info).toEqual(
 			expect.objectContaining({
 				maxTokens: 32768,
-				contextWindow: 131072,
+				contextWindow: 262144,
 				supportsImages: false,
 				supportsPromptCache: false,
 				inputPrice: 0,
@@ -253,8 +253,8 @@ describe("ChutesHandler", () => {
 		)
 	})
 
-	it("should return moonshotai/Kimi-K2-Instruct model with correct configuration", () => {
-		const testModelId: ChutesModelId = "moonshotai/Kimi-K2-Instruct"
+	it("should return moonshotai/Kimi-K2-Instruct-75k model with correct configuration", () => {
+		const testModelId: ChutesModelId = "moonshotai/Kimi-K2-Instruct-75k"
 		const handlerWithModel = new ChutesHandler({
 			apiModelId: testModelId,
 			chutesApiKey: "test-chutes-api-key",
@@ -264,12 +264,12 @@ describe("ChutesHandler", () => {
 		expect(model.info).toEqual(
 			expect.objectContaining({
 				maxTokens: 32768,
-				contextWindow: 131072,
+				contextWindow: 75000,
 				supportsImages: false,
 				supportsPromptCache: false,
-				inputPrice: 0,
-				outputPrice: 0,
-				description: "Moonshot AI Kimi K2 Instruct model.",
+				inputPrice: 0.1481,
+				outputPrice: 0.5926,
+				description: "Moonshot AI Kimi K2 Instruct model with 75k context window.",
 				temperature: 0.5, // Default temperature for non-DeepSeek models
 			}),
 		)

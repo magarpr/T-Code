@@ -28,7 +28,7 @@ export type ChutesModelId =
 	| "tngtech/DeepSeek-R1T-Chimera"
 	| "zai-org/GLM-4.5-Air"
 	| "zai-org/GLM-4.5-FP8"
-	| "moonshotai/Kimi-K2-Instruct"
+	| "moonshotai/Kimi-K2-Instruct-75k"
 
 export const chutesDefaultModelId: ChutesModelId = "deepseek-ai/DeepSeek-R1-0528"
 
@@ -262,20 +262,20 @@ export const chutesModels = {
 	},
 	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
 		maxTokens: 32768,
-		contextWindow: 131072,
+		contextWindow: 262144,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
 		description: "Qwen3 Coder 480B A35B Instruct FP8 model, optimized for coding tasks.",
 	},
-	"moonshotai/Kimi-K2-Instruct": {
+	"moonshotai/Kimi-K2-Instruct-75k": {
 		maxTokens: 32768,
-		contextWindow: 131072,
+		contextWindow: 75000,
 		supportsImages: false,
 		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description: "Moonshot AI Kimi K2 Instruct model.",
+		inputPrice: 0.1481,
+		outputPrice: 0.5926,
+		description: "Moonshot AI Kimi K2 Instruct model with 75k context window.",
 	},
 } as const satisfies Record<string, ModelInfo>
