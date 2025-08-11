@@ -104,7 +104,12 @@
 			"noResponseBody": "Error de l'API de Cerebras: No hi ha cos de resposta",
 			"completionError": "Error de finalització de Cerebras: {{error}}"
 		},
-		"mode_import_failed": "Ha fallat la importació del mode: {{error}}"
+		"mode_import_failed": "Ha fallat la importació del mode: {{error}}",
+		"openaiCompatible": {
+			"rateLimitExceeded": "{{provider}} API rate limit exceeded. Please wait a moment before making another request. If using a free tier, consider upgrading your plan or reducing request frequency.",
+			"genericError": "{{provider}} API error: {{error}}",
+			"completionError": "{{provider}} completion error: {{error}}"
+		}
 	},
 	"warnings": {
 		"no_terminal_content": "No s'ha seleccionat contingut de terminal",

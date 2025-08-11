@@ -104,6 +104,11 @@
 			"genericError": "Erro da API Cerebras ({{status}}): {{message}}",
 			"noResponseBody": "Erro da API Cerebras: Sem corpo de resposta",
 			"completionError": "Erro de conclusão do Cerebras: {{error}}"
+		},
+		"openaiCompatible": {
+			"rateLimitExceeded": "{{provider}} API rate limit exceeded. Please wait a moment before making another request. If using a free tier, consider upgrading your plan or reducing request frequency.",
+			"genericError": "{{provider}} API error: {{error}}",
+			"completionError": "{{provider}} completion error: {{error}}"
 		}
 	},
 	"warnings": {
