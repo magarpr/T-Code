@@ -1,25 +1,25 @@
 {
-	"name": "@roo-code/types",
+	"name": "@takara-coder/types",
 	"version": "1.45.0",
-	"description": "TypeScript type definitions for Roo Code.",
+	"description": "TypeScript type definitions for Takara Coder.",
 	"publishConfig": {
 		"access": "public",
-		"name": "@roo-code/types",
+		"name": "@takara-coder/types",
 		"registry": "https://registry.npmjs.org/"
 	},
-	"author": "Roo Code Team",
+	"author": "Takara Coder Team",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/RooCodeInc/Roo-Code.git"
+		"url": "git+https://github.com/RooCodeInc/Takara-Coder.git"
 	},
 	"bugs": {
-		"url": "https://github.com/RooCodeInc/Roo-Code/issues"
+		"url": "https://github.com/RooCodeInc/Takara-Coder/issues"
 	},
 	"homepage": "https://roocode.com",
 	"keywords": [
 		"roo",
-		"roo-code",
+		"takara-coder",
 		"ai"
 	],
 	"main": "./dist/index.cjs",

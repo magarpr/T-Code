@@ -25,7 +25,7 @@ import {
 	LucideIcon,
 } from "lucide-react"
 
-import type { ProviderSettings, ExperimentId } from "@roo-code/types"
+import type { ProviderSettings, ExperimentId } from "@takara-coder/types"
 
 import { TelemetrySetting } from "@roo/TelemetrySetting"
 

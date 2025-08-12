@@ -14,8 +14,8 @@ import {
 	providerSettingsSchema,
 	globalSettingsSchema,
 	isSecretStateKey,
-} from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+} from "@takara-coder/types"
+import { TelemetryService } from "@takara-coder/telemetry"
 
 import { logger } from "../../utils/logging"
 

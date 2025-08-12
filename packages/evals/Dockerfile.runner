@@ -67,7 +67,7 @@ RUN mkdir -p /roo/.vscode-template \
 
 # Copy evals
 ARG EVALS_COMMIT=main
-ARG EVALS_REPO_URL=https://github.com/RooCodeInc/Roo-Code-Evals.git
+ARG EVALS_REPO_URL=https://github.com/RooCodeInc/Takara-Coder-Evals.git
 RUN git clone ${EVALS_REPO_URL} evals \
   && cd evals \
   && git checkout ${EVALS_COMMIT}
@@ -124,9 +124,9 @@ COPY packages/evals/.env.local ./packages/evals/
 # Copy the pre-installed VS Code extensions
 RUN cp -r /roo/.vscode-template /roo/.vscode
 
-# Build the Roo Code extension
-RUN pnpm vsix -- --out ../bin/roo-code.vsix \
-    && yes | code --no-sandbox --user-data-dir /roo/.vscode --install-extension bin/roo-code.vsix
+# Build the Takara Coder extension
+RUN pnpm vsix -- --out ../bin/takara-coder.vsix \
+    && yes | code --no-sandbox --user-data-dir /roo/.vscode --install-extension bin/takara-coder.vsix
 
 # Copy entrypoint script
 COPY packages/evals/.docker/entrypoints/runner.sh /usr/local/bin/entrypoint.sh

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@/utils/test-utils"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import { TaskActions } from "../TaskActions"
-import type { HistoryItem } from "@roo-code/types"
+import type { HistoryItem } from "@takara-coder/types"
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 
@@ -39,10 +39,10 @@ vi.mock("react-i18next", () => ({
 				"chat:task.sharePublicly": "Share Publicly",
 				"chat:task.sharePubliclyDescription": "Anyone with the link can access",
 				"chat:task.connectToCloud": "Connect to Cloud",
-				"chat:task.connectToCloudDescription": "Sign in to Roo Code Cloud to share tasks",
+				"chat:task.connectToCloudDescription": "Sign in to Takara Coder Cloud to share tasks",
 				"chat:task.sharingDisabledByOrganization": "Sharing disabled by organization",
-				"account:cloudBenefitsTitle": "Connect to Roo Code Cloud",
-				"account:cloudBenefitsSubtitle": "Sign in to Roo Code Cloud to share tasks",
+				"account:cloudBenefitsTitle": "Connect to Takara Coder Cloud",
+				"account:cloudBenefitsSubtitle": "Sign in to Takara Coder Cloud to share tasks",
 				"account:cloudBenefitHistory": "Access your task history from anywhere",
 				"account:cloudBenefitSharing": "Share tasks with your team",
 				"account:cloudBenefitMetrics": "Track usage and costs",
@@ -195,8 +195,8 @@ describe("TaskActions", () => {
 			const shareButton = screen.getByTestId("share-button")
 			fireEvent.click(shareButton)
 
-			expect(screen.getByText("Connect to Roo Code Cloud")).toBeInTheDocument()
-			expect(screen.getByText("Sign in to Roo Code Cloud to share tasks")).toBeInTheDocument()
+			expect(screen.getByText("Connect to Takara Coder Cloud")).toBeInTheDocument()
+			expect(screen.getByText("Sign in to Takara Coder Cloud to share tasks")).toBeInTheDocument()
 			expect(screen.getByText("Connect")).toBeInTheDocument()
 		})
 

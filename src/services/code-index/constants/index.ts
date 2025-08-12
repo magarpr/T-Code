@@ -1,4 +1,4 @@
-import { CODEBASE_INDEX_DEFAULTS } from "@roo-code/types"
+import { CODEBASE_INDEX_DEFAULTS } from "@takara-coder/types"
 
 /**Parser */
 export const MAX_BLOCK_CHARS = 1000

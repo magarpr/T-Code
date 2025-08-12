@@ -1,4 +1,4 @@
-import type { CommandId, CodeActionId, TerminalActionId } from "@roo-code/types"
+import type { CommandId, CodeActionId, TerminalActionId } from "@takara-coder/types"
 
 import { Package } from "../shared/package"
 

@@ -11,7 +11,7 @@ import {
 	type ReasoningEffort,
 	type VerbosityLevel,
 	type ReasoningEffortWithMinimal,
-} from "@roo-code/types"
+} from "@takara-coder/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 

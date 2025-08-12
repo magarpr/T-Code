@@ -31,8 +31,8 @@ import {
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	DEFAULT_USAGE_COLLECTION_TIMEOUT_MS,
 	isBlockingAsk,
-} from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+} from "@takara-coder/types"
+import { TelemetryService } from "@takara-coder/telemetry"
 import { CloudService } from "@roo-code/cloud"
 
 // api

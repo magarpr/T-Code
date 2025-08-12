@@ -160,8 +160,8 @@ export class MdmService {
 
 			case "linux":
 			default:
-				// Linux: /etc/roo-code/mdm.json or mdm.dev.json
-				return `/etc/roo-code/${configFileName}`
+				// Linux: /etc/takara-coder/mdm.json or mdm.dev.json
+				return `/etc/takara-coder/${configFileName}`
 		}
 	}
 

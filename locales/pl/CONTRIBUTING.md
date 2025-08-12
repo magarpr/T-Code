@@ -11,9 +11,9 @@
 </sub>
 </div>
 
-# Współtworzenie Roo Code
+# Współtworzenie Takara Coder
 
-Roo Code to projekt napędzany przez społeczność i bardzo cenimy każdy wkład. Aby usprawnić współpracę, działamy według zasady [Issue-First](#podejście-issue-first), co oznacza, że wszystkie [Pull Requesty (PR)](#zgłaszanie-pull-requesta) muszą najpierw być powiązane z GitHub Issue. Prosimy o uważne zapoznanie się z tym przewodnikiem.
+Takara Coder to projekt napędzany przez społeczność i bardzo cenimy każdy wkład. Aby usprawnić współpracę, działamy według zasady [Issue-First](#podejście-issue-first), co oznacza, że wszystkie [Pull Requesty (PR)](#zgłaszanie-pull-requesta) muszą najpierw być powiązane z GitHub Issue. Prosimy o uważne zapoznanie się z tym przewodnikiem.
 
 ## Spis treści
 
@@ -52,7 +52,7 @@ Nasza roadmapa wyznacza kierunek projektu. Dostosuj swój wkład do tych kluczow
 
 Wspomnij o powiązaniu z tymi obszarami w swoich PR.
 
-### 3. Dołącz do społeczności Roo Code
+### 3. Dołącz do społeczności Takara Coder
 
 - **Główna metoda:** Dołącz do naszego [Discorda](https://discord.gg/roocode) i wyślij wiadomość prywatną do **Hannes Rudolph (`hrudolph`)**.
 - **Alternatywa:** Doświadczeni współtwórcy mogą angażować się bezpośrednio przez [GitHub Projects](https://github.com/orgs/RooCodeInc/projects/1).
@@ -69,7 +69,7 @@ Wspomnij o powiązaniu z tymi obszarami w swoich PR.
 
 Każdy wkład musi zaczynać się od GitHub Issue.
 
-- **Sprawdź istniejące issues:** Przeszukaj [GitHub Issues](https://github.com/RooCodeInc/Roo-Code/issues).
+- **Sprawdź istniejące issues:** Przeszukaj [GitHub Issues](https://github.com/RooCodeInc/Takara-Coder/issues).
 - **Utwórz issue:** Używaj odpowiednich szablonów:
     - **Błędy:** Szablon "Bug Report".
     - **Funkcje:** Szablon "Detailed Feature Proposal". Wymagane zatwierdzenie przed rozpoczęciem.
@@ -80,13 +80,13 @@ Każdy wkład musi zaczynać się od GitHub Issue.
 ### Decydowanie, nad czym pracować
 
 - Sprawdź [Projekt GitHub](https://github.com/orgs/RooCodeInc/projects/1) w poszukiwaniu nieprzypisanych "Good First Issues".
-- W kwestii dokumentacji odwiedź [Roo Code Docs](https://github.com/RooCodeInc/Roo-Code-Docs).
+- W kwestii dokumentacji odwiedź [Takara Coder Docs](https://github.com/RooCodeInc/Takara-Coder-Docs).
 
 ### Zgłaszanie błędów
 
 - Najpierw sprawdź istniejące zgłoszenia.
-- Twórz nowe zgłoszenia błędów używając [szablonu "Bug Report"](https://github.com/RooCodeInc/Roo-Code/issues/new/choose).
-- **Luki bezpieczeństwa:** Zgłaszaj prywatnie przez [security advisories](https://github.com/RooCodeInc/Roo-Code/security/advisories/new).
+- Twórz nowe zgłoszenia błędów używając [szablonu "Bug Report"](https://github.com/RooCodeInc/Takara-Coder/issues/new/choose).
+- **Luki bezpieczeństwa:** Zgłaszaj prywatnie przez [security advisories](https://github.com/RooCodeInc/Takara-Coder/security/advisories/new).
 
 ## Proces rozwoju i zgłaszania
 
@@ -95,7 +95,7 @@ Każdy wkład musi zaczynać się od GitHub Issue.
 1. **Fork & Clone:**
 
 ```
-git clone https://github.com/TWÓJ_UŻYTKOWNIK/Roo-Code.git
+git clone https://github.com/TWÓJ_UŻYTKOWNIK/Takara-Coder.git
 ```
 
 2. **Instalacja zależności:**
@@ -135,4 +135,4 @@ npm run install:all
 
 ## Prawne
 
-Zgłaszając pull request, zgadzasz się, że twój wkład będzie licencjonowany na licencji Apache 2.0, zgodnie z licencją Roo Code.
+Zgłaszając pull request, zgadzasz się, że twój wkład będzie licencjonowany na licencji Apache 2.0, zgodnie z licencją Takara Coder.

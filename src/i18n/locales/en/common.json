@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Roo Code",
+		"name": "Takara Coder",
 		"description": "A whole dev team of AI agents in your editor."
 	},
 	"number_format": {
@@ -174,8 +174,8 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Your organization requires Roo Code Cloud authentication. Please sign in to continue.",
-			"organization_mismatch": "You must be authenticated with your organization's Roo Code Cloud account.",
+			"cloud_auth_required": "Your organization requires Takara Coder Cloud authentication. Please sign in to continue.",
+			"organization_mismatch": "You must be authenticated with your organization's Takara Coder Cloud account.",
 			"verification_failed": "Unable to verify organization authentication."
 		}
 	},

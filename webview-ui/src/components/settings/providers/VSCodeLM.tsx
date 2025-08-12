@@ -2,7 +2,7 @@ import { useState, useCallback } from "react"
 import { useEvent } from "react-use"
 import { LanguageModelChatSelector } from "vscode"
 
-import type { ProviderSettings } from "@roo-code/types"
+import type { ProviderSettings } from "@takara-coder/types"
 
 import { ExtensionMessage } from "@roo/ExtensionMessage"
 

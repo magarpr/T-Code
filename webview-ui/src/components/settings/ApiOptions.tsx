@@ -32,7 +32,7 @@ import {
 	mainlandZAiDefaultModelId,
 	fireworksDefaultModelId,
 	ioIntelligenceDefaultModelId,
-} from "@roo-code/types"
+} from "@takara-coder/types"
 
 import { vscode } from "@src/utils/vscode"
 import { validateApiConfigurationExcludingModelErrors, getModelValidationError } from "@src/utils/validate"

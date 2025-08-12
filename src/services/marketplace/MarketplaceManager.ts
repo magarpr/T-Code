@@ -4,8 +4,13 @@ import * as path from "path"
 import * as vscode from "vscode"
 import * as yaml from "yaml"
 
-import type { MarketplaceItem, MarketplaceItemType, McpMarketplaceItem, OrganizationSettings } from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+import type {
+	MarketplaceItem,
+	MarketplaceItemType,
+	McpMarketplaceItem,
+	OrganizationSettings,
+} from "@takara-coder/types"
+import { TelemetryService } from "@takara-coder/telemetry"
 import { CloudService } from "@roo-code/cloud"
 
 import { GlobalFileNames } from "../../shared/globalFileNames"

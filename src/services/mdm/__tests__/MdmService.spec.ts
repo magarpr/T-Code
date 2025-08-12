@@ -35,10 +35,10 @@ vi.mock("vscode", () => ({
 
 vi.mock("../../../shared/package", () => ({
 	Package: {
-		publisher: "roo-code",
+		publisher: "takara-coder",
 		name: "roo-cline",
 		version: "1.0.0",
-		outputChannel: "Roo-Code",
+		outputChannel: "Takara-Coder",
 		sha: undefined,
 	},
 }))
@@ -47,9 +47,9 @@ vi.mock("../../../i18n", () => ({
 	t: vi.fn((key: string) => {
 		const translations: Record<string, string> = {
 			"mdm.errors.cloud_auth_required":
-				"Your organization requires Roo Code Cloud authentication. Please sign in to continue.",
+				"Your organization requires Takara Coder Cloud authentication. Please sign in to continue.",
 			"mdm.errors.organization_mismatch":
-				"You must be authenticated with your organization's Roo Code Cloud account.",
+				"You must be authenticated with your organization's Takara Coder Cloud account.",
 			"mdm.errors.verification_failed": "Unable to verify organization authentication.",
 		}
 		return translations[key] || key
@@ -215,7 +215,7 @@ describe("MdmService", () => {
 
 			await MdmService.createInstance()
 
-			expect(mockFs.existsSync).toHaveBeenCalledWith("/etc/roo-code/mdm.json")
+			expect(mockFs.existsSync).toHaveBeenCalledWith("/etc/takara-coder/mdm.json")
 		})
 
 		it("should use correct path for Linux in development", async () => {
@@ -226,7 +226,7 @@ describe("MdmService", () => {
 
 			await MdmService.createInstance()
 
-			expect(mockFs.existsSync).toHaveBeenCalledWith("/etc/roo-code/mdm.dev.json")
+			expect(mockFs.existsSync).toHaveBeenCalledWith("/etc/takara-coder/mdm.dev.json")
 		})
 
 		it("should default to dev config when NODE_ENV is not set", async () => {
@@ -278,7 +278,7 @@ describe("MdmService", () => {
 
 			expect(compliance.compliant).toBe(false)
 			if (!compliance.compliant) {
-				expect(compliance.reason).toContain("Your organization requires Roo Code Cloud authentication")
+				expect(compliance.reason).toContain("Your organization requires Takara Coder Cloud authentication")
 			}
 		})
 
@@ -301,7 +301,7 @@ describe("MdmService", () => {
 			expect(compliance.compliant).toBe(false)
 			if (!compliance.compliant) {
 				expect(compliance.reason).toContain(
-					"You must be authenticated with your organization's Roo Code Cloud account",
+					"You must be authenticated with your organization's Takara Coder Cloud account",
 				)
 			}
 		})

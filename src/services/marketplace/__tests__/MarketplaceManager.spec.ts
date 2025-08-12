@@ -1,6 +1,6 @@
 // npx vitest services/marketplace/__tests__/MarketplaceManager.spec.ts
 
-import type { MarketplaceItem } from "@roo-code/types"
+import type { MarketplaceItem } from "@takara-coder/types"
 
 import { MarketplaceManager } from "../MarketplaceManager"
 

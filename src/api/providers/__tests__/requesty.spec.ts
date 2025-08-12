@@ -59,7 +59,7 @@ describe("RequestyHandler", () => {
 			apiKey: mockOptions.requestyApiKey,
 			defaultHeaders: {
 				"HTTP-Referer": "https://github.com/RooVetGit/Roo-Cline",
-				"X-Title": "Roo Code",
+				"X-Title": "Takara Coder",
 				"User-Agent": `RooCode/${Package.version}`,
 			},
 		})

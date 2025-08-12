@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { rooCodeSettingsSchema } from "@roo-code/types"
+import { rooCodeSettingsSchema } from "@takara-coder/types"
 
 /**
  * CreateRun
