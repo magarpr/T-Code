@@ -16,8 +16,8 @@ import {
 	isSecretStateKey,
 	IpcOrigin,
 	IpcMessageType,
-} from "@roo-code/types"
-import { IpcServer } from "@roo-code/ipc"
+} from "@takara-coder/types"
+import { IpcServer } from "@takara-coder/ipc"
 
 import { Package } from "../shared/package"
 import { ClineProvider } from "../core/webview/ClineProvider"
@@ -50,7 +50,7 @@ export class API extends EventEmitter<RooCodeEvents> implements RooCodeAPI {
 				console.log(args)
 			}
 
-			this.logfile = path.join(os.tmpdir(), "roo-code-messages.log")
+			this.logfile = path.join(os.tmpdir(), "takara-coder-messages.log")
 		} else {
 			this.log = () => {}
 		}

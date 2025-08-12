@@ -3,7 +3,12 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import { type ChutesModelId, chutesDefaultModelId, chutesModels, DEEP_SEEK_DEFAULT_TEMPERATURE } from "@roo-code/types"
+import {
+	type ChutesModelId,
+	chutesDefaultModelId,
+	chutesModels,
+	DEEP_SEEK_DEFAULT_TEMPERATURE,
+} from "@takara-coder/types"
 
 import { ChutesHandler } from "../chutes"
 

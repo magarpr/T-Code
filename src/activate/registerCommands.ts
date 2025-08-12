@@ -1,8 +1,8 @@
 import * as vscode from "vscode"
 import delay from "delay"
 
-import type { CommandId } from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+import type { CommandId } from "@takara-coder/types"
+import { TelemetryService } from "@takara-coder/telemetry"
 
 import { Package } from "../shared/package"
 import { getCommand } from "../utils/commands"
@@ -23,7 +23,7 @@ import { t } from "../i18n"
 export function getVisibleProviderOrLog(outputChannel: vscode.OutputChannel): ClineProvider | undefined {
 	const visibleProvider = ClineProvider.getVisibleInstance()
 	if (!visibleProvider) {
-		outputChannel.appendLine("Cannot find any visible Roo Code instances.")
+		outputChannel.appendLine("Cannot find any visible Takara Coder instances.")
 		return undefined
 	}
 	return visibleProvider
@@ -253,7 +253,7 @@ export const openClineInNewTab = async ({ context, outputChannel }: Omit<Registe
 
 	const targetCol = hasVisibleEditors ? Math.max(lastCol + 1, 1) : vscode.ViewColumn.Two
 
-	const newPanel = vscode.window.createWebviewPanel(ClineProvider.tabPanelId, "Roo Code", targetCol, {
+	const newPanel = vscode.window.createWebviewPanel(ClineProvider.tabPanelId, "Takara Coder", targetCol, {
 		enableScripts: true,
 		retainContextWhenHidden: true,
 		localResourceRoots: [context.extensionUri],

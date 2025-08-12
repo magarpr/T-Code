@@ -9,7 +9,7 @@ import {
 	type ToolGroup,
 	type PromptComponent,
 	DEFAULT_MODES,
-} from "@roo-code/types"
+} from "@takara-coder/types"
 
 import { addCustomInstructions } from "../core/prompts/sections/custom-instructions"
 

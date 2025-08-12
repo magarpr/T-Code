@@ -4,12 +4,12 @@ import * as path from "path"
 import * as os from "os"
 import * as vscode from "vscode"
 
-import { RooCodeEventName, type ClineMessage } from "@roo-code/types"
+import { RooCodeEventName, type ClineMessage } from "@takara-coder/types"
 
 import { waitFor, sleep } from "../utils"
 import { setDefaultSuiteTimeout } from "../test-utils"
 
-suite("Roo Code read_file Tool", function () {
+suite("Takara Coder read_file Tool", function () {
 	setDefaultSuiteTimeout(this)
 
 	let tempDir: string

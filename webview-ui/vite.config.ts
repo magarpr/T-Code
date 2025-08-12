@@ -62,11 +62,11 @@ export default defineConfig(({ mode }) => {
 		"process.env.VSCODE_TEXTMATE_DEBUG": JSON.stringify(process.env.VSCODE_TEXTMATE_DEBUG),
 		"process.env.PKG_NAME": JSON.stringify(pkg.name),
 		"process.env.PKG_VERSION": JSON.stringify(pkg.version),
-		"process.env.PKG_OUTPUT_CHANNEL": JSON.stringify("Roo-Code"),
+		"process.env.PKG_OUTPUT_CHANNEL": JSON.stringify("Takara-Coder"),
 		...(gitSha ? { "process.env.PKG_SHA": JSON.stringify(gitSha) } : {}),
 	}
 
-	// TODO: We can use `@roo-code/build` to generate `define` once the
+	// TODO: We can use `@takara-coder/build` to generate `define` once the
 	// monorepo is deployed.
 	if (mode === "nightly") {
 		outDir = "../apps/vscode-nightly/build/webview-ui/build"
@@ -77,7 +77,7 @@ export default defineConfig(({ mode }) => {
 
 		define["process.env.PKG_NAME"] = JSON.stringify(nightlyPkg.name)
 		define["process.env.PKG_VERSION"] = JSON.stringify(nightlyPkg.version)
-		define["process.env.PKG_OUTPUT_CHANNEL"] = JSON.stringify("Roo-Code-Nightly")
+		define["process.env.PKG_OUTPUT_CHANNEL"] = JSON.stringify("Takara-Coder-Nightly")
 	}
 
 	const plugins: PluginOption[] = [react(), tailwindcss(), persistPortPlugin(), wasmPlugin(), sourcemapPlugin()]

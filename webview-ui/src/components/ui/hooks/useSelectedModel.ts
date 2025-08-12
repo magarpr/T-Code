@@ -48,7 +48,7 @@ import {
 	fireworksDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	ioIntelligenceModels,
-} from "@roo-code/types"
+} from "@takara-coder/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
 

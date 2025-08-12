@@ -11,8 +11,8 @@ import {
 import { getModelQueryPrefix } from "../../../shared/embeddingModels"
 import { t } from "../../../i18n"
 import { withValidationErrorHandling, formatEmbeddingError, HttpError } from "../shared/validation-helpers"
-import { TelemetryEventName } from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@takara-coder/types"
+import { TelemetryService } from "@takara-coder/telemetry"
 
 /**
  * OpenAI implementation of the embedder interface with batching and rate limiting

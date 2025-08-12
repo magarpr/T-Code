@@ -2,7 +2,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { promises as fs } from "fs"
 
-import type { ModeConfig } from "@roo-code/types"
+import type { ModeConfig } from "@takara-coder/types"
 
 import { getAllModesWithPrompts } from "../../../shared/modes"
 

@@ -1,11 +1,11 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryService } from "@takara-coder/telemetry"
 
 import { ApiHandler } from "../../api"
 import { MAX_CONDENSE_THRESHOLD, MIN_CONDENSE_THRESHOLD, summarizeConversation, SummarizeResponse } from "../condense"
 import { ApiMessage } from "../task-persistence/apiMessages"
-import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
+import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "@takara-coder/types"
 
 /**
  * Default percentage of the context window to use as a buffer when deciding when to truncate

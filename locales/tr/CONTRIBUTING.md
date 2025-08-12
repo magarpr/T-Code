@@ -11,9 +11,9 @@
 </sub>
 </div>
 
-# Roo Code'a Katkıda Bulunma
+# Takara Coder'a Katkıda Bulunma
 
-Roo Code, topluluk odaklı bir projedir ve her katkıyı çok önemsiyoruz. İşbirliğini kolaylaştırmak için [Issue-First](#issue-first-yaklaşımı) yaklaşımıyla çalışıyoruz; bu, tüm [Pull Request'lerin (PR'lar)](#pull-request-gönderme) önce bir GitHub Issue'ya bağlanması gerektiği anlamına gelir. Lütfen bu rehberi dikkatlice incele.
+Takara Coder, topluluk odaklı bir projedir ve her katkıyı çok önemsiyoruz. İşbirliğini kolaylaştırmak için [Issue-First](#issue-first-yaklaşımı) yaklaşımıyla çalışıyoruz; bu, tüm [Pull Request'lerin (PR'lar)](#pull-request-gönderme) önce bir GitHub Issue'ya bağlanması gerektiği anlamına gelir. Lütfen bu rehberi dikkatlice incele.
 
 ## İçindekiler
 
@@ -52,7 +52,7 @@ Yol haritamız projenin yönünü belirler. Katkılarını bu temel hedeflerle u
 
 PR'larında bu alanlarla olan bağlantıyı belirt.
 
-### 3. Roo Code Topluluğuna Katıl
+### 3. Takara Coder Topluluğuna Katıl
 
 - **Ana yöntem:** [Discord](https://discord.gg/roocode)'umuza katıl ve **Hannes Rudolph (`hrudolph`)**'a DM gönder.
 - **Alternatif:** Deneyimli katkı sağlayanlar [GitHub Projects](https://github.com/orgs/RooCodeInc/projects/1) üzerinden doğrudan katılabilir.
@@ -69,7 +69,7 @@ PR'larında bu alanlarla olan bağlantıyı belirt.
 
 Tüm katkılar bir GitHub Issue ile başlamalıdır.
 
-- **Mevcut issue'ları kontrol et:** [GitHub Issues](https://github.com/RooCodeInc/Roo-Code/issues)'da ara.
+- **Mevcut issue'ları kontrol et:** [GitHub Issues](https://github.com/RooCodeInc/Takara-Coder/issues)'da ara.
 - **Issue oluştur:** Uygun şablonları kullan:
     - **Hatalar:** "Bug Report" şablonu.
     - **Özellikler:** "Detailed Feature Proposal" şablonu. Başlamadan önce onay gerekir.
@@ -80,13 +80,13 @@ Tüm katkılar bir GitHub Issue ile başlamalıdır.
 ### Ne Üzerinde Çalışacağına Karar Verme
 
 - [GitHub Projesi](https://github.com/orgs/RooCodeInc/projects/1)'nde atanmamış "Good First Issues" bak.
-- Dokümantasyon için [Roo Code Docs](https://github.com/RooCodeInc/Roo-Code-Docs)'u ziyaret et.
+- Dokümantasyon için [Takara Coder Docs](https://github.com/RooCodeInc/Takara-Coder-Docs)'u ziyaret et.
 
 ### Hata veya Sorun Bildirme
 
 - Önce mevcut raporları kontrol et.
-- ["Bug Report" şablonu](https://github.com/RooCodeInc/Roo-Code/issues/new/choose) kullanarak yeni hata raporları oluştur.
-- **Güvenlik açıkları:** [security advisories](https://github.com/RooCodeInc/Roo-Code/security/advisories/new) aracılığıyla özel olarak bildir.
+- ["Bug Report" şablonu](https://github.com/RooCodeInc/Takara-Coder/issues/new/choose) kullanarak yeni hata raporları oluştur.
+- **Güvenlik açıkları:** [security advisories](https://github.com/RooCodeInc/Takara-Coder/security/advisories/new) aracılığıyla özel olarak bildir.
 
 ## Geliştirme & Gönderim Süreci
 
@@ -95,7 +95,7 @@ Tüm katkılar bir GitHub Issue ile başlamalıdır.
 1. **Fork & Clone:**
 
 ```
-git clone https://github.com/KULLANICI_ADIN/Roo-Code.git
+git clone https://github.com/KULLANICI_ADIN/Takara-Coder.git
 ```
 
 2. **Bağımlılıkları yükle:**
@@ -135,4 +135,4 @@ npm run install:all
 
 ## Yasal
 
-Pull request göndererek, katkılarının Roo Code'un lisanslamasıyla tutarlı olarak Apache 2.0 Lisansı altında lisanslanacağını kabul etmiş olursun.
+Pull request göndererek, katkılarının Takara Coder'un lisanslamasıyla tutarlı olarak Apache 2.0 Lisansı altında lisanslanacağını kabul etmiş olursun.

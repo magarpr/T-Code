@@ -14,13 +14,13 @@
 		"node": "20.19.2"
 	},
 	"author": {
-		"name": "Roo Code"
+		"name": "Takara Coder"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/RooCodeInc/Roo-Code"
+		"url": "https://github.com/RooCodeInc/Takara-Coder"
 	},
-	"homepage": "https://github.com/RooCodeInc/Roo-Code",
+	"homepage": "https://github.com/RooCodeInc/Takara-Coder",
 	"categories": [
 		"AI",
 		"Chat",
@@ -42,7 +42,7 @@
 		"sonnet",
 		"ai",
 		"llama",
-		"roo code",
+		"takara coder",
 		"roocode"
 	],
 	"activationEvents": [
@@ -421,9 +421,9 @@
 		"@modelcontextprotocol/sdk": "^1.9.0",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "^0.5.0",
-		"@roo-code/ipc": "workspace:^",
-		"@roo-code/telemetry": "workspace:^",
-		"@roo-code/types": "workspace:^",
+		"@takara-coder/ipc": "workspace:^",
+		"@takara-coder/telemetry": "workspace:^",
+		"@takara-coder/types": "workspace:^",
 		"@types/lodash.debounce": "^4.0.9",
 		"@vscode/codicons": "^0.0.36",
 		"async-mutex": "^0.5.0",
@@ -484,9 +484,9 @@
 		"zod": "^3.25.61"
 	},
 	"devDependencies": {
-		"@roo-code/build": "workspace:^",
-		"@roo-code/config-eslint": "workspace:^",
-		"@roo-code/config-typescript": "workspace:^",
+		"@takara-coder/build": "workspace:^",
+		"@takara-coder/config-eslint": "workspace:^",
+		"@takara-coder/config-typescript": "workspace:^",
 		"@types/clone-deep": "^4.0.4",
 		"@types/debug": "^4.1.12",
 		"@types/diff": "^5.2.1",

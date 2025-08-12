@@ -4,7 +4,7 @@ import {
 	type VerbosityLevel,
 	type ReasoningEffortWithMinimal,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
-} from "@roo-code/types"
+} from "@takara-coder/types"
 
 import {
 	DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS,

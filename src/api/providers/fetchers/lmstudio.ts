@@ -1,4 +1,4 @@
-import { ModelInfo, lMStudioDefaultModelInfo } from "@roo-code/types"
+import { ModelInfo, lMStudioDefaultModelInfo } from "@takara-coder/types"
 import { LLM, LLMInfo, LLMInstanceInfo, LMStudioClient } from "@lmstudio/sdk"
 import axios from "axios"
 import { flushModels, getModels } from "./modelCache"

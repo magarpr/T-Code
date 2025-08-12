@@ -9,8 +9,8 @@ import {
 	isSecretStateKey,
 	ProviderSettingsEntry,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
-} from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+} from "@takara-coder/types"
+import { TelemetryService } from "@takara-coder/telemetry"
 
 import { Mode, modes } from "../../shared/modes"
 

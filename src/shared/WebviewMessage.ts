@@ -7,8 +7,8 @@ import type {
 	InstallMarketplaceItemOptions,
 	MarketplaceItem,
 	ShareVisibility,
-} from "@roo-code/types"
-import { marketplaceItemSchema } from "@roo-code/types"
+} from "@takara-coder/types"
+import { marketplaceItemSchema } from "@takara-coder/types"
 
 import { Mode } from "./modes"
 

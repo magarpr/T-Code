@@ -1,5 +1,5 @@
 {
-	"greeting": "Chào mừng đến với Roo Code",
+	"greeting": "Chào mừng đến với Takara Coder",
 	"task": {
 		"title": "Nhiệm vụ",
 		"seeMore": "Xem thêm",
@@ -19,7 +19,7 @@
 		"sharePublicly": "Chia sẻ công khai",
 		"sharePubliclyDescription": "Bất kỳ ai có liên kết đều có thể truy cập",
 		"connectToCloud": "Kết nối với Cloud",
-		"connectToCloudDescription": "Đăng nhập vào Roo Code Cloud để chia sẻ tác vụ",
+		"connectToCloudDescription": "Đăng nhập vào Takara Coder Cloud để chia sẻ tác vụ",
 		"sharingDisabledByOrganization": "Chia sẻ bị tổ chức vô hiệu hóa",
 		"shareSuccessOrganization": "Liên kết tổ chức đã được sao chép vào clipboard",
 		"shareSuccessPublic": "Liên kết công khai đã được sao chép vào clipboard"
@@ -241,7 +241,7 @@
 	"autoApprove": {
 		"title": "Tự động phê duyệt:",
 		"none": "Không",
-		"description": "Tự động phê duyệt cho phép Roo Code thực hiện hành động mà không cần xin phép. Chỉ bật cho các hành động bạn hoàn toàn tin tưởng. Cấu hình chi tiết hơn có sẵn trong <settingsLink>Cài đặt</settingsLink>.",
+		"description": "Tự động phê duyệt cho phép Takara Coder thực hiện hành động mà không cần xin phép. Chỉ bật cho các hành động bạn hoàn toàn tin tưởng. Cấu hình chi tiết hơn có sẵn trong <settingsLink>Cài đặt</settingsLink>.",
 		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt",
 		"toggleAriaLabel": "Chuyển đổi tự động phê duyệt",
 		"disabledAriaLabel": "Tự động phê duyệt bị vô hiệu hóa - hãy chọn các tùy chọn trước"
@@ -262,8 +262,8 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"announcement": {
-		"title": "🎉 Roo Code {{version}} Đã phát hành",
-		"description": "Roo Code {{version}} mang đến các tính năng mạnh mẽ mới và cải tiến đáng kể để nâng cao quy trình phát triển của bạn.",
+		"title": "🎉 Takara Coder {{version}} Đã phát hành",
+		"description": "Takara Coder {{version}} mang đến các tính năng mạnh mẽ mới và cải tiến đáng kể để nâng cao quy trình phát triển của bạn.",
 		"whatsNew": "Có gì mới",
 		"feature1": "<bold>Hàng đợi Tin nhắn</bold>: Xếp hàng nhiều tin nhắn trong khi Roo đang làm việc, cho phép bạn tiếp tục lập kế hoạch quy trình làm việc mà không bị gián đoạn.",
 		"feature2": "<bold>Lệnh Slash Tùy chỉnh</bold>: Tạo các lệnh slash được cá nhân hóa để truy cập nhanh vào các prompt và quy trình làm việc thường dùng, với quản lý UI đầy đủ.",
@@ -306,7 +306,7 @@
 	"profileViolationWarning": "Hồ sơ hiện tại không tương thích với cài đặt của tổ chức của bạn",
 	"shellIntegration": {
 		"title": "Cảnh báo thực thi lệnh",
-		"description": "Lệnh của bạn đang được thực thi mà không có tích hợp shell terminal VSCode. Để ẩn cảnh báo này, bạn có thể vô hiệu hóa tích hợp shell trong phần <strong>Terminal</strong> của <settingsLink>cài đặt Roo Code</settingsLink> hoặc khắc phục sự cố tích hợp terminal VSCode bằng liên kết bên dưới.",
+		"description": "Lệnh của bạn đang được thực thi mà không có tích hợp shell terminal VSCode. Để ẩn cảnh báo này, bạn có thể vô hiệu hóa tích hợp shell trong phần <strong>Terminal</strong> của <settingsLink>cài đặt Takara Coder</settingsLink> hoặc khắc phục sự cố tích hợp terminal VSCode bằng liên kết bên dưới.",
 		"troubleshooting": "Nhấp vào đây để xem tài liệu tích hợp shell."
 	},
 	"ask": {
@@ -347,7 +347,7 @@
 		"ariaLabel": "Phiên bản {{version}} - Nhấp để xem ghi chú phát hành"
 	},
 	"rooCloudCTA": {
-		"title": "Roo Code Cloud sắp ra mắt!",
+		"title": "Takara Coder Cloud sắp ra mắt!",
 		"description": "Chạy các agent từ xa trên cloud, truy cập các tác vụ của bạn từ mọi nơi, cộng tác với người khác và nhiều hơn nữa.",
 		"joinWaitlist": "Tham gia danh sách chờ để được truy cập sớm."
 	},

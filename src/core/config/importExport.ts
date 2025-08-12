@@ -6,8 +6,8 @@ import fs from "fs/promises"
 import * as vscode from "vscode"
 import { z, ZodError } from "zod"
 
-import { globalSettingsSchema } from "@roo-code/types"
-import { TelemetryService } from "@roo-code/telemetry"
+import { globalSettingsSchema } from "@takara-coder/types"
+import { TelemetryService } from "@takara-coder/telemetry"
 
 import { ProviderSettingsManager, providerProfilesSchema } from "./ProviderSettingsManager"
 import { ContextProxy } from "./ContextProxy"
@@ -145,7 +145,7 @@ export const importSettingsFromFile = async (
 export const exportSettings = async ({ providerSettingsManager, contextProxy }: ExportOptions) => {
 	const uri = await vscode.window.showSaveDialog({
 		filters: { JSON: ["json"] },
-		defaultUri: vscode.Uri.file(path.join(os.homedir(), "Documents", "roo-code-settings.json")),
+		defaultUri: vscode.Uri.file(path.join(os.homedir(), "Documents", "takara-coder-settings.json")),
 	})
 
 	if (!uri) {
